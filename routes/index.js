@@ -3,8 +3,8 @@ var router = express.Router();
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  
-  res.send({12:'123'});
+  const a = '123'
+  res.send({a});
 });
 
 module.exports = router;
