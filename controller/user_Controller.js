@@ -198,7 +198,7 @@ module.exports = {
             return;
         }
 
-        currentUser.password = bcrypt.hashSync(newPassword, 10);
+        currentUser.hashPass = bcrypt.hashSync(newPassword, 10);
         
         try {
             await currentUser.save();
@@ -288,12 +288,12 @@ module.exports = {
             return;
         }
 
-        if (!bcrypt.compareSync(oldpassword, currentUser.password)) {
+        if (!bcrypt.compareSync(oldpassword, currentUser.hashPass)) {
             res.status(423).json({ message: 'Current password is wrong'});
             return;
         }
 
-        currentUser.password = bcrypt.hashSync(newpassword, 10);
+        currentUser.hashPass = bcrypt.hashSync(newpassword, 10);
         
         try {
             await currentUser.save()
