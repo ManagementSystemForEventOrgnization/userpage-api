@@ -16,7 +16,7 @@ const userSchema = new Schema({
     isReported: {type: Boolean, default: false},
     dateDelete: Date,
     discription: String,
-    
+    phoneNumber: String,
 })
 
 mongoose.model('users', userSchema);
