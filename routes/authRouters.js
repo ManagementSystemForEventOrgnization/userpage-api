@@ -34,10 +34,18 @@ router.post('/api/login', function (req, res, next) {
         });
     })(req, res, next);
 });
-router.get('/api/logout', controller_User.logout);
-router.get('/api/current_user', controller_User.current_user);
-router.post('/api/register', controller_User.register);
-router.post('/api/checkMail', controller_User.check_Mail);
-router.get('/api/user/profile', controller_User.profile_user);
+
+router.get('/logout', controller_User.logout);
+router.get('/current_user', controller_User.current_user);
+router.post('/register', controller_User.register);
+router.post('/checkMail', controller_User.check_Mail);
+
+router.post('/requestForgotPassword', controller_User.requestForgotPassword);
+router.post('/verifyForgotPassword', controller_User.verifyForgotPassword);
+router.get('/forgotPassword', controller_User.forgotPassword);
+router.get('/updatePassword', controller_User.updatePassword);
+
+router.post('/user/updateInfor', controller_User.updateInfor);
+router.get('/user/profile', controller_User.profile_user);
 
 module.exports = router;
