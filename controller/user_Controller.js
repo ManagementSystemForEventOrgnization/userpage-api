@@ -1,10 +1,12 @@
-var express = require('express');
-var router = express.Router();
+var bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
 const User = mongoose.model('users');
-const mailer = require('../untils/Mailer');
+const mailer = require('../utils/Mailer');
+const otp = require('../utils/otp');
+var passport = require('passport');
 
 module.exports = {
+
     logout: async (req, res) => {
         req.logout();
         res.status(200).json({ message: 'success' });
@@ -45,7 +47,7 @@ module.exports = {
         }
     },
 
-    register: async (req, res) => {
+    register: async (req, res, next) => {
         if ((typeof req.body.email === 'undefined')
             || (typeof req.body.password === 'undefined')
             || typeof req.body.fullName === 'undefined'
@@ -55,8 +57,8 @@ module.exports = {
         }
         let { email, password, fullName } = req.body;
         let regex = /^[a-zA-Z][a-z0-9A-Z\.\_]{1,}@[a-z0-9]{2,}(\.[a-z0-9]{1,4}){1,2}$/gm
-        if (regex.test(email) || password.length < 6) {
-            res.status(422).json({ msg: 'Invalid data' });                          
+        if (!regex.test(email) || password.length < 3) {
+            res.status(422).json({ msg: 'Invalid mail data' });
             return;
         }
         let userFind = null;
@@ -67,21 +69,34 @@ module.exports = {
             res.status(500).json({ msg: err });
             return;
         }
-        if (userFind.length > 0) {
+        if (userFind) {
             res.status(409).json({ msg: 'Email already exist' });
             return;
         }
         password = bcrypt.hashSync(password, 10);
-        const newUser = new user({
+        const newUser = new User({
             email: email,
             fullName: fullName,
             hashPass: password,
         });
         try {
             await newUser.save();
+            passport.authenticate('local', function (err, user, info) {
+                if (err) {
+                    return next(err);
+                }
+                if (!user) {
+                    return res.send(info);
+                }
+                req.logIn(user, function (err) {
+                    if (err) { 
+                        return next(err); 
+                    }
+                    return res.status(200).json(user);
+                });
+            })(req, res, next);
         }
         catch (err) {
-            console.log(err);
             res.status(500).json({ msg: err });
             return;
         }
@@ -97,8 +112,240 @@ module.exports = {
         }
     },
 
+    requestForgotPassword: async (req, res) => {
+        if (typeof req.body.email === 'undefined') {
+            res.json({ message: "Invalid data" });
+            return;
+        }
+
+        let email = req.body.email;
+        let currentUser = null;
+
+        try {
+            currentUser = await User.findOne({ 'email': email });
+        }
+        catch (err) {
+            res.json({ message: err });
+            return;
+        }
+
+        if (currentUser == null) {
+            res.status(422).json({ message: "Invalid data" });
+        }
+
+        mailer.sentMailer('admin@gmail.com', email, 'confirm', otp.generateOTP())
+            .then(async (json) => {
+                currentUser.token = token;
+                try {
+                    await currentUser.save();
+                }
+                catch (err) {
+                    res.status(500).json({ message: err });
+                    return;
+                }
+                res.status(201).json({ message: 'success', email: email })
+            }).catch(err => {
+                res.status(500).json({ message: 'Send email fail' });
+                return;
+            })
+    },
+    verifyToken: async (req, res) => {
+        if (typeof req.body.token === 'undefined') {
+            res.status(402).json({ message: 'Invalid value' });
+            return;
+        }
+        let { token } = req.body;
+        let userNow=null;
+        try {
+            let id = req.user;
+            userNow = await User.findById(id);
+        } catch (err) {
+            res.json(err);
+        }
+        
+        let tokenDB = userNow.TOKEN;
+        if (token != tokenDB) {
+            res.status(422).json({ message: "OTP fail" });
+            return;
+        } else {
+            userNow.isActive = true;
+            await userNow.save();
+            res.status(200).json({ message: 'success' });
+        }
+
+
+    },
+
+    verifyForgotPassword: async (req, res) => {
+        if (typeof req.body.email === 'undefined'
+            || typeof req.body.otp === 'undefined') {
+            res.status(402).json({ message: "Invalid data" });
+            return;
+        }
+
+        let { email, otp } = req.body;
+        let currentUser = null;
+
+        try {
+            currentUser = await User.findOne({ 'email': email });
+        }
+        catch (err) {
+            res.json({ msg: err });
+            return;
+        }
+
+        if (currentUser == null) {
+            res.status(422).json({ message: "Invalid data" });
+            return;
+        }
+
+        if (currentUser.token != otp) {
+            res.status(422).json({ message: "OTP fail" });
+            return;
+        }
+
+        res.status(200).json({ message: "success", otp: otp });
+    },
+
+    forgotPassword: async (req, res) => {
+        if (typeof req.body.email === 'undefined'
+            || typeof req.body.otp === 'undefined'
+            || typeof req.body.newPassword === 'undefined') {
+            res.status(402).json({ message: "Invalid data" });
+            return;
+        }
+
+        let { email, otp, newPassword } = req.body;
+        let currentUser = null;
+
+        try {
+            currentUser = await User.findOne({ 'email': email });
+        }
+        catch (err) {
+            res.json({ message: err });
+            return;
+        }
+
+        if (currentUser == null) {
+            res.status(422).json({ message: "Invalid data" });
+            return;
+        }
+
+        if (currentUser.token != otp) {
+            res.status(422).json({ message: "OTP fail" });
+            return;
+        }
+
+        currentUser.hashPass = bcrypt.hashSync(newPassword, 10);
+
+        try {
+            await currentUser.save();
+        }
+        catch (err) {
+            res.status(500).json({ message: err });
+            return;
+        }
+
+        res.status(201).json({ message: 'success' })
+    },
+
+    updateInfor: async (req, res) => {
+        if (typeof req.body.email === 'undefined') {
+            res.status(422).json({ message: 'Invalid data' });
+            return;
+        }
+
+        let { email, fullName, birthday, gender, job, phone, discription, avatarUrl } = req.body;
+        let currentUser = null
+
+        try {
+            currentUser = await User.findOne({ 'email': email })
+        }
+        catch (err) {
+            res.status(500).json({ message: err });
+            return;
+        }
+
+        if (currentUser == null) {
+            res.status(422).json({ message: "not found" });
+            return;
+        }
+
+        currentUser.fullName = fullName;
+        currentUser.birthday = birthday;
+        currentUser.gender = gender;
+        currentUser.job = job;
+        currentUser.phone = phone;
+        currentUser.discription = discription;
+        currentUser.avatar = avatarUrl;
+
+        try {
+            await currentUser.save()
+        }
+        catch (err) {
+            res.status(500).json({ message: err });
+            return;
+        }
+
+        res.status(200).json({
+            message: 'success', user: {
+                email: currentUser.email,
+                fullName: currentUser.fullName,
+                birthday: currentUser.birthday,
+                gender: currentUser.gender,
+                job: currentUser.job,
+                id: currentUser._id,
+                phone: currentUser.phone,
+                discription: currentUser.discription,
+                avatar: currentUser.avatar
+            }
+        });
+    },
+
+    updatePassword: async (req, res) => {
+        if (typeof req.body.oldpassword === 'undefined'
+            || typeof req.body.newpassword === 'undefined'
+            || typeof req.body.email === 'undefined') {
+            res.status(422).json({ msg: 'Invalid data' });
+            return;
+        }
+
+        let { email, oldpassword, newpassword } = req.body;
+        let currentUser = null;
+
+        try {
+            currentUser = await User.findOne({ 'email': email });
+        }
+        catch (err) {
+            res.json({ message: err });
+            return;
+        }
+
+        if (currentUser == null) {
+            res.status(422).json({ message: "Invalid data" });
+            return;
+        }
+
+        if (!bcrypt.compareSync(oldpassword, currentUser.hashPass)) {
+            res.status(423).json({ message: 'Current password is wrong' });
+            return;
+        }
+
+        currentUser.hashPass = bcrypt.hashSync(newpassword, 10);
+
+        try {
+            await currentUser.save()
+        }
+        catch (err) {
+            res.status(500).json({ message: err });
+            return;
+        }
+
+        res.status(200).json({ msg: 'success' });
+    },
 
 }
+
 // }
 
 //     // cai này bỏ nha nhựt vì chốt vs bên font-end là sẽ gữi mail sau khi nhập mail xong và gữi code đi luôn

@@ -2,6 +2,8 @@ var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
 var bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
+const mailer = require('../utils/Mailer')
+const otp = require('../utils/otp')
 
 const User = mongoose.model('users');
 
@@ -20,20 +22,31 @@ module.exports = (app) => {
     var ls = new LocalStrategy({
         usernameField: 'email',
         passwordField: 'password'
-    },(username, password, done) => {
+    }, (username, password, done) => {
         //1
         if(typeof username === 'undefined' || typeof password === 'undefined'){
             return done(null, false, {message : 'Invalid data'});
         }
-        User.findOne({ 'email': username }).then(user => {
+        User.findOne({ 'email': username }).then(async user => {
             if (!user) {
                 return done(null, false, { message: 'username incorrect' });
-            }
-            let ret = bcrypt.compareSync(user.hashPass, password);
+            }//compareSync
+
+            let ret = bcrypt.compare(user.hashPass, password);
             
             if (!ret) {
                 return done(null, false, { message: 'Password incorrect' });
             }
+
+            if(!user.isActive){
+                // false
+                let too = '123';
+                console.log(user.email)
+                mailer.sentMailer('admin@gmail.com',{email:user.email},'confirm',too);
+                user.TOKEN = too;
+                user.save();
+            }
+
             return done(null, user);
 
         }).catch(err => {

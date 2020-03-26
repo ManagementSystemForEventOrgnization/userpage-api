@@ -17,6 +17,7 @@ const userSchema = new Schema({
     dateDelete: Date,
     discription: String,
     phoneNumber: String,
+    isActive:{type:Boolean,default: false},
 })
 
 mongoose.model('users', userSchema);

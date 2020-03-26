@@ -13,8 +13,8 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser( async (id, done) => {
     //4
-    let user = await User.findById(id);
-    done(null, user);
+    //let user = await User.findById(id);
+    done(null, id);
 })
 
 passport.use(
@@ -27,12 +27,13 @@ passport.use(
         async (accessToken, refreshToken, profile, done) => {
             //1
             let { sub, name, picture, email } = profile._json;
-            let userExisting = await User.findOne({ TOKEN: sub });
+            let userExisting = await User.findOne({ $or:[ {TOKEN: sub },{email:email}]});
 
             if (userExisting) {
                 return done(null, userExisting);
             } else {
-                let userSave = await new User({ email, avatar: picture, fullName: name, TOKEN: sub }).save();
+                let userSave = await new User({ email, avatar: picture, fullName: name, TOKEN: sub ,isActive:true}).save();
+                
                 return done(null, userSave);
             }
         }
