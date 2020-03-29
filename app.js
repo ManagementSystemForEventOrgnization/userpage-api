@@ -7,7 +7,6 @@ const keys = require('./config/key');
 const bodyParser = require('body-parser');
 const passport = require('passport');
 const mongoose = require('mongoose');
-const cors = require('cors');
 
 
 mongoose.connect(keys.mongoURI,  {useNewUrlParser: true, useUnifiedTopology: true});
@@ -20,7 +19,6 @@ app.use(
         keys:[keys.cookieKey]
     })
 );
-app.use(cors());
 // app.use(bodyParser.urlencoded({ extended: false }))
 app.use(express.json())
 app.use(logger('dev'));
@@ -28,6 +26,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(passport.initialize());
 app.use(passport.session());
+
 require('./models/EvenCategory.js');
 require('./models/User');
 require('./routes/passport-google'); 
