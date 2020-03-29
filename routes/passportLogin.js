@@ -37,7 +37,6 @@ module.exports = (app) => {
             if (!ret) {
                 return done(null, false, { message: 'Password incorrect' });
             }
-
             if(!user.isActive){
                 // false
                 let too = '123';

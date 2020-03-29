@@ -172,8 +172,6 @@ module.exports = {
             await userNow.save();
             res.status(200).json({ message: 'success' });
         }
-
-
     },
 
     verifyForgotPassword: async (req, res) => {

@@ -10,7 +10,8 @@ module.exports= {
             res.status(401).json({ message: 'Login-google false' });
         } else {
             let u = await User.findById(req.user);
-            res.status(200).json(u);
+res.redirect('/api/current_user');
+            //res.status(200).json(u);
         }
     },
 

@@ -28,12 +28,13 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(passport.initialize());
 app.use(passport.session());
-
+require('./models/EvenCategory.js');
 require('./models/User');
 require('./routes/passport-google'); 
 require('./routes/passportLogin')(app);
 
 app.use('/api', require('./routes/authRouters'));
+app.use('/api/evenCategory', require('./routes/eventCategoryRouter'));
 app.use('/',  require('./routes/googleRouter'));
 
 //require('./routes/authRouters')(app);
