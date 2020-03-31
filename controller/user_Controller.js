@@ -47,18 +47,61 @@ module.exports = {
         }
     },
 
+    login_google: async (req, res, next) => {
+        if ((typeof req.body.email === 'undefined')
+            || (typeof req.body.sub === 'undefined')
+            || typeof req.body.fullName === 'undefined'
+        ) {
+            res.status(422).json({ message: 'Invalid data' });
+            return;
+        }
+        
+        let { sub, name, picture, email } = req.body;
+        //let password = bcrypt.hashSync(sub, 10);
+        let userPassport= null;
+        // can check lai về vấn đề nó đã đăng kí = form trước. thì cần check lại.
+        let userExisting = await User.findOne({ $or: [{ TOKEN: sub }, { email: email }] });
+        
+        req.body.password = sub;
+        if (userExisting) {
+            userPassport = userExisting;
+            userExisting.TOKEN = sub;
+            userExisting.isActive = true;
+            userExisting.save();
+        } else {
+            let userSave = await new User({ email, avatar: picture, fullName: name, TOKEN: sub, isActive: true }).save();
+            userPassport = userSave;
+        }
+        passport.authenticate('local', function (err, user, info) {
+            console.log(user);
+            if (err) {
+                return next(err);
+            }
+            if (!user) {
+                return res.send(info);
+            }
+            req.logIn(user, function (err) {
+                if (err) {
+                    return next(err);
+                }
+                return res.status(200).json(user);
+            });
+        })(req, res, next);
+
+    },
+
     register: async (req, res, next) => {
         if ((typeof req.body.email === 'undefined')
             || (typeof req.body.password === 'undefined')
             || typeof req.body.fullName === 'undefined'
         ) {
-            res.status(422).json({ msg: 'Invalid data' });
+            res.status(422).json({ message: 'Invalid data' });
             return;
         }
         let { email, password, fullName } = req.body;
         let regex = /^[a-zA-Z][a-z0-9A-Z\.\_]{1,}@[a-z0-9]{2,}(\.[a-z0-9]{1,4}){1,2}$/gm
         if (!regex.test(email) || password.length < 3) {
-            res.status(422).json({ msg: 'Invalid mail data' });
+            res.status(422).json({ message: 'Invalid mail data' });
             return;
         }
         let userFind = null;
@@ -66,11 +109,11 @@ module.exports = {
             userFind = await User.findOne({ 'email': email });
         }
         catch (err) {
-            res.status(500).json({ msg: err });
+            res.status(500).json({ message: err });
             return;
         }
         if (userFind) {
-            res.status(409).json({ msg: 'Email already exist' });
+            res.status(409).json({ message: 'Email already exist' });
             return;
         }
         password = bcrypt.hashSync(password, 10);
@@ -89,15 +132,15 @@ module.exports = {
                     return res.send(info);
                 }
                 req.logIn(user, function (err) {
-                    if (err) { 
-                        return next(err); 
+                    if (err) {
+                        return next(err);
                     }
                     return res.status(200).json(user);
                 });
             })(req, res, next);
         }
         catch (err) {
-            res.status(500).json({ msg: err });
+            res.status(500).json({ message: err });
             return;
         }
     },
@@ -155,20 +198,21 @@ module.exports = {
             return;
         }
         let { token } = req.body;
-        let userNow=null;
+        let userNow = null;
         try {
             let id = req.user;
             userNow = await User.findById(id);
         } catch (err) {
             res.json(err);
         }
-        
+
         let tokenDB = userNow.TOKEN;
         if (token != tokenDB) {
             res.status(422).json({ message: "OTP fail" });
             return;
         } else {
             userNow.isActive = true;
+            userNow.TOKEN = "";
             await userNow.save();
             res.status(200).json({ message: 'success' });
         }
@@ -188,7 +232,7 @@ module.exports = {
             currentUser = await User.findOne({ 'email': email });
         }
         catch (err) {
-            res.json({ msg: err });
+            res.json({ message: err });
             return;
         }
 
@@ -304,7 +348,7 @@ module.exports = {
         if (typeof req.body.oldpassword === 'undefined'
             || typeof req.body.newpassword === 'undefined'
             || typeof req.body.email === 'undefined') {
-            res.status(422).json({ msg: 'Invalid data' });
+            res.status(422).json({ message: 'Invalid data' });
             return;
         }
 
@@ -339,7 +383,7 @@ module.exports = {
             return;
         }
 
-        res.status(200).json({ msg: 'success' });
+        res.status(200).json({ message: 'success' });
     },
 
 }
@@ -350,7 +394,7 @@ module.exports = {
 //     // cai nay can trao doi lai de thuan tien cho viec check.
 //     exports.verifyAccount = async (req, res) => {
 //         if (typeof req.params.token === 'undefined') {
-//             res.status(402).json({ msg: "!invalid" });
+//             res.status(402).json({ message: "!invalid" });
 //             return;
 //         }
 //         let token = req.params.token;
@@ -359,11 +403,11 @@ module.exports = {
 //             tokenFind = await user.findOne({ 'token': token });
 //         }
 //         catch (err) {
-//             res.status(500).json({ msg: err });
+//             res.status(500).json({ message: err });
 //             return;
 //         }
 //         if (tokenFind == null) {
-//             res.status(404).json({ msg: "not found!!!" });
+//             res.status(404).json({ message: "not found!!!" });
 //             return;
 //         }
 //         try {
@@ -371,8 +415,8 @@ module.exports = {
 //                 { $set: { is_verify: true } }, { new: true });
 //         }
 //         catch (err) {
-//             res.status(500).json({ msg: err });
+//             res.status(500).json({ message: err });
 //             return;
 //         }
-//         res.status(200).json({ msg: "success!" });
+//         res.status(200).json({ message: "success!" });
 //     }

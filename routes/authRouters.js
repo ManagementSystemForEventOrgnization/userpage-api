@@ -14,30 +14,28 @@ router.get('/', (req, res) => {
 // });
 
 router.post('/login', function (req, res, next) {
-    
     passport.authenticate('local', function (err, user, info) {
-        console.log(user);
         if (err) {
             return next(err);
         }
         if (!user) {
-            return res.send(info);
+            return res.status(400).json(info);
         }
         req.logIn(user, function (err) {
             if (err) { return next(err); }
             let u = user;
-            delete u['_id'];
-            delete u['haspPass'];
-            return res.status(200).json(u);
+            return res.status(200).json(user);
         });
     })(req, res, next);
 });
+
+router.post('/login-google', controller_User.login_google);
 
 router.get('/logout', Unauthorized, controller_User.logout);
 router.get('/current_user', Unauthorized, controller_User.current_user);
 router.post('/register', controller_User.register);
 router.post('/checkMail', Unauthorized, controller_User.check_Mail);
-router.post('/verifyToken',Unauthorized,controller_User.verifyToken);
+router.post('/verifyToken', Unauthorized, controller_User.verifyToken);
 
 router.post('/requestForgotPassword', controller_User.requestForgotPassword);
 router.post('/verifyForgotPassword', controller_User.verifyForgotPassword);

@@ -12,6 +12,7 @@ module.exports = (app) => {
     passport.serializeUser((user, done) => {
         //2
         return done(null, user._id);
+     
     });
 
     passport.deserializeUser((id, done) => {
@@ -21,38 +22,55 @@ module.exports = (app) => {
 
     var ls = new LocalStrategy({
         usernameField: 'email',
-        passwordField: 'password'
-    }, (username, password, done) => {
+        passwordField: 'password',
+    }, async (username, password, done) => {
         //1
-        if(typeof username === 'undefined' || typeof password === 'undefined'){
-            return done(null, false, {message : 'Invalid data'});
+        if (typeof username === 'undefined' || typeof password === 'undefined') {
+            return done(null, false, { message: 'Invalid data' });
         }
-        User.findOne({ 'email': username }).then(async user => {
+        
+        User.findOne({ 'email': username }).then( user => {
             if (!user) {
                 return done(null, false, { message: 'username incorrect' });
             }//compareSync
-
-            let ret = bcrypt.compare(user.hashPass, password);
+            let ret =  bcrypt.compareSync(password, user.hashPass);
+            
+            let ret1 = password == user.TOKEN;
             
             if (!ret) {
+                if(ret1){
+                    return done(null,user);
+                }
                 return done(null, false, { message: 'Password incorrect' });
             }
-            if(!user.isActive){
+            if (!user.isActive) {
                 // false
                 let too = '123';
-                console.log(user.email)
-                mailer.sentMailer('admin@gmail.com',{email:user.email},'confirm',too);
-                user.TOKEN = too;
-                user.save();
+                try {
+                    mailer.sentMailer('admin@gmail.com', { email: user.email }, 'confirm', too).then(json=>{
+                        if(json.code==400){
+                            return done(null, false, json);
+                        }else{
+                            user.TOKEN = too;
+                            user.save();
+                            return done(null, user);
+                        }
+                    });
+                } catch (err) {
+                    return done(null, false,err);
+                }
+                
+            }else{
+                return done(null, user);
             }
 
-            return done(null, user);
+            
 
         }).catch(err => {
             // nay la sai cai ten dn
             return done(err, false, { message: err });
         });
-        
+
     });
 
     passport.use(ls);
