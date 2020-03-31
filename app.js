@@ -29,8 +29,8 @@ app.use(passport.session());
 
 require('./models/EvenCategory.js');
 require('./models/User');
-require('./routes/passport-google'); 
-require('./routes/passportLogin')(app);
+require('./utils/passport-google'); 
+require('./utils/passportLogin')(app);
 
 app.use('/api', require('./routes/authRouters'));
 app.use('/api/evenCategory', require('./routes/eventCategoryRouter'));
