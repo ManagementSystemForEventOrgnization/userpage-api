@@ -18,6 +18,8 @@ const userSchema = new Schema({
     discription: String,
     phoneNumber: String,
     isActive:{type:Boolean,default: false},
+    createAt: { type: Date, default: Date() },
+    updateAt: Date
 })
 
 mongoose.model('users', userSchema);
