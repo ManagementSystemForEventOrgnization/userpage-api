@@ -26,7 +26,7 @@ exports.sentMailer = function (from, { email }, subject, content) {
 
         transporter.verify(function (error, success) {
             if (error) {
-                resolve({ message: 'Server is ready to take our messages!', code: 400 });
+                resolve({ message: 'Server is not ready to take our messages!', code: 400 });
             } else {
                 console.log("Server is ready to take our messages");
             }

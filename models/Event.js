@@ -12,6 +12,7 @@ const eventSchema = new Schema({
         long: String,
         lat: String
     },
+    address : String,
     ticket: {
         price: Number,
         discount: Number
