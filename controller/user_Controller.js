@@ -1,6 +1,10 @@
 var bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
+
 const User = mongoose.model('users');
+const Event = mongoose.model('event');
+const ApplyEvent = mongoose.model('applyEvent');
+
 const mailer = require('../utils/Mailer');
 const otp = require('../utils/otp');
 var passport = require('passport');
@@ -55,13 +59,13 @@ module.exports = {
             res.status(422).json({ message: 'Invalid data' });
             return;
         }
-        
+
         let { sub, name, picture, email } = req.body;
         //let password = bcrypt.hashSync(sub, 10);
-        let userPassport= null;
+        let userPassport = null;
         // can check lai về vấn đề nó đã đăng kí = form trước. thì cần check lại.
         let userExisting = await User.findOne({ $or: [{ TOKEN: sub }, { email: email }] });
-        
+
         req.body.password = sub;
         if (userExisting) {
             userPassport = userExisting;
@@ -73,14 +77,13 @@ module.exports = {
             userPassport = userSave;
         }
         passport.authenticate('local', function (err, user, info) {
-            console.log(user);
             if (err) {
                 return next(err);
             }
             if (!user) {
                 return res.send(info);
             }
-            req.logIn(user, function (err) {
+            req.logIn(user._id, function (err) {
                 if (err) {
                     return next(err);
                 }
@@ -131,7 +134,7 @@ module.exports = {
                 if (!user) {
                     return res.send(info);
                 }
-                req.logIn(user, function (err) {
+                req.logIn(user._id, function (err) {
                     if (err) {
                         return next(err);
                     }
@@ -386,37 +389,30 @@ module.exports = {
         res.status(200).json({ message: 'success' });
     },
 
+    get_History: async (req, res, next) => {
+        let { categotyEventId, startDate, endDate, txtSearch } = req.body;
+        // let event = new Event({name: 'Event test', joinNumber: 123, userId: '5e7c4f04b68a633c840bb5e3', isPayment: false, page:[], address: '78 duong 17', category:'nhạc',endTime: '2020-1-1', limitNumber: 1234, status: 'PENDDING', urlWeb: 'event-test'});
+        
+        // event.save();
+
+        // let appllyEvent = new ApplyEvent({userId: req.user, eventId: '5e85b6bab0108b19dc989d23', isConfirm: true, qrcode: '5e85b6bab0108b19dc989d23'});
+        // appllyEvent.save();
+
+//, { createAt: { $gt: new Date((startDate === undefined ? '1940-01-01' : startDate)) }, $lt: new Date(endDate === undefined ? (new Date()) : endDate) }
+        let idUserLogin = req.user;
+        try {
+            let arrEvent = await ApplyEvent.aggregate([
+                { $match:  { userId: idUserLogin }},
+                
+            ]);
+
+            console.log(arrEvent);
+            res.status(200).json(arrEvent);
+        } catch (err) {
+             res.status(200).json(err);
+        }
+
+
+    }
+
 }
-
-// }
-
-//     // cai này bỏ nha nhựt vì chốt vs bên font-end là sẽ gữi mail sau khi nhập mail xong và gữi code đi luôn
-//     // cai nay can trao doi lai de thuan tien cho viec check.
-//     exports.verifyAccount = async (req, res) => {
-//         if (typeof req.params.token === 'undefined') {
-//             res.status(402).json({ message: "!invalid" });
-//             return;
-//         }
-//         let token = req.params.token;
-//         let tokenFind = null;
-//         try {
-//             tokenFind = await user.findOne({ 'token': token });
-//         }
-//         catch (err) {
-//             res.status(500).json({ message: err });
-//             return;
-//         }
-//         if (tokenFind == null) {
-//             res.status(404).json({ message: "not found!!!" });
-//             return;
-//         }
-//         try {
-//             await user.findByIdAndUpdate(tokenFind._id,
-//                 { $set: { is_verify: true } }, { new: true });
-//         }
-//         catch (err) {
-//             res.status(500).json({ message: err });
-//             return;
-//         }
-//         res.status(200).json({ message: "success!" });
-//     }

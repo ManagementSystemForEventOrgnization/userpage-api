@@ -1,13 +1,12 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
-const PageEvent = mongoose.model('pageEvent');
 
 const eventSchema = new Schema({
     name: String,
     joinNumber: Number,
     userId: Schema.Types.ObjectId,
     isPayment: Boolean,
-    page: [PageEvent],
+    page: [Schema.Types.ObjectId],
     map: {
         long: String,
         lat: String

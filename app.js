@@ -9,7 +9,7 @@ const passport = require('passport');
 const mongoose = require('mongoose');
 
 
-mongoose.connect(keys.mongoURI,  {useNewUrlParser: true, useUnifiedTopology: true});
+mongoose.connect(keys.mongoURI,  {useNewUrlParser: true, useUnifiedTopology: true,'useCreateIndex': true});
 
 var app = express();
 
@@ -27,8 +27,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(passport.initialize());
 app.use(passport.session());
 
-require('./models/EvenCategory.js');
-require('./models/User');
+require('./middlewares/loadMongoose');
+
 require('./utils/passport-google'); 
 require('./utils/passportLogin')(app);
 

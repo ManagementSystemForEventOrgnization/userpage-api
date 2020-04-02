@@ -15,15 +15,15 @@ router.get('/', (req, res) => {
 
 router.post('/login', function (req, res, next) {
     passport.authenticate('local', function (err, user, info) {
+        
         if (err) {
             return next(err);
         }
         if (!user) {
             return res.status(400).json(info);
         }
-        req.logIn(user, function (err) {
+        req.logIn(user._id, function (err) {
             if (err) { return next(err); }
-            let u = user;
             return res.status(200).json(user);
         });
     })(req, res, next);
@@ -44,5 +44,5 @@ router.get('/updatePassword', Unauthorized, controller_User.updatePassword);
 
 router.post('/user/updateInfor', Unauthorized, controller_User.updateInfor);
 router.get('/user/profile', Unauthorized, controller_User.profile_user);
-
+router.get('/user/history', Unauthorized, controller_User.get_History);
 module.exports = router;
