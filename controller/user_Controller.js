@@ -1,5 +1,6 @@
 var bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
+const ObjectId = mongoose.Types.ObjectId;
 
 const User = mongoose.model('users');
 const Event = mongoose.model('event');
@@ -390,26 +391,43 @@ module.exports = {
     },
 
     get_History: async (req, res, next) => {
-        let { categotyEventId, startDate, endDate, txtSearch } = req.body;
-        // let event = new Event({name: 'Event test', joinNumber: 123, userId: '5e7c4f04b68a633c840bb5e3', isPayment: false, page:[], address: '78 duong 17', category:'nhạc',endTime: '2020-1-1', limitNumber: 1234, status: 'PENDDING', urlWeb: 'event-test'});
-        
+
+        let { categotyEventId, startDate, endDate, txtSearch, pageNumber, numberRecord } = req.body;
+
+        pageNumber = pageNumber || 1;
+        numberRecord = numberRecord || 10;
+
+        // let event = new Event({name: 'Event test123213213', joinNumber: 123, userId: '5e7c4f04b68a633c840bb5e3', isPayment: false, page:[], address: '78 duong 17', category:'nhạc',endTime: '2020-1-1', limitNumber: 1234, status: 'PENDDING', urlWeb: 'event-test'});
+
         // event.save();
 
-        // let appllyEvent = new ApplyEvent({userId: req.user, eventId: '5e85b6bab0108b19dc989d23', isConfirm: true, qrcode: '5e85b6bab0108b19dc989d23'});
+        // let appllyEvent = new ApplyEvent({userId: req.user, eventId: '5e85fc2db308bb30d0269fd9', isConfirm: true, qrcode: '5e85fc2db308bb30d0269fd9'});
         // appllyEvent.save();
 
-//, { createAt: { $gt: new Date((startDate === undefined ? '1940-01-01' : startDate)) }, $lt: new Date(endDate === undefined ? (new Date()) : endDate) }
+
         let idUserLogin = req.user;
         try {
             let arrEvent = await ApplyEvent.aggregate([
-                { $match:  { userId: idUserLogin }},
-                
+                {
+                    $match: {
+                        $and: [{
+                            createAt: {
+                                $gt: new Date((startDate || '1940-01-01')),
+                                $lt: new Date(endDate || (new Date().toString()))
+                            }
+                        },
+                        { userId: ObjectId(idUserLogin) }]
+                    }
+                },
+                { $lookup: { from: "events", localField: "eventId", foreignField: "_id", as: "event" } },
+                { $unwind: "$event" },
+                { $match: { "event.status": { $nin: ["HUY"] } } },
+                { $project: { "event": 1 } },
+                {$limit : numberRecord}
             ]);
-
-            console.log(arrEvent);
             res.status(200).json(arrEvent);
         } catch (err) {
-             res.status(200).json(err);
+            res.status(200).json(err);
         }
 
 
