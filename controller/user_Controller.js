@@ -15,6 +15,22 @@ var passport = require('passport');
 
 module.exports = {
 
+    login: (req,res,next)=>{
+        passport.authenticate('local', function (err, user, info) {
+        
+            if (err) {
+                return next(err);
+            }
+            if (!user) {
+                return res.status(400).json(info);
+            }
+            req.logIn(user._id, function (err) {
+                if (err) { return next(err); }
+                return res.status(200).json(user);
+            });
+        })(req, res, next);
+    },
+
     logout: async (req, res) => {
         req.logout();
         res.status(200).json({ message: 'success' });
@@ -397,14 +413,6 @@ module.exports = {
         pageNumber = pageNumber || 1;
         numberRecord = numberRecord || 10;
 
-        // let event = new Event({name: 'Event test123213213', joinNumber: 123, userId: '5e7c4f04b68a633c840bb5e3', isPayment: false, page:[], address: '78 duong 17', category:'nhạc',endTime: '2020-1-1', limitNumber: 1234, status: 'PENDDING', urlWeb: 'event-test'});
-
-        // event.save();
-
-        // let appllyEvent = new ApplyEvent({userId: '5e7c55125ba6431a80c6f9f1', eventId: '5e85fc2db308bb30d0269fd9', isConfirm: true, qrcode: '5e85fc2db308bb30d0269fd9'});
-        // appllyEvent.save();
-
-
         let idUserLogin = req.user;
         try {
 
@@ -433,6 +441,7 @@ module.exports = {
                                                     { $eq: ["$_id", "$$event_id"] },
                                                     { $cond: [categotyEventId, { $eq: ["$category", categotyEventId] }, {}] }
                                                 ],
+                                                //$text: {$search: txtSearch}
                                         },
                                         $text: { $search: txtSearch }
                                     }
@@ -476,7 +485,6 @@ module.exports = {
                                 {
                                     $match:
                                     {
-
                                         $expr:
                                         {
                                             $and:
