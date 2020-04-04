@@ -56,10 +56,7 @@ module.exports = {
     },
 
     login_google: async (req, res, next) => {
-        if ((typeof req.body.email === 'undefined')
-            || (typeof req.body.googleId === 'undefined')
-            || typeof req.body.name === 'undefined'
-        ) {
+        if ((typeof req.body.profile === 'undefined')) {
             res.status(422).json({ message: 'Invalid data' });
             return;
         }
@@ -515,7 +512,6 @@ module.exports = {
                     { $limit: numberRecord }
                 ]);
             }
-
             res.status(200).json(arrEvent);
         } catch (err) {
             res.status(500).json(err);
