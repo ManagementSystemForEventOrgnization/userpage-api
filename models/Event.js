@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const eventSchema = new Schema({
-    name: String,
+    name: { type:String, "index": "text" },
     joinNumber: Number,
     userId: Schema.Types.ObjectId,
     isPayment: Boolean,
@@ -11,7 +11,7 @@ const eventSchema = new Schema({
         long: String,
         lat: String
     },
-    address : String,
+    address : { type:String, "index": "text" },
     ticket: {
         price: Number,
         discount: Number
@@ -20,7 +20,7 @@ const eventSchema = new Schema({
     endTime: Date,
     limitNumber: Number,
     startTime: { type: Date, default: Date() },
-    status: String,
+    status: { type:String, "index": "text" },
     urlWeb: String,
     createAt: { type: Date, default: Date() },
     updateAt: Date

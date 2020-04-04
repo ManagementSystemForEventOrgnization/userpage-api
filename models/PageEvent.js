@@ -2,8 +2,8 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const pageEventSchema = new Schema({
-    title: String,
-    discription: String,
+    title: { type:String, "index": "text" },
+    discription: { type:String, "index": "text" },
     eventId: Schema.Types.ObjectId,
     index: {
         row: Number,

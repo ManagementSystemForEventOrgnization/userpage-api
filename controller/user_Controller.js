@@ -4,6 +4,9 @@ const ObjectId = mongoose.Types.ObjectId;
 
 const User = mongoose.model('users');
 const Event = mongoose.model('event');
+
+Event.createIndexes({ "$**": 'text' });
+
 const ApplyEvent = mongoose.model('applyEvent');
 
 const mailer = require('../utils/Mailer');
@@ -54,27 +57,27 @@ module.exports = {
 
     login_google: async (req, res, next) => {
         if ((typeof req.body.email === 'undefined')
-            || (typeof req.body.sub === 'undefined')
-            || typeof req.body.fullName === 'undefined'
+            || (typeof req.body.googleId === 'undefined')
+            || typeof req.body.name === 'undefined'
         ) {
             res.status(422).json({ message: 'Invalid data' });
             return;
         }
 
-        let { sub, name, picture, email } = req.body;
-        //let password = bcrypt.hashSync(sub, 10);
+        let { googleId, name, imageUrl, email } = req.body.profile;
         let userPassport = null;
         // can check lai về vấn đề nó đã đăng kí = form trước. thì cần check lại.
-        let userExisting = await User.findOne({ $or: [{ TOKEN: sub }, { email: email }] });
+        let userExisting = await User.findOne({ $or: [{ TOKEN: googleId }, { email: email }] });
 
-        req.body.password = sub;
+        req.body.password = googleId;
+        req.body.email = email;
         if (userExisting) {
             userPassport = userExisting;
-            userExisting.TOKEN = sub;
+            userExisting.TOKEN = googleId;
             userExisting.isActive = true;
             userExisting.save();
         } else {
-            let userSave = await new User({ email, avatar: picture, fullName: name, TOKEN: sub, isActive: true }).save();
+            let userSave = await new User({ email, avatar: imageUrl, fullName: name, TOKEN: googleId, isActive: true }).save();
             userPassport = userSave;
         }
         passport.authenticate('local', function (err, user, info) {
@@ -401,33 +404,121 @@ module.exports = {
 
         // event.save();
 
-        // let appllyEvent = new ApplyEvent({userId: req.user, eventId: '5e85fc2db308bb30d0269fd9', isConfirm: true, qrcode: '5e85fc2db308bb30d0269fd9'});
+        // let appllyEvent = new ApplyEvent({userId: '5e7c55125ba6431a80c6f9f1', eventId: '5e85fc2db308bb30d0269fd9', isConfirm: true, qrcode: '5e85fc2db308bb30d0269fd9'});
         // appllyEvent.save();
 
 
         let idUserLogin = req.user;
         try {
-            let arrEvent = await ApplyEvent.aggregate([
-                {
-                    $match: {
-                        $and: [{
-                            createAt: {
-                                $gt: new Date((startDate || '1940-01-01')),
-                                $lt: new Date(endDate || (new Date().toString()))
-                            }
+
+            let arrEvent = null;
+
+            if (txtSearch) {
+                arrEvent = await ApplyEvent.aggregate([
+                    {
+                        $match: {
+                            userId: ObjectId(idUserLogin)
+                        }
+                    },
+                    {
+                        $lookup:
+                        {
+                            from: "events",
+                            let: { event_id: "$eventId" },
+                            pipeline: [
+                                {
+                                    $match:
+                                    {
+                                        $expr:
+                                        {
+                                            $and:
+                                                [
+                                                    { $eq: ["$_id", "$$event_id"] },
+                                                    { $cond: [categotyEventId, { $eq: ["$category", categotyEventId] }, {}] }
+                                                ],
+                                        },
+                                        $text: { $search: txtSearch }
+                                    }
+                                },
+                            ],
+                            as: "events"
+                        }
+                    },
+                    {
+                        $match: {
+                            $and: [{
+                                "events.startTime": {
+                                    $gt: new Date((startDate || '1940-01-01')),
+                                    $lt: new Date(endDate || (new Date().toString()))
+                                }
+                            },
+                            { "events.status": { $nin: ["HUY"] } }
+                            ]
+
                         },
-                        { userId: ObjectId(idUserLogin) }]
-                    }
-                },
-                { $lookup: { from: "events", localField: "eventId", foreignField: "_id", as: "event" } },
-                { $unwind: "$event" },
-                { $match: { "event.status": { $nin: ["HUY"] } } },
-                { $project: { "event": 1 } },
-                {$limit : numberRecord}
-            ]);
+                    },
+                    {
+                        $project: { "events": 1 }
+                    },
+                    { $skip: (+numberRecord * (+pageNumber - 1)) },
+                    { $limit: numberRecord }
+                ]);
+            } else {
+                arrEvent = await ApplyEvent.aggregate([
+                    {
+                        $match: {
+                            userId: ObjectId(idUserLogin)
+                        }
+                    },
+                    {
+                        $lookup:
+                        {
+                            from: "events",
+                            let: { event_id: "$eventId" },
+                            pipeline: [
+                                {
+                                    $match:
+                                    {
+
+                                        $expr:
+                                        {
+                                            $and:
+                                                [
+                                                    { $eq: ["$_id", "$$event_id"] },
+                                                    { $cond: [categotyEventId, { $eq: ["$category", categotyEventId] }, {}] }
+                                                ],
+                                        },
+                                        // $text: { $search: txtSearch }
+                                    }
+                                },
+                            ],
+                            as: "events"
+                        }
+                    },
+                    {
+                        $match: {
+                            $and: [{
+                                "events.startTime": {
+                                    $gt: new Date((startDate || '1940-01-01')),
+                                    $lt: new Date(endDate || (new Date().toString()))
+                                }
+                            },
+                            { "events.status": { $nin: ["HUY"] } },
+
+                            ]
+                        },
+                    },
+                    {
+                        $project: { "events": 1 }
+                    },
+                    { $skip: (+numberRecord * (+pageNumber - 1)) },
+                    { $limit: numberRecord }
+                ]);
+            }
+
             res.status(200).json(arrEvent);
         } catch (err) {
-            res.status(200).json(err);
+            res.status(500).json(err);
         }
 
 
