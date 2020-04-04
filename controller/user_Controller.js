@@ -55,7 +55,7 @@ module.exports = {
                 let user = await User.findOne({ email: email });
                 if (!user) {
                     // xac nhan mail nay  chua dùng nên gữi mail đi và thông báo cho người dùng biết luôn là mail có tồn tại hay không để xác nhận.
-                    const token = '123';
+                    const token = Math.floor( Math.random()*1000)+ 1000;
                     mailer.sentMailer('admin@gmail.com', req.body, 'confirm', token)
                         .then(json => {
                             return res.status(200).json({ token });
