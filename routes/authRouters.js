@@ -1,8 +1,8 @@
-const passport = require('passport');
 var express = require('express');
 var router = express.Router();
 const controller_User = require('../controller/user_Controller');
 const Unauthorized = require('../middlewares/loginAuth');
+const Authorization = require('../middlewares/authorization');
 
 router.get('/', (req, res) => {
     res.send(req.user)
@@ -18,7 +18,8 @@ router.get('/forgotPassword', controller_User.forgotPassword);
 
 // api user middlewares
 router.get('/logout', Unauthorized, controller_User.logout);
-router.get('/current_user', Unauthorized, controller_User.current_user);
+// check xem co active chua.
+router.get('/current_user', Unauthorized, Authorization, controller_User.current_user);
 router.post('/checkMail', Unauthorized, controller_User.check_Mail);
 router.post('/verifyToken', Unauthorized, controller_User.verifyToken);
 router.get('/updatePassword', Unauthorized, controller_User.updatePassword);
