@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const cardSchema = new Schema({
-    cardCustomerId: Schema.Types.ObjectId,
+    customerId: String,
     userId: Schema.Types.ObjectId,
     cardNumber: String,
     cardExpire: String,
@@ -10,4 +10,4 @@ const cardSchema = new Schema({
     updateAt: Date
 })
 
-mongoose.model('card', cardSchema);
+mongoose.model('cards', cardSchema);
