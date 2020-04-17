@@ -294,7 +294,7 @@ module.exports = {
   		 	 		if (err != null) {
   						res.status(600).json(err);
   					} else {
-						res.send(card);
+						res.send({"result": true});
   					}
  				 }
 			);
