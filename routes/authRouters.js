@@ -26,4 +26,5 @@ router.get('/updatePassword', Unauthorized, controller_User.updatePassword);
 router.post('/user/updateInfor', Unauthorized, controller_User.updateInfor);
 router.get('/user/profile', Unauthorized, controller_User.profile_user);
 router.get('/user/history', Unauthorized, controller_User.get_History);
+
 module.exports = router;
