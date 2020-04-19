@@ -1,25 +1,29 @@
-const passport = require('passport');
+var express = require('express');
+var router = express.Router();
+const controller_User = require('../controller/user_Controller');
+const Unauthorized = require('../middlewares/loginAuth');
+const Authorization = require('../middlewares/authorization');
 
-module.exports = (app) => {
-    app.get('/auth/google', passport.authenticate('google', {
-        scope: ['profile', 'email']
-    }));
+router.get('/', (req, res) => {
+    res.send(req.user)
+});
 
-    app.get(
-        '/auth/google/callback',
-        passport.authenticate('google'),
-        (req,res)=>{
-            res.send('callBack auth google');
-        }
-    );
+router.post('/login', controller_User.login);
+router.post('/login-google', controller_User.login_google);
+router.post('/register', controller_User.register);
+router.post('/requestForgotPassword', controller_User.requestForgotPassword);
+router.post('/verifyForgotPassword', controller_User.verifyForgotPassword);
+router.get('/forgotPassword', controller_User.forgotPassword);
 
-    app.get('/api/logout', (req, res) => {
-        req.logout();
-        console.log(req);
-        res.redirect('/');
-    });
 
-    app.get('/api/current_user', (req, res) => {
-        res.send(req.user);
-    });
-}
+// api user middlewares
+router.get('/logout', Unauthorized, controller_User.logout);
+// check xem co active chua.
+router.get('/current_user', Unauthorized, Authorization, controller_User.current_user);
+router.post('/checkMail', Unauthorized, controller_User.check_Mail);
+router.post('/verifyToken', Unauthorized, controller_User.verifyToken);
+router.get('/updatePassword', Unauthorized, controller_User.updatePassword);
+router.post('/user/updateInfor', Unauthorized, controller_User.updateInfor);
+router.get('/user/profile', Unauthorized, controller_User.profile_user);
+router.get('/user/history', Unauthorized, controller_User.get_History);
+module.exports = router;
