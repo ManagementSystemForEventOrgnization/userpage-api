@@ -16,38 +16,38 @@ module.exports = {
 
     login: (req, res, next) => {
         passport.authenticate('local', function (err, user, info) {
-
             if (err) {
                 return next(err);
             }
             if (!user) {
-                return  res.status(600).json({error: {message: info.message, code: 620 }});
+                return res.status(600).json({ error: { message: info.message, code: 620 } });
             }
             req.logIn(user._id, function (err) {
                 if (err) { return next(err); }
-                return res.status(200).json({ result: user});;
+                return res.status(200).json({ result: user });;
             });
         })(req, res, next);
     },
 
     logout: async (req, res) => {
         req.logout();
-        res.status(200).json({ message: 'success' });
+        res.status(200).json({ result: { message: 'success' } });
     },
 
-    current_user: async (req, res) => {
+    current_user: async (req, res, next) => {
         let id = req.user;
         try {
             let u = await User.findById(id);
-            res.status(200).json(u);
+            res.status(200).json({ result: u });
         } catch (err) {
-            res.status(500).json({ message: err });
+            //res.status(600).json({ error: { message: err, code: 500 } });
+            next(err)
         }
     },
 
-    check_Mail: async (req, res) => {
+    check_Mail: async (req, res,next) => {
         if (typeof req.body.email === 'undefined') {
-            return res.status(404).json({ message: 'Invalid value' });
+            return res.status(600).json({ error: { message: 'Invalid value', code: 400 } });
         } else {
             let { email } = req.body;
             try {
@@ -55,24 +55,25 @@ module.exports = {
                 if (!user) {
                     // xac nhan mail nay  chua dùng nên gữi mail đi và thông báo cho người dùng biết luôn là mail có tồn tại hay không để xác nhận.
                     const token = Math.floor(Math.random() * 1000) + 1000;
-                    mailer.sentMailer('admin@gmail.com', req.body, 'confirm',`${token}`)
+                    mailer.sentMailer('admin@gmail.com', req.body, 'confirm', `${token}`)
                         .then(json => {
-                            return res.status(200).json({ token });
+                            return res.status(200).json({ result: token });
                         }).catch(err => {
-                            return res.status(404).json(err);
+                            //return res.status(600).json({ error: { message: err, code: 400 } })
+                            next(err);
                         })
                 } else {
-                    return res.status(409).json({ message: 'Email already exist' });
+                    return res.status(600).json({ error: { message: 'Email already exist', code: 500 } });
                 }
             } catch (err) {
-                return res.status(500).json({ message: err });
+                return res.status(600).json({ error: { message: err, code: 500 } })
             }
         }
     },
 
     login_google: async (req, res, next) => {
         if ((typeof req.body.profile === 'undefined')) {
-            res.status(422).json({ message: 'Invalid data' });
+            res.status(600).json({ error: { message: 'Invalid value', code: 400 } });
             return;
         }
 
@@ -97,13 +98,13 @@ module.exports = {
                 return next(err);
             }
             if (!user) {
-                return res.send(info);
+                return res.status(600).json({ error: { message: info.message, code: 620 } });
             }
             req.logIn(user._id, function (err) {
                 if (err) {
                     return next(err);
                 }
-                return res.status(200).json(user);
+                return res.status(200).json({ result: user });
             });
         })(req, res, next);
 
@@ -114,25 +115,25 @@ module.exports = {
             || (typeof req.body.password === 'undefined')
             || typeof req.body.fullName === 'undefined'
         ) {
-            res.status(422).json({ message: 'Invalid data' });
+            res.status(600).json({ error: { message: 'Invalid data', code: 422 } });
             return;
         }
         let { email, password, fullName } = req.body;
         let regex = /^[a-zA-Z][a-z0-9A-Z\.\_]{1,}@[a-z0-9]{2,}(\.[a-z0-9]{1,4}){1,2}$/gm
         if (!regex.test(email) || password.length < 3) {
-            res.status(422).json({ message: 'Invalid mail data' });
+            res.status(600).json({ error: { message: 'Invalid mail data', code: 422 } });
             return;
         }
         let userFind = null;
         try {
             userFind = await User.findOne({ 'email': email });
-        }
-        catch (err) {
-            res.status(500).json({ message: err });
+        }catch (err) {
+            //res.status(600).json({ error: { message: err, code: 500 } });
+            next(err);
             return;
         }
         if (userFind) {
-            res.status(409).json({ message: 'Email already exist' });
+            res.status(600).json({ error: { message: 'Email already exist', code: 409 } });
             return;
         }
         password = bcrypt.hashSync(password, 10);
@@ -148,35 +149,37 @@ module.exports = {
                     return next(err);
                 }
                 if (!user) {
-                    return res.send(info);
+                    return res.status(600).json({ error: { message: info.message, code: 620 } });
                 }
                 req.logIn(user._id, function (err) {
                     if (err) {
                         return next(err);
                     }
-                    return res.status(200).json(user);
+                    return res.status(200).json({ result: user });
                 });
             })(req, res, next);
         }
         catch (err) {
-            res.status(500).json({ message: err });
+            //res.status(600).json({ error: { message: err, code: 500 } });
+            next(err);
             return;
         }
     },
 
-    profile_user: async (req, res) => {
+    profile_user: async (req, res, next) => {
         let id = req.user;
         try {
             let u = await User.findById(id);
-            res.status(200).json(u);
+            res.status(200).json({ result: u });
         } catch (err) {
-            res.status(500).json({ message: err });
+            //res.status(600).json({ error: { message: err, code: 500 } });
+            next(err);
         }
     },
 
-    requestForgotPassword: async (req, res) => {
+    requestForgotPassword: async (req, res, next) => {
         if (typeof req.body.email === 'undefined') {
-            res.json({ message: "Invalid data" });
+            res.status(600).json({ error: { message: "Invalid data", code: 422 } });
             return;
         }
 
@@ -187,12 +190,13 @@ module.exports = {
             currentUser = await User.findOne({ 'email': email });
         }
         catch (err) {
-            res.json({ message: err });
+            //res.status(600).json({ error: { message: err, code: 500 } });
+            next(err)
             return;
         }
 
         if (currentUser == null) {
-            res.status(422).json({ message: "Invalid data" });
+            res.status(600).json({ error: { message: "Invalid data", code: 422 } });
         }
 
         mailer.sentMailer('admin@gmail.com', email, 'confirm', otp.generateOTP())
@@ -202,18 +206,20 @@ module.exports = {
                     await currentUser.save();
                 }
                 catch (err) {
-                    res.status(500).json({ message: err });
+                    //res.status(600).json({ error: { message: err, code: 500 } });
+                    next(err)
                     return;
                 }
-                res.status(201).json({ message: 'success', email: email })
+                res.status(200).json({ result: { message: 'success', email: email } })
             }).catch(err => {
-                res.status(500).json({ message: 'Send email fail' });
+                //res.status(600).json({ error: { message: err, code: 500 } });
+                next(err);
                 return;
             })
     },
-    verifyToken: async (req, res) => {
+    verifyToken: async (req, res, next) => {
         if (typeof req.body.token === 'undefined') {
-            res.status(402).json({ message: 'Invalid value' });
+            res.status(600).json({ error: { message: 'Invalid value', code: 402 } });
             return;
         }
         let { token } = req.body;
@@ -222,25 +228,26 @@ module.exports = {
             let id = req.user;
             userNow = await User.findById(id);
         } catch (err) {
-            res.json(err);
+            //res.json(err);
+            next(err);
         }
 
         let tokenDB = userNow.TOKEN;
         if (token != tokenDB) {
-            res.status(422).json({ message: "OTP fail" });
+            res.status(600).json({ error: { message: "OTP fail", code: 422 } });
             return;
         } else {
             userNow.isActive = true;
             userNow.TOKEN = "";
             await userNow.save();
-            res.status(200).json({ message: 'success' });
+            res.status(200).json({ result: { message: 'success' } });
         }
     },
 
-    verifyForgotPassword: async (req, res) => {
+    verifyForgotPassword: async (req, res, next) => {
         if (typeof req.body.email === 'undefined'
             || typeof req.body.otp === 'undefined') {
-            res.status(402).json({ message: "Invalid data" });
+            res.status(600).json({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
@@ -251,28 +258,29 @@ module.exports = {
             currentUser = await User.findOne({ 'email': email });
         }
         catch (err) {
-            res.json({ message: err });
+            //res.json({ message: err });
+            next(err);
             return;
         }
 
         if (currentUser == null) {
-            res.status(422).json({ message: "Invalid data" });
+            res.status(600).json({ error: { message: "Invalid data", code: 422 } });
             return;
         }
 
         if (currentUser.token != otp) {
-            res.status(422).json({ message: "OTP fail" });
+            res.status(600).json({ error: { message: "OTP fail", code: 422 } });
             return;
         }
 
-        res.status(200).json({ message: "success", otp: otp });
+        res.status(200).json({ result: { message: "success", otp: otp } });
     },
 
-    forgotPassword: async (req, res) => {
+    forgotPassword: async (req, res, next) => {
         if (typeof req.body.email === 'undefined'
             || typeof req.body.otp === 'undefined'
             || typeof req.body.newPassword === 'undefined') {
-            res.status(402).json({ message: "Invalid data" });
+            res.status(600).json({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
@@ -283,17 +291,18 @@ module.exports = {
             currentUser = await User.findOne({ 'email': email });
         }
         catch (err) {
-            res.json({ message: err });
+            //res.json({ message: err });
+            next(err)
             return;
         }
 
         if (currentUser == null) {
-            res.status(422).json({ message: "Invalid data" });
+            res.status(600).json({ error: { message: "Invalid data", code: 422 } });
             return;
         }
 
         if (currentUser.token != otp) {
-            res.status(422).json({ message: "OTP fail" });
+            res.status(600).json({ error: { message: "OTP fail", code: 422 } });
             return;
         }
 
@@ -303,16 +312,17 @@ module.exports = {
             await currentUser.save();
         }
         catch (err) {
-            res.status(500).json({ message: err });
+            //res.status(600).json({ error: { message: err, code: 500 } });
+            next(err);
             return;
         }
 
-        res.status(201).json({ message: 'success' })
+        res.status(200).json({ result: { message: 'success' } })
     },
 
-    updateInfor: async (req, res) => {
+    updateInfor: async (req, res, next) => {
         if (typeof req.body.email === 'undefined') {
-            res.status(422).json({ message: 'Invalid data' });
+            res.status(600).json({ error: { message: 'Invalid data', code: 422 } });
             return;
         }
 
@@ -323,12 +333,13 @@ module.exports = {
             currentUser = await User.findOne({ 'email': email })
         }
         catch (err) {
-            res.status(500).json({ message: err });
+            //res.status(600).json({ error: { message: err, code: 500 } });
+            next(err)
             return;
         }
 
         if (currentUser == null) {
-            res.status(422).json({ message: "not found" });
+            res.status(600).json({ error: { message: "not found", code: 422 } });
             return;
         }
 
@@ -344,30 +355,33 @@ module.exports = {
             await currentUser.save()
         }
         catch (err) {
-            res.status(500).json({ message: err });
+            //res.status(600).json({ error: { message: err, code: 500 } });
+            next(err)
             return;
         }
 
         res.status(200).json({
-            message: 'success', user: {
-                email: currentUser.email,
-                fullName: currentUser.fullName,
-                birthday: currentUser.birthday,
-                gender: currentUser.gender,
-                job: currentUser.job,
-                id: currentUser._id,
-                phone: currentUser.phone,
-                discription: currentUser.discription,
-                avatar: currentUser.avatar
+            result: {
+                message: 'success', user: {
+                    email: currentUser.email,
+                    fullName: currentUser.fullName,
+                    birthday: currentUser.birthday,
+                    gender: currentUser.gender,
+                    job: currentUser.job,
+                    id: currentUser._id,
+                    phone: currentUser.phone,
+                    discription: currentUser.discription,
+                    avatar: currentUser.avatar
+                }
             }
         });
     },
 
-    updatePassword: async (req, res) => {
+    updatePassword: async (req, res, next) => {
         if (typeof req.body.oldpassword === 'undefined'
             || typeof req.body.newpassword === 'undefined'
             || typeof req.body.email === 'undefined') {
-            res.status(422).json({ message: 'Invalid data' });
+            res.status(600).json({ error: { message: 'Invalid data', code: 422 } });
             return;
         }
 
@@ -378,17 +392,18 @@ module.exports = {
             currentUser = await User.findOne({ 'email': email });
         }
         catch (err) {
-            res.json({ message: err });
+            //res.json({ message: err });
+            next(err)
             return;
         }
 
         if (currentUser == null) {
-            res.status(422).json({ message: "Invalid data" });
+            res.status(600).json({ error: { message: "Invalid data", code: 422 } });
             return;
         }
 
         if (!bcrypt.compareSync(oldpassword, currentUser.hashPass)) {
-            res.status(423).json({ message: 'Current password is wrong' });
+            res.status(600).json({ error: { message: 'Current password is wrong', code: 423 } });
             return;
         }
 
@@ -398,17 +413,17 @@ module.exports = {
             await currentUser.save()
         }
         catch (err) {
-            res.status(500).json({ message: err });
+            //res.status(600).json({error: {  message: err, code: 500 }});
+            next(err)
             return;
         }
-
-        res.status(200).json({ message: 'success' });
+        res.status(200).json({result:{ message: 'success' }});
     },
 
     get_History: async (req, res, next) => {
 
-        let { categotyEventId, startDate, endDate, txtSearch, pageNumber, numberRecord } = req.body;
-        txtSearch = txtSearch||'';
+        let { categoryEventId, startDate, endDate, txtSearch, pageNumber, numberRecord } = req.body;
+        txtSearch = txtSearch || '';
 
         pageNumber = pageNumber || 1;
         numberRecord = numberRecord || 10;
@@ -421,14 +436,14 @@ module.exports = {
             let conditionQuery = {
                 $expr: {
                     $and: [
-                            { $eq: ["$_id", "$$event_id"] },
-                            { $cond: [categotyEventId, { $eq: ["$category", categotyEventId] }, {}] },
-                        ],
+                        { $eq: ["$_id", "$$event_id"] },
+                        { $cond: [categoryEventId, { $eq: ["$category", categoryEventId] }, {}] },
+                    ],
                 },
             };
 
             if (txtSearch != "") {
-                conditionQuery.$text = {$search: txtSearch};
+                conditionQuery.$text = { $search: txtSearch };
             }
             arrEvent = await ApplyEvent.aggregate([
                 {
@@ -443,7 +458,7 @@ module.exports = {
                         let: { event_id: "$eventId" },
                         pipeline: [
                             {
-                                $match:conditionQuery
+                                $match: conditionQuery
                             },
                         ],
                         as: "events"
@@ -469,11 +484,10 @@ module.exports = {
                 { $limit: numberRecord }
             ]);
 
-
-
-            res.status(200).json(arrEvent);
+            res.status(200).json({result: arrEvent});
         } catch (err) {
-            res.status(500).json(err);
+            //res.status(600).json({error: {  message: err, code: 500 }});
+            next(err);
         }
 
 
