@@ -173,24 +173,7 @@ module.exports = {
                         return next(err);
                     }
 
-                    // let token = otp.generateOTP();
-
-                    // mailer.sentMailer('admin@gmail.com', email, 'confirm', token)
-                    // .then(async (json) => {
-                    //     newUser.TOKEN = token;
-        
-                    //     try {
-                    //         await newUser.save();
-                    //     }
-                    //     catch (err) {
-                    //         next(err)
-                    //         return;
-                    //     }
-        
-                        return res.status(200).json({ result: user })
-                    // }).catch(err => {
-                    //     next(err);
-                    // })
+                    return res.status(200).json({ result: user })
                 });
             })(req, res, next);
         }

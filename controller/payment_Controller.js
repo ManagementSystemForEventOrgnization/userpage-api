@@ -20,7 +20,7 @@ const embeddata = {
 };
 
 module.exports = {
-	create_order: async (req, res) => {
+	create_order: async (req, res, next) => {
 		const items = [];
 
 		const order = {
@@ -42,7 +42,7 @@ module.exports = {
   		.then(result => {
   		  res.status(200).json({ result: result.data });
   		})
-  		.catch(err => res.status(600).json({ error: { message: err, code: 500 } }));
+  		.catch(err => next(err));
 	},
 	
 	create_order_callback: async (req, res) => {
@@ -79,7 +79,7 @@ module.exports = {
   		res.status(200).json(result);
 	},
 	
-	create_charges: async (req, res) => {
+	create_charges: async (req, res, next) => {
 		if (typeof req.body.amount === 'undefined') {
             res.status(600).json({ error: { message: "Invalid data", code: 402 } });
             return;
@@ -90,7 +90,7 @@ module.exports = {
         try {
             cardFind = await Cards.findOne({ 'userId': req.body.userId });
         } catch (err) {
-            res.status(600).json({ error: { message: err, code: 500 } });
+            next(err);
             return;
         }
         
@@ -106,7 +106,7 @@ module.exports = {
   			},
   			function(err, charge) {
   				  if (err != null) {
-						res.status(600).json({ error: { message: err, code: 500 } });
+						next(err);
   					} else {
     					res.status(200).json({ result: charge });
   					}
@@ -114,13 +114,13 @@ module.exports = {
 		}
 	},
 	
-	get_listcard: async (req, res) => {        
+	get_listcard: async (req, res, next) => {        
 		let cardFind = null;
 		
         try {
             cardFind = await Cards.findOne({ 'userId': req.body.userId });
         } catch (err) {
-            res.status(600).json({ error: { message: err, code: 500 } });
+            next(err);
             return;
         }
         
@@ -136,7 +136,7 @@ module.exports = {
 			  	}, 
 			  	function(err, cards) {
 			  		if (err != null) {
-						res.status(600).json({ error: { message: err, code: 500 } });
+						next(err);
   					} else {
     					res.status(200).json({result: cards.data});
   					}
@@ -145,7 +145,7 @@ module.exports = {
 		}
 	},
 	
-	set_card_default: async (req, res) => {
+	set_card_default: async (req, res, next) => {
 		if (typeof req.body.cardId === 'undefined') {
             res.status(600).json({ error: { message: "Invalid data", code: 402 } });
             return;
@@ -156,7 +156,7 @@ module.exports = {
         try {
             cardFind = await Cards.findOne({ 'userId': req.body.userId });
         } catch (err) {
-            res.status(600).json({ error: { message: err, code: 500 } });
+            next(err);
             return;
         }
         
@@ -172,7 +172,7 @@ module.exports = {
 		 		},
  		 		function(err, customer) {
  			 	  if (err != null) {
-						res.status(600).json({ error: { message: err, code: 500 } });
+						next(err);
   					} else {
         				console.log("customer: ", customer, "\n")
     					res.status(200).json({ result: true });
@@ -182,7 +182,7 @@ module.exports = {
 		}
 	},
 	
-	del_card: async (req, res) => {
+	del_card: async (req, res, next) => {
 		if (typeof req.body.cardId === 'undefined') {
             res.status(600).json({ error: { message: "Invalid data", code: 402 } });
             return;
@@ -193,7 +193,7 @@ module.exports = {
         try {
             cardFind = await Cards.findOne({ 'userId': req.body.userId });
         } catch (err) {
-            res.status(600).json({ error: { message: err, code: 500 } });
+            next(err);
             return;
         }
         
@@ -206,7 +206,7 @@ module.exports = {
 		  		req.body.cardId,
  		 		function(err, confirmation) {
  		 		  if (err != null) {
-						res.status(600).json({ error: { message: err, code: 500 } });
+						next(err);
   					} else {
     					res.status(200).json({result: confirmation.deleted});
   					}
@@ -215,13 +215,13 @@ module.exports = {
 		}
 	},
 	
-	del_customer: async (req, res) => {
+	del_customer: async (req, res, next) => {
 		let cardFind = null;
 		
         try {
             cardFind = await Cards.findOne({ 'userId': req.body.userId });
         } catch (err) {
-            res.status(600).json({ error: { message: err, code: 500 } });
+            next(err);
             return;
         }
         
@@ -235,7 +235,7 @@ module.exports = {
         	try {
         		confirmation = await stripe.customers.del(cardFind.customerId);
         	} catch (err) {
-        		res.status(600).json({ error: { message: err, code: 500 } });
+        		next(err);
       	      	return;
         	}
 			
@@ -249,7 +249,7 @@ module.exports = {
 					res.status(200).json({result: false})
 				}
    			} catch (err) {
-				res.status(600).json({ error: { message: err, code: 500 } });
+				next(err);
      	 	}
 		}
 	},
@@ -269,7 +269,7 @@ module.exports = {
 		});
 	},
 	
-	create_customer: async (req, res) => {
+	create_customer: async (req, res, next) => {
 		if (typeof req.body.cardToken === 'undefined') {
             res.status(600).json({ error: { message: "Invalid data", code: 402 } });
             return;
@@ -280,7 +280,7 @@ module.exports = {
         try {
             cardFind = await Cards.findOne({ 'userId': req.body.userId });
         } catch (err) {
-            res.status(600).json({ error: { message: err, code: 500 } });
+            next(err);
             return;
         }
         
@@ -290,7 +290,7 @@ module.exports = {
   				{ source: cardToken },
  				function(err, card) {
   		 	 		if (err != null) {
-						res.status(600).json({ error: { message: err, code: 500 } });
+						next(err);
   					} else {
 						res.status(200).json({ result: true });
   					}
@@ -308,7 +308,7 @@ module.exports = {
    				 	description: 'My First Test Customer (created for API docs)'
  		 		});
  		 	} catch (err) {
-            	res.status(600).json({ error: { message: err, code: 500 } });
+            	next(err);
             	return;
         	}
         	
@@ -330,7 +330,7 @@ module.exports = {
  		 			res.status(600).json({ message: "can't create card customer" });
  		 		} 
             } catch (err) {
-            	res.status(600).json({ error: { message: err, code: 500 } });
+            	next(err);
             	return;
         	}
  		 } else { 				
