@@ -47,7 +47,8 @@ module.exports = (app) => {
                 // false
                 let too = Math.floor( Math.random()*1000)+ 1000;
                 try {
-                    mailer.sentMailer('admin@gmail.com', { email: user.email }, 'confirm', too).then(json=>{
+                    mailer.sentMailer('admin@gmail.com', { email: user.email }, 'confirm', `${too}`).then(json=>{
+                        console.log(json);
                         if(json.code==400){
                             return done(null, false, json);
                         }else{

@@ -21,11 +21,11 @@ module.exports = {
                 return next(err);
             }
             if (!user) {
-                return res.status(400).json(info);
+                return  res.status(600).json({error: {message: info.message, code: 620 }});
             }
             req.logIn(user._id, function (err) {
                 if (err) { return next(err); }
-                return res.status(200).json(user);
+                return res.status(200).json({ result: user});;
             });
         })(req, res, next);
     },
@@ -55,7 +55,7 @@ module.exports = {
                 if (!user) {
                     // xac nhan mail nay  chua dùng nên gữi mail đi và thông báo cho người dùng biết luôn là mail có tồn tại hay không để xác nhận.
                     const token = Math.floor(Math.random() * 1000) + 1000;
-                    mailer.sentMailer('admin@gmail.com', req.body, 'confirm', token)
+                    mailer.sentMailer('admin@gmail.com', req.body, 'confirm',`${token}`)
                         .then(json => {
                             return res.status(200).json({ token });
                         }).catch(err => {
