@@ -10,7 +10,6 @@ router.post('/del_customer', payment_Controller.del_customer);
 router.post('/add_card', payment_Controller.create_customer);
 router.post('/payouts', payment_Controller.payouts);
 
-
 router.post('/zalopay_create_order', payment_Controller.create_order);
 router.post('/create_order_callback', payment_Controller.create_order_callback);
 

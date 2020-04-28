@@ -41,11 +41,11 @@ app.use('/',  require('./routes/googleRouter'));
 
 //Xử lý error 404
 app.use((req, res, next)=>{
-    res.send({loi: '404'})
+    res.status(404).json({error: {message: 'API này hiện tại chưa hổ trợ'}});
 })
 
 app.use((error,req, res, next)=>{
-    res.status(600).json({error: {message: error, code: 500}});
+    res.status(600).json(error);
 })
 
 app.listen(process.env.PORT || 5000, ()=>{
