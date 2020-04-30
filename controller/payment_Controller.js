@@ -20,7 +20,7 @@ const embeddata = {
 };
 
 module.exports = {
-	create_order: async (req, res) => {
+	create_order: async (req, res, next) => {
 		const items = [];
 
 		const order = {
@@ -40,9 +40,9 @@ module.exports = {
 
 		axios.post(config.endpoint, null, { params: order })
   		.then(result => {
-  		  res.send(result.data)
+  		  res.status(200).json({ result: result.data });
   		})
-  		.catch(err => res.status(600).json({ message: err }));
+  		.catch(err => next(err));
 	},
 	
 	create_order_callback: async (req, res) => {
@@ -76,12 +76,12 @@ module.exports = {
   		}
 
   		// thông báo kết quả cho ZaloPay server
-  		res.json(result);
+  		res.status(200).json(result);
 	},
 	
-	create_charges: async (req, res) => {
+	create_charges: async (req, res, next) => {
 		if (typeof req.body.amount === 'undefined') {
-            res.status(422).json({ message: 'Invalid data' });
+            res.status(600).json({ error: { message: "Invalid data", code: 402 } });
             return;
         }
         
@@ -90,12 +90,12 @@ module.exports = {
         try {
             cardFind = await Cards.findOne({ 'userId': req.body.userId });
         } catch (err) {
-            res.status(600).json({ message: err });
+            next(err);
             return;
         }
         
         if (cardFind == null || cardFind.customerId == null) {
-        	res.status(600).json({ message: "card customer not found" });
+        	res.status(600).json({ error: { message: "card customer not found", code: 900 } });
         } else  {
 			stripe.charges.create(
   			{
@@ -106,26 +106,26 @@ module.exports = {
   			},
   			function(err, charge) {
   				  if (err != null) {
-  						res.status(600).json(err);
+						next(err);
   					} else {
-    					res.send({"result": charge});
+    					res.status(200).json({ result: charge });
   					}
  			});
 		}
 	},
 	
-	get_listcard: async (req, res) => {        
+	get_listcard: async (req, res, next) => {        
 		let cardFind = null;
 		
         try {
             cardFind = await Cards.findOne({ 'userId': req.body.userId });
         } catch (err) {
-            res.status(600).json({ message: err });
+            next(err);
             return;
         }
         
         if (cardFind == null || cardFind.customerId == null) {
-        	res.status(600).json({ message: "card customer not found" });
+			res.status(600).json({ error: { message: "card customer not found", code: 900 } });
         } else  {
         	console.log("customerId: ", cardFind.customerId)
 			stripe.customers.listSources(
@@ -136,18 +136,18 @@ module.exports = {
 			  	}, 
 			  	function(err, cards) {
 			  		if (err != null) {
-  						res.status(600).json(err);
+						next(err);
   					} else {
-    					res.send(cards.data);
+    					res.status(200).json({result: cards.data});
   					}
  				}
 			);
 		}
 	},
 	
-	set_card_default: async (req, res) => {
+	set_card_default: async (req, res, next) => {
 		if (typeof req.body.cardId === 'undefined') {
-            res.status(422).json({ message: 'Invalid data' });
+            res.status(600).json({ error: { message: "Invalid data", code: 402 } });
             return;
         }
         
@@ -156,12 +156,12 @@ module.exports = {
         try {
             cardFind = await Cards.findOne({ 'userId': req.body.userId });
         } catch (err) {
-            res.status(600).json({ message: err });
+            next(err);
             return;
         }
         
         if (cardFind == null || cardFind.customerId == null) {
-        	res.status(600).json({ message: "card customer not found" });
+        	res.status(600).json({ error: { message: "card customer not found", code: 900 } });
         } else  {
         	console.log("customerId: ", cardFind.customerId)
         	
@@ -172,19 +172,19 @@ module.exports = {
 		 		},
  		 		function(err, customer) {
  			 	  if (err != null) {
-  						res.status(600).json(err);
+						next(err);
   					} else {
         				console.log("customer: ", customer, "\n")
-    					res.send({"result": true});
+    					res.status(200).json({ result: true });
   					}
  				}
 			);
 		}
 	},
 	
-	del_card: async (req, res) => {
+	del_card: async (req, res, next) => {
 		if (typeof req.body.cardId === 'undefined') {
-            res.status(422).json({ message: 'Invalid data' });
+            res.status(600).json({ error: { message: "Invalid data", code: 402 } });
             return;
         }
         
@@ -193,12 +193,12 @@ module.exports = {
         try {
             cardFind = await Cards.findOne({ 'userId': req.body.userId });
         } catch (err) {
-            res.status(600).json({ message: err });
+            next(err);
             return;
         }
         
         if (cardFind == null || cardFind.customerId == null) {
-        	res.status(600).json({ message: "card customer not found" });
+        	res.status(600).json({ error: { message: "card customer not found", code: 900 } });
         } else  {
        		console.log("customerId: ", cardFind.customerId)
 			stripe.customers.deleteSource(
@@ -206,27 +206,27 @@ module.exports = {
 		  		req.body.cardId,
  		 		function(err, confirmation) {
  		 		  if (err != null) {
-  						res.status(600).json(err);
+						next(err);
   					} else {
-    					res.send({"result": confirmation.deleted});
+    					res.status(200).json({result: confirmation.deleted});
   					}
  				}
 			);
 		}
 	},
 	
-	del_customer: async (req, res) => {
+	del_customer: async (req, res, next) => {
 		let cardFind = null;
 		
         try {
             cardFind = await Cards.findOne({ 'userId': req.body.userId });
         } catch (err) {
-            res.status(600).json({ message: err });
+            next(err);
             return;
         }
         
         if (cardFind == null || cardFind.customerId == null) {
-        	res.status(600).json({ message: "card customer not found" });
+        	res.status(600).json({ error: { message: "card customer not found", code: 900 } });
         } else  {
         	console.log("customerId: ", cardFind.customerId)
         	
@@ -235,7 +235,7 @@ module.exports = {
         	try {
         		confirmation = await stripe.customers.del(cardFind.customerId);
         	} catch (err) {
-        		res.status(600).json({ message: err });
+        		next(err);
       	      	return;
         	}
 			
@@ -244,17 +244,15 @@ module.exports = {
 			try {
 				if (confirmation.deleted) {
 					await Cards.remove({ 'userId': req.body.userId });
-					res.send({"result": true})
+					res.status(200).json({result: true})
 				} else {
-					res.send({"result": false})
+					res.status(200).json({result: false})
 				}
    			} catch (err) {
-      	      res.status(600).json({ message: err });
-      	      return;
+				next(err);
      	 	}
 		}
 	},
-	
 	
 	payouts: async (req, res) => {
 		stripe.balance.retrieve(function(err, balance) {
@@ -262,18 +260,18 @@ module.exports = {
   				{amount: req.body.amount, currency: 'vnd'},
   				function(err, payout) {
   					if (err != null) {
-  						res.status(600).json({err, "balance": balance});
+						res.status(600).json({ error: { message: err, code: 500 }, balance });
   					} else {
-						res.send({"result": payout, "balance": balance});
+						res.status(200).json({ result: { payout, balance } });
   					}
  				 }
 			);
 		});
 	},
 	
-	create_customer: async (req, res) => {
+	create_customer: async (req, res, next) => {
 		if (typeof req.body.cardToken === 'undefined') {
-            res.status(422).json({ message: 'Invalid data' });
+            res.status(600).json({ error: { message: "Invalid data", code: 402 } });
             return;
         }
         
@@ -282,7 +280,7 @@ module.exports = {
         try {
             cardFind = await Cards.findOne({ 'userId': req.body.userId });
         } catch (err) {
-            res.status(600).json({ message: err });
+            next(err);
             return;
         }
         
@@ -292,9 +290,9 @@ module.exports = {
   				{ source: cardToken },
  				function(err, card) {
   		 	 		if (err != null) {
-  						res.status(600).json(err);
+						next(err);
   					} else {
-						res.send({"result": true});
+						res.status(200).json({ result: true });
   					}
  				 }
 			);
@@ -310,7 +308,7 @@ module.exports = {
    				 	description: 'My First Test Customer (created for API docs)'
  		 		});
  		 	} catch (err) {
-            	res.status(600).json({ message: err });
+            	next(err);
             	return;
         	}
         	
@@ -332,7 +330,7 @@ module.exports = {
  		 			res.status(600).json({ message: "can't create card customer" });
  		 		} 
             } catch (err) {
-            	res.status(600).json({ message: err });
+            	next(err);
             	return;
         	}
  		 } else { 				

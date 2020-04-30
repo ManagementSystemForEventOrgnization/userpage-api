@@ -6,12 +6,14 @@ const eventSchema = new Schema({
     joinNumber: Number,
     userId: Schema.Types.ObjectId,
     isPayment: Boolean,
-    page: [Schema.Types.ObjectId],
+    typeOfEvent : String,
     map: {
         long: String,
         lat: String
     },
     address : { type:String, "index": "text" },
+    detailAddress: String,
+    isSellTicket: Boolean,
     ticket: {
         price: Number,
         discount: Number

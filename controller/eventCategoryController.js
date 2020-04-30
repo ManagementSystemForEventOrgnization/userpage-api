@@ -3,14 +3,12 @@ const eventCategory = mongoose.model('eventCategory');
 
 
 module.exports = {
-    getCategory: async (req, res) => {
-        
+    getCategory: async (req, res, next) => {
         try {
-            let category = await eventCategory.find({});
-            res.status(200).json(category);
+            let category = await eventCategory.find({isDelete : {$exists: false}});
+            res.status(200).json({result: category});
         } catch (err) {
-            console.log(err)
-            res.send(err)
+            next({error: {message: 'Lỗi không lấy được dữ liệu', code: 500}})
         }
 
     }

@@ -1,11 +1,9 @@
 var bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
 const ObjectId = mongoose.Types.ObjectId;
-
 const User = mongoose.model('users');
 const Event = mongoose.model('event');
 
-Event.createIndexes({ "$**": 'text' });
 
 const ApplyEvent = mongoose.model('applyEvent');
 
@@ -15,65 +13,70 @@ var passport = require('passport');
 
 module.exports = {
 
-    login: (req,res,next)=>{
-        passport.authenticate('local', function (err, user, info) {
+    login: (req, res, next) => {
         
+        passport.authenticate('local', function (err, user, info) {
             if (err) {
                 return next(err);
             }
+
             if (!user) {
-                return res.status(400).json(info);
+                return next({ error: { message: info.message, code: 620 } });
             }
+
             req.logIn(user._id, function (err) {
                 if (err) { return next(err); }
-                return res.status(200).json(user);
+                return res.status(200).json({ result: user });;
             });
         })(req, res, next);
     },
 
     logout: async (req, res) => {
         req.logout();
-        res.status(200).json({ message: 'success' });
+        res.status(200).json({ result: { success: true } });
     },
 
-    current_user: async (req, res) => {
+    current_user: async (req, res, next) => {
         let id = req.user;
+
         try {
             let u = await User.findById(id);
-            res.status(200).json(u);
+            res.status(200).json({ result: u });
         } catch (err) {
-            res.status(500).json({ message: err });
+            next(err)
         }
     },
 
-    check_Mail: async (req, res) => {
+    check_Mail: async (req, res, next) => {
         if (typeof req.body.email === 'undefined') {
-            return res.status(404).json({ message: 'Invalid value' });
+            return next({ error: { message: 'Invalid value', code: 400 } });
         } else {
             let { email } = req.body;
+
             try {
                 let user = await User.findOne({ email: email });
+
                 if (!user) {
                     // xac nhan mail nay  chua dùng nên gữi mail đi và thông báo cho người dùng biết luôn là mail có tồn tại hay không để xác nhận.
-                    const token = Math.floor( Math.random()*1000)+ 1000;
-                    mailer.sentMailer('admin@gmail.com', req.body, 'confirm', token)
+                    const token = Math.floor(Math.random() * 1000) + 1000;
+                    mailer.sentMailer('admin@gmail.com', req.body, 'confirm', `${token}`)
                         .then(json => {
-                            return res.status(200).json({ token });
+                            return res.status(200).json({ result: token });
                         }).catch(err => {
-                            return res.status(404).json(err);
+                            next(err);
                         })
                 } else {
-                    return res.status(409).json({ message: 'Email already exist' });
+                    return next({ error: { message: 'Email already exist', code: 500 } });
                 }
             } catch (err) {
-                return res.status(500).json({ message: err });
+                return next({ error: { message: err, code: 500 } })
             }
         }
     },
 
     login_google: async (req, res, next) => {
         if ((typeof req.body.profile === 'undefined')) {
-            res.status(422).json({ message: 'Invalid data' });
+            next({ error: { message: 'Invalid value', code: 400 } });
             return;
         }
 
@@ -84,6 +87,7 @@ module.exports = {
 
         req.body.password = googleId;
         req.body.email = email;
+
         if (userExisting) {
             userPassport = userExisting;
             userExisting.TOKEN = googleId;
@@ -93,18 +97,22 @@ module.exports = {
             let userSave = await new User({ email, avatar: imageUrl, fullName: name, TOKEN: googleId, isActive: true }).save();
             userPassport = userSave;
         }
+
         passport.authenticate('local', function (err, user, info) {
             if (err) {
                 return next(err);
             }
+
             if (!user) {
-                return res.send(info);
+                return next({ error: { message: info.message, code: 620 } });
             }
+
             req.logIn(user._id, function (err) {
                 if (err) {
                     return next(err);
                 }
-                return res.status(200).json(user);
+
+                return res.status(200).json({ result: user });
             });
         })(req, res, next);
 
@@ -115,69 +123,116 @@ module.exports = {
             || (typeof req.body.password === 'undefined')
             || typeof req.body.fullName === 'undefined'
         ) {
-            res.status(422).json({ message: 'Invalid data' });
+            next({ error: { message: 'Invalid data', code: 422 } });
             return;
         }
+
         let { email, password, fullName } = req.body;
         let regex = /^[a-zA-Z][a-z0-9A-Z\.\_]{1,}@[a-z0-9]{2,}(\.[a-z0-9]{1,4}){1,2}$/gm
+
         if (!regex.test(email) || password.length < 3) {
-            res.status(422).json({ message: 'Invalid mail data' });
+            next({ error: { message: 'Invalid mail data', code: 422 } });
             return;
         }
+
         let userFind = null;
+
         try {
             userFind = await User.findOne({ 'email': email });
-        }
-        catch (err) {
-            res.status(500).json({ message: err });
+        } catch (err) {
+            next(err);
             return;
         }
+
         if (userFind) {
-            res.status(409).json({ message: 'Email already exist' });
+            next({ error: { message: 'Email already exist', code: 409 } });
             return;
         }
+
         password = bcrypt.hashSync(password, 10);
+
         const newUser = new User({
             email: email,
             fullName: fullName,
             hashPass: password,
         });
+
         try {
             await newUser.save();
+
             passport.authenticate('local', function (err, user, info) {
                 if (err) {
                     return next(err);
                 }
                 if (!user) {
-                    return res.send(info);
+                    return next({ error: { message: info.message, code: 620 } });
                 }
+
                 req.logIn(user._id, function (err) {
                     if (err) {
                         return next(err);
                     }
-                    return res.status(200).json(user);
+                    return res.status(200).json({ result: user })
                 });
             })(req, res, next);
         }
         catch (err) {
-            res.status(500).json({ message: err });
+            next(err);
             return;
         }
     },
 
-    profile_user: async (req, res) => {
-        let id = req.user;
+    // verify account khi register
+    verifyToken: async (req, res, next) => {
+
+
+        if (typeof req.body.token === 'undefined') {
+            next({ error: { message: 'Invalid value', code: 402 } });
+            return;
+        }
+
+        let { token } = req.body;
+        let userNow = null;
+
         try {
-            let u = await User.findById(id);
-            res.status(200).json(u);
+            let id = req.user;
+            userNow = await User.findById(id);
         } catch (err) {
-            res.status(500).json({ message: err });
+            next(err);
+        }
+
+        let tokenDB = userNow.TOKEN;
+
+        if (token != tokenDB) {
+            next({ error: { message: "OTP fail", code: 422 } });
+            return;
+        } else {
+            userNow.isActive = true;
+            userNow.TOKEN = "";
+
+            try {
+                await userNow.save();
+                res.status(200).json({ result: true });
+            } catch (err) {
+                next(err)
+            }
         }
     },
 
-    requestForgotPassword: async (req, res) => {
+    profile_user: async (req, res, next) => {
+        let id = req.user;
+
+        try {
+            let u = await User.findById(id);
+            res.status(200).json({ result: u });
+        } catch (err) {
+            next(err);
+        }
+    },
+
+    requestForgotPassword: async (req, res, next) => {
         if (typeof req.body.email === 'undefined') {
-            res.json({ message: "Invalid data" });
+            next({ error: { message: "Invalid data", code: 422 } });
             return;
         }
 
@@ -188,60 +243,39 @@ module.exports = {
             currentUser = await User.findOne({ 'email': email });
         }
         catch (err) {
-            res.json({ message: err });
+            next(err)
             return;
         }
 
         if (currentUser == null) {
-            res.status(422).json({ message: "Invalid data" });
+            next({ error: { message: "Invalid data", code: 422 } });
         }
 
-        mailer.sentMailer('admin@gmail.com', email, 'confirm', otp.generateOTP())
+        let token = otp.generateOTP();
+
+        mailer.sentMailer('admin@gmail.com', email, 'confirm', token)
             .then(async (json) => {
                 currentUser.token = token;
+
                 try {
                     await currentUser.save();
                 }
                 catch (err) {
-                    res.status(500).json({ message: err });
+                    next(err)
                     return;
                 }
-                res.status(201).json({ message: 'success', email: email })
+
+                res.status(200).json({ result: true })
             }).catch(err => {
-                res.status(500).json({ message: 'Send email fail' });
+                next(err);
                 return;
             })
     },
-    verifyToken: async (req, res) => {
-        if (typeof req.body.token === 'undefined') {
-            res.status(402).json({ message: 'Invalid value' });
-            return;
-        }
-        let { token } = req.body;
-        let userNow = null;
-        try {
-            let id = req.user;
-            userNow = await User.findById(id);
-        } catch (err) {
-            res.json(err);
-        }
 
-        let tokenDB = userNow.TOKEN;
-        if (token != tokenDB) {
-            res.status(422).json({ message: "OTP fail" });
-            return;
-        } else {
-            userNow.isActive = true;
-            userNow.TOKEN = "";
-            await userNow.save();
-            res.status(200).json({ message: 'success' });
-        }
-    },
-
-    verifyForgotPassword: async (req, res) => {
+    verifyForgotPassword: async (req, res, next) => {
         if (typeof req.body.email === 'undefined'
             || typeof req.body.otp === 'undefined') {
-            res.status(402).json({ message: "Invalid data" });
+            next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
@@ -252,28 +286,28 @@ module.exports = {
             currentUser = await User.findOne({ 'email': email });
         }
         catch (err) {
-            res.json({ message: err });
+            next(err);
             return;
         }
 
         if (currentUser == null) {
-            res.status(422).json({ message: "Invalid data" });
+            next({ error: { message: "Invalid data", code: 422 } });
             return;
         }
 
         if (currentUser.token != otp) {
-            res.status(422).json({ message: "OTP fail" });
+            next({ error: { message: "OTP fail", code: 621 } });
             return;
         }
 
-        res.status(200).json({ message: "success", otp: otp });
+        res.status(200).json({ result: true });
     },
 
-    forgotPassword: async (req, res) => {
+    forgotPassword: async (req, res, next) => {
         if (typeof req.body.email === 'undefined'
             || typeof req.body.otp === 'undefined'
             || typeof req.body.newPassword === 'undefined') {
-            res.status(402).json({ message: "Invalid data" });
+            next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
@@ -284,52 +318,47 @@ module.exports = {
             currentUser = await User.findOne({ 'email': email });
         }
         catch (err) {
-            res.json({ message: err });
+            next(err)
             return;
         }
 
         if (currentUser == null) {
-            res.status(422).json({ message: "Invalid data" });
+            next({ error: { message: "Invalid data", code: 422 } });
             return;
         }
 
         if (currentUser.token != otp) {
-            res.status(422).json({ message: "OTP fail" });
+            next({ error: { message: "OTP fail", code: 422 } });
             return;
         }
 
         currentUser.hashPass = bcrypt.hashSync(newPassword, 10);
+        currentUser.token = ""
 
         try {
             await currentUser.save();
+            res.status(200).json({ result: true })
         }
         catch (err) {
-            res.status(500).json({ message: err });
-            return;
+            next(err);
         }
-
-        res.status(201).json({ message: 'success' })
     },
 
-    updateInfor: async (req, res) => {
-        if (typeof req.body.email === 'undefined') {
-            res.status(422).json({ message: 'Invalid data' });
-            return;
-        }
-
-        let { email, fullName, birthday, gender, job, phone, discription, avatarUrl } = req.body;
+    updateInfor: async (req, res, next) => {
+        let id = req.user;
+        let { fullName, birthday, gender, job, phone, discription, avatarUrl } = req.body;
         let currentUser = null
 
         try {
-            currentUser = await User.findOne({ 'email': email })
+            currentUser = await User.findById(id);
         }
         catch (err) {
-            res.status(500).json({ message: err });
+            next(err)
             return;
         }
 
         if (currentUser == null) {
-            res.status(422).json({ message: "not found" });
+            next({ error: { message: "not found", code: 422 } });
             return;
         }
 
@@ -343,53 +372,53 @@ module.exports = {
 
         try {
             await currentUser.save()
+            res.status(200).json({
+                result: {
+                    user: {
+                        email: currentUser.email,
+                        fullName: currentUser.fullName,
+                        birthday: currentUser.birthday,
+                        gender: currentUser.gender,
+                        job: currentUser.job,
+                        id: currentUser._id,
+                        phone: currentUser.phone,
+                        discription: currentUser.discription,
+                        avatar: currentUser.avatar
+                    }
+                }
+            });
         }
         catch (err) {
-            res.status(500).json({ message: err });
-            return;
+            next(err)
         }
-
-        res.status(200).json({
-            message: 'success', user: {
-                email: currentUser.email,
-                fullName: currentUser.fullName,
-                birthday: currentUser.birthday,
-                gender: currentUser.gender,
-                job: currentUser.job,
-                id: currentUser._id,
-                phone: currentUser.phone,
-                discription: currentUser.discription,
-                avatar: currentUser.avatar
-            }
-        });
     },
 
-    updatePassword: async (req, res) => {
+    updatePassword: async (req, res, next) => {
         if (typeof req.body.oldpassword === 'undefined'
-            || typeof req.body.newpassword === 'undefined'
-            || typeof req.body.email === 'undefined') {
-            res.status(422).json({ message: 'Invalid data' });
+            || typeof req.body.newpassword === 'undefined') {
+            next({ error: { message: 'Invalid data', code: 422 } });
             return;
         }
 
-        let { email, oldpassword, newpassword } = req.body;
+        let id = req.user;
+        let { oldpassword, newpassword } = req.body;
         let currentUser = null;
 
         try {
-            currentUser = await User.findOne({ 'email': email });
+            currentUser = await User.findById(id);
         }
         catch (err) {
-            res.json({ message: err });
+            next(err)
             return;
         }
 
         if (currentUser == null) {
-            res.status(422).json({ message: "Invalid data" });
+            next({ error: { message: "Invalid data", code: 422 } });
             return;
         }
 
         if (!bcrypt.compareSync(oldpassword, currentUser.hashPass)) {
-            res.status(423).json({ message: 'Current password is wrong' });
+            next({ error: { message: 'Current password is wrong', code: 423 } });
             return;
         }
 
@@ -397,18 +426,17 @@ module.exports = {
 
         try {
             await currentUser.save()
+            res.status(200).json({ result: true });
         }
         catch (err) {
-            res.status(500).json({ message: err });
-            return;
+            next(err)
         }
-
-        res.status(200).json({ message: 'success' });
     },
 
     get_History: async (req, res, next) => {
 
-        let { categotyEventId, startDate, endDate, txtSearch, pageNumber, numberRecord } = req.body;
+        let { categoryEventId, startDate, endDate, txtSearch, pageNumber, numberRecord } = req.body;
+        txtSearch = txtSearch || '';
 
         pageNumber = pageNumber || 1;
         numberRecord = numberRecord || 10;
@@ -418,114 +446,59 @@ module.exports = {
 
             let arrEvent = null;
 
-            if (txtSearch) {
-                arrEvent = await ApplyEvent.aggregate([
-                    {
-                        $match: {
-                            userId: ObjectId(idUserLogin)
-                        }
-                    },
-                    {
-                        $lookup:
-                        {
-                            from: "events",
-                            let: { event_id: "$eventId" },
-                            pipeline: [
-                                {
-                                    $match:
-                                    {
-                                        $expr:
-                                        {
-                                            $and:
-                                                [
-                                                    { $eq: ["$_id", "$$event_id"] },
-                                                    { $cond: [categotyEventId, { $eq: ["$category", categotyEventId] }, {}] }
-                                                ],
-                                                //$text: {$search: txtSearch}
-                                        },
-                                        $text: { $search: txtSearch }
-                                    }
-                                },
-                            ],
-                            as: "events"
-                        }
-                    },
-                    {
-                        $match: {
-                            $and: [{
-                                "events.startTime": {
-                                    $gt: new Date((startDate || '1940-01-01')),
-                                    $lt: new Date(endDate || (new Date().toString()))
-                                }
-                            },
-                            { "events.status": { $nin: ["HUY"] } }
-                            ]
+            let conditionQuery = {
+                $expr: {
+                    $and: [
+                        { $eq: ["$_id", "$$event_id"] },
+                        { $cond: [categoryEventId, { $eq: ["$category", categoryEventId] }, {}] },
+                    ],
+                },
+            };
 
-                        },
-                    },
-                    {
-                        $project: { "events": 1 }
-                    },
-                    { $skip: (+numberRecord * (+pageNumber - 1)) },
-                    { $limit: numberRecord }
-                ]);
-            } else {
-                arrEvent = await ApplyEvent.aggregate([
-                    {
-                        $match: {
-                            userId: ObjectId(idUserLogin)
-                        }
-                    },
-                    {
-                        $lookup:
-                        {
-                            from: "events",
-                            let: { event_id: "$eventId" },
-                            pipeline: [
-                                {
-                                    $match:
-                                    {
-                                        $expr:
-                                        {
-                                            $and:
-                                                [
-                                                    { $eq: ["$_id", "$$event_id"] },
-                                                    { $cond: [categotyEventId, { $eq: ["$category", categotyEventId] }, {}] }
-                                                ],
-                                        },
-                                        // $text: { $search: txtSearch }
-                                    }
-                                },
-                            ],
-                            as: "events"
-                        }
-                    },
-                    {
-                        $match: {
-                            $and: [{
-                                "events.startTime": {
-                                    $gt: new Date((startDate || '1940-01-01')),
-                                    $lt: new Date(endDate || (new Date().toString()))
-                                }
-                            },
-                            { "events.status": { $nin: ["HUY"] } },
-
-                            ]
-                        },
-                    },
-                    {
-                        $project: { "events": 1 }
-                    },
-                    { $skip: (+numberRecord * (+pageNumber - 1)) },
-                    { $limit: numberRecord }
-                ]);
+            if (txtSearch != "") {
+                conditionQuery.$text = { $search: txtSearch };
             }
-            res.status(200).json(arrEvent);
+            arrEvent = await ApplyEvent.aggregate([
+                {
+                    $match: {
+                        userId: ObjectId(idUserLogin)
+                    }
+                },
+                {
+                    $lookup:
+                    {
+                        from: "events",
+                        let: { event_id: "$eventId" },
+                        pipeline: [
+                            {
+                                $match: conditionQuery
+                            },
+                        ],
+                        as: "events"
+                    }
+                },
+                {
+                    $match: {
+                        $and: [{
+                            "events.startTime": {
+                                $gt: new Date((startDate || '1940-01-01')),
+                                $lt: new Date(endDate || (new Date().toString()))
+                            }
+                        },
+                        { "events.status": { $nin: ["HUY"] } }
+                        ]
+                    },
+                },
+                {
+                    $project: { "events": 1 }
+                },
+                { $skip: (+numberRecord * (+pageNumber - 1)) },
+                { $limit: numberRecord }
+            ]);
+
+            res.status(200).json({ result: arrEvent });
         } catch (err) {
-            res.status(500).json(err);
+            next(err);
         }
-
-
     }
-
 }

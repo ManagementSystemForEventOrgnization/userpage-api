@@ -1,24 +1,24 @@
 var nodemailer = require('nodemailer');
 
-exports.sentMailer = function (from, { email }, subject, content) {
+exports.sentMailer = function (from1, { email }, subject, content) {
     return new Promise(async (resolve, reject) => {
         let transporter = nodemailer.createTransport({
-            service: 'Gmail',
+            //service: 'Gmail',
             host: 'smtp.gmail.com',
-            // port: 465,
-            port: 587,
-            // secure: true,
-            secure: false,
-            requireTLS: true,
+            port: 465,
+            //port: 587,
+            secure: true,
+            //secure: false,
+            //requireTLS: true,
             auth: {
                 // type: 'OAuth2',
-                user: 'ahayday2018@gmail.com',
-                pass: 'sang1998'
+                user: 'datn.qlsk@gmail.com',
+                pass: 'datn.qlsk.2020'
             },
         });
 
         let mail = {
-            from: from,
+            from: from1,
             to: email,
             subject: subject,
             html: content
