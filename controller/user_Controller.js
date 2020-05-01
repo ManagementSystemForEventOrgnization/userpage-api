@@ -14,7 +14,6 @@ var passport = require('passport');
 module.exports = {
 
     login: (req, res, next) => {
-        
         passport.authenticate('local', function (err, user, info) {
             if (err) {
                 return next(err);
@@ -24,7 +23,7 @@ module.exports = {
                 return next({ error: { message: info.message, code: 620 } });
             }
 
-            req.logIn(user._id, function (err) {
+            req.logIn({}, function (err) {
                 if (err) { return next(err); }
                 return res.status(200).json({ result: user });;
             });
@@ -128,10 +127,10 @@ module.exports = {
         }
 
         let { email, password, fullName } = req.body;
-        let regex = /^[a-zA-Z][a-z0-9A-Z\.\_]{1,}@[a-z0-9]{2,}(\.[a-z0-9]{1,4}){1,2}$/gm
+        let regex = /^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i;
 
         if (!regex.test(email) || password.length < 3) {
-            next({ error: { message: 'Invalid mail data', code: 422 } });
+            next({ error: { message: 'incorrect Email or password little than 3 characters', code: 422 } });
             return;
         }
 
@@ -184,7 +183,6 @@ module.exports = {
 
     // verify account khi register
     verifyToken: async (req, res, next) => {
-
 
         if (typeof req.body.token === 'undefined') {
             next({ error: { message: 'Invalid value', code: 402 } });
