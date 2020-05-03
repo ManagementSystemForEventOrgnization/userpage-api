@@ -16,7 +16,6 @@ const userSchema = new Schema({
     isReported: {type: Boolean, default: false},
     dateDelete: Date,
     discription: { type:String, "index": "text" },
-    phoneNumber: String,
     isActive:{type:Boolean,default: false},
     createAt: { type: Date, default: Date() },
     updateAt: Date

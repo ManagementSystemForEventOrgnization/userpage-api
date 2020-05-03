@@ -23,7 +23,7 @@ module.exports = {
                 return next({ error: { message: info.message, code: 620 } });
             }
 
-            req.logIn({}, function (err) {
+            req.logIn(user._id, function (err) {
                 if (err) { return next(err); }
                 return res.status(200).json({ result: user });;
             });
