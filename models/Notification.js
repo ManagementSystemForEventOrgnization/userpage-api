@@ -4,7 +4,7 @@ const { Schema } = mongoose;
 const notificationSchema = new Schema({
     sender: Schema.Types.ObjectId,
     receiver: [Schema.Types.ObjectId],
-    type: Number, // (Email, notify: (event: (apply, start event), payment))
+    type: Number, // (event: (apply, start event), payment))
     message: String,
     title: String,
     linkTo: {

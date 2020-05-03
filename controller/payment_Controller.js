@@ -20,7 +20,30 @@ const embeddata = {
 };
 
 module.exports = {
+	paymentHistory: async (req, res) => {
+		
+	},
+
+	refund: async (req, res) => {
+	},
+	
+	payouts: async (req, res) => {
+		stripe.balance.retrieve(function(err, balance) {
+			stripe.payouts.create(
+  				{amount: req.body.amount, currency: 'vnd'},
+  				function(err, payout) {
+  					if (err != null) {
+						res.status(600).json({ error: { message: err, code: 500 }, balance });
+  					} else {
+						res.status(200).json({ result: { payout, balance } });
+  					}
+ 				 }
+			);
+		});
+	},
+	
 	create_order: async (req, res, next) => {
+		///////////////// save info charge in db
 		const items = [];
 
 		const order = {
@@ -80,6 +103,7 @@ module.exports = {
 	},
 	
 	create_charges: async (req, res, next) => {
+		///////////////// save info charge in db , {userid, eventid, cardid, price}
 		if (typeof req.body.amount === 'undefined') {
             res.status(600).json({ error: { message: "Invalid data", code: 402 } });
             return;
@@ -253,22 +277,7 @@ module.exports = {
      	 	}
 		}
 	},
-	
-	payouts: async (req, res) => {
-		stripe.balance.retrieve(function(err, balance) {
-			stripe.payouts.create(
-  				{amount: req.body.amount, currency: 'vnd'},
-  				function(err, payout) {
-  					if (err != null) {
-						res.status(600).json({ error: { message: err, code: 500 }, balance });
-  					} else {
-						res.status(200).json({ result: { payout, balance } });
-  					}
- 				 }
-			);
-		});
-	},
-	
+
 	create_customer: async (req, res, next) => {
 		if (typeof req.body.cardToken === 'undefined') {
             res.status(600).json({ error: { message: "Invalid data", code: 402 } });
