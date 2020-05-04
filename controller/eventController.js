@@ -19,7 +19,8 @@ module.exports = {
             return next({ error: { message: 'URL is wrong format.', code: 422 } });
         }
         let checkURL = await Event.find({ urlWeb });
-        if (checkURL) {
+        console.log(checkURL);
+        if (checkURL.length !== 0) {
             next({ error: { message: 'URL is used', code: 402 } });
             return;
         }
@@ -30,7 +31,6 @@ module.exports = {
             name,
             limitNumber,
             category,
-            time,
             address,
             urlWeb,
             detailAddress,
@@ -48,7 +48,7 @@ module.exports = {
             }
             res.status(200).json({ result: event._id });
         } catch (error) {
-            next({ error: { message: err, code: 500 } })
+            next({ error: { message: error, code: 500 } })
         }
     },
 

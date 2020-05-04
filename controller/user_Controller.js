@@ -16,7 +16,7 @@ module.exports = {
     login: (req, res, next) => {
         passport.authenticate('local', function (err, user, info) {
             if (err) {
-                return next(err);
+                return next({ error: { message: err, code: 422 } });
             }
 
             if (!user) {
@@ -24,7 +24,7 @@ module.exports = {
             }
 
             req.logIn({}, function (err) {
-                if (err) { return next(err); }
+                if (err) { return next({ error: { message: err, code: 422 } }); }
                 return res.status(200).json({ result: user });;
             });
         })(req, res, next);
@@ -62,7 +62,7 @@ module.exports = {
                         .then(json => {
                             return res.status(200).json({ result: token });
                         }).catch(err => {
-                            next(err);
+                            return next({ error: { message: err, code: 422 } });
                         })
                 } else {
                     return next({ error: { message: 'Email already exist', code: 500 } });
@@ -76,7 +76,7 @@ module.exports = {
     login_google: async (req, res, next) => {
         if ((typeof req.body.profile === 'undefined')) {
             next({ error: { message: 'Invalid value', code: 400 } });
-            return;
+             
         }
 
         let { googleId, name, imageUrl, email } = req.body.profile;
@@ -99,7 +99,7 @@ module.exports = {
 
         passport.authenticate('local', function (err, user, info) {
             if (err) {
-                return next(err);
+                return next({ error: { message: err, code: 422 } });
             }
 
             if (!user) {
@@ -108,7 +108,7 @@ module.exports = {
 
             req.logIn(user._id, function (err) {
                 if (err) {
-                    return next(err);
+                    return next({ error: { message: err, code: 422 } });
                 }
 
                 return res.status(200).json({ result: user });
@@ -123,7 +123,7 @@ module.exports = {
             || typeof req.body.fullName === 'undefined'
         ) {
             next({ error: { message: 'Invalid data', code: 422 } });
-            return;
+             
         }
 
         let { email, password, fullName } = req.body;
@@ -131,7 +131,7 @@ module.exports = {
 
         if (!regex.test(email) || password.length < 3) {
             next({ error: { message: 'incorrect Email or password little than 3 characters', code: 422 } });
-            return;
+             
         }
 
         let userFind = null;
@@ -139,13 +139,13 @@ module.exports = {
         try {
             userFind = await User.findOne({ 'email': email });
         } catch (err) {
-            next(err);
-            return;
+            return next({ error: { message: err, code: 422 } });
+             
         }
 
         if (userFind) {
             next({ error: { message: 'Email already exist', code: 409 } });
-            return;
+             
         }
 
         password = bcrypt.hashSync(password, 10);
@@ -161,7 +161,7 @@ module.exports = {
 
             passport.authenticate('local', function (err, user, info) {
                 if (err) {
-                    return next(err);
+                    return next({ error: { message: err, code: 422 } });
                 }
                 if (!user) {
                     return next({ error: { message: info.message, code: 620 } });
@@ -169,15 +169,15 @@ module.exports = {
 
                 req.logIn(user._id, function (err) {
                     if (err) {
-                        return next(err);
+                        return next({ error: { message: err, code: 422 } });
                     }
                     return res.status(200).json({ result: user })
                 });
             })(req, res, next);
         }
         catch (err) {
-            next(err);
-            return;
+            return next({ error: { message: err, code: 422 } });
+             
         }
     },
 
@@ -186,7 +186,7 @@ module.exports = {
 
         if (typeof req.body.token === 'undefined') {
             next({ error: { message: 'Invalid value', code: 402 } });
-            return;
+             
         }
 
         let { token } = req.body;
@@ -196,14 +196,14 @@ module.exports = {
             let id = req.user;
             userNow = await User.findById(id);
         } catch (err) {
-            next(err);
+            return next({ error: { message: err, code: 422 } });
         }
 
         let tokenDB = userNow.TOKEN;
 
         if (token != tokenDB) {
             next({ error: { message: "OTP fail", code: 422 } });
-            return;
+             
         } else {
             userNow.isActive = true;
             userNow.TOKEN = "";
@@ -224,14 +224,14 @@ module.exports = {
             let u = await User.findById(id);
             res.status(200).json({ result: u });
         } catch (err) {
-            next(err);
+            return next({ error: { message: err, code: 422 } });
         }
     },
 
     requestForgotPassword: async (req, res, next) => {
         if (typeof req.body.email === 'undefined') {
             next({ error: { message: "Invalid data", code: 422 } });
-            return;
+             
         }
 
         let email = req.body.email;
@@ -241,8 +241,8 @@ module.exports = {
             currentUser = await User.findOne({ 'email': email });
         }
         catch (err) {
-            next(err)
-            return;
+            return next({ error: { message: err, code: 422 } });
+             
         }
 
         if (currentUser == null) {
@@ -259,14 +259,13 @@ module.exports = {
                     await currentUser.save();
                 }
                 catch (err) {
-                    next(err)
-                    return;
+                    return next({ error: { message: err, code: 422 } });
+                     
                 }
 
                 res.status(200).json({ result: true })
             }).catch(err => {
-                next(err);
-                return;
+                return next({ error: { message: err, code: 422 } });
             })
     },
 
@@ -274,7 +273,7 @@ module.exports = {
         if (typeof req.body.email === 'undefined'
             || typeof req.body.otp === 'undefined') {
             next({ error: { message: "Invalid data", code: 402 } });
-            return;
+             
         }
 
         let { email, otp } = req.body;
@@ -284,18 +283,18 @@ module.exports = {
             currentUser = await User.findOne({ 'email': email });
         }
         catch (err) {
-            next(err);
-            return;
+            return next({ error: { message: err, code: 422 } });
+             
         }
 
         if (currentUser == null) {
             next({ error: { message: "Invalid data", code: 422 } });
-            return;
+             
         }
 
         if (currentUser.token != otp) {
             next({ error: { message: "OTP fail", code: 621 } });
-            return;
+             
         }
 
         res.status(200).json({ result: true });
@@ -306,7 +305,7 @@ module.exports = {
             || typeof req.body.otp === 'undefined'
             || typeof req.body.newPassword === 'undefined') {
             next({ error: { message: "Invalid data", code: 402 } });
-            return;
+             
         }
 
         let { email, otp, newPassword } = req.body;
@@ -317,17 +316,17 @@ module.exports = {
         }
         catch (err) {
             next(err)
-            return;
+             
         }
 
         if (currentUser == null) {
             next({ error: { message: "Invalid data", code: 422 } });
-            return;
+             
         }
 
         if (currentUser.token != otp) {
             next({ error: { message: "OTP fail", code: 422 } });
-            return;
+             
         }
 
         currentUser.hashPass = bcrypt.hashSync(newPassword, 10);
@@ -338,7 +337,7 @@ module.exports = {
             res.status(200).json({ result: true })
         }
         catch (err) {
-            next(err);
+            return next({ error: { message: err, code: 422 } });
         }
     },
 
@@ -352,12 +351,12 @@ module.exports = {
         }
         catch (err) {
             next(err)
-            return;
+             
         }
 
         if (currentUser == null) {
             next({ error: { message: "not found", code: 422 } });
-            return;
+             
         }
 
         currentUser.fullName = fullName;
@@ -395,7 +394,7 @@ module.exports = {
         if (typeof req.body.oldpassword === 'undefined'
             || typeof req.body.newpassword === 'undefined') {
             next({ error: { message: 'Invalid data', code: 422 } });
-            return;
+             
         }
 
         let id = req.user;
@@ -407,17 +406,17 @@ module.exports = {
         }
         catch (err) {
             next(err)
-            return;
+             
         }
 
         if (currentUser == null) {
             next({ error: { message: "Invalid data", code: 422 } });
-            return;
+             
         }
 
         if (!bcrypt.compareSync(oldpassword, currentUser.hashPass)) {
             next({ error: { message: 'Current password is wrong', code: 423 } });
-            return;
+             
         }
 
         currentUser.hashPass = bcrypt.hashSync(newpassword, 10);
@@ -496,7 +495,7 @@ module.exports = {
 
             res.status(200).json({ result: arrEvent });
         } catch (err) {
-            next(err);
+            return next({ error: { message: err, code: 422 } });
         }
     }
 }
