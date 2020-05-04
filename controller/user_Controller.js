@@ -11,22 +11,6 @@ const otp = require("../utils/otp");
 var passport = require("passport");
 
 module.exports = {
-<<<<<<< HEAD
-
-    login: (req, res, next) => {
-        passport.authenticate('local', function (err, user, info) {
-            if (err) {
-                return next({ error: { message: err, code: 422 } });
-            }
-
-            if (!user) {
-                return next({ error: { message: info.message, code: 620 } });
-            }
-
-            req.logIn({}, function (err) {
-                if (err) { return next({ error: { message: err, code: 422 } }); }
-                return res.status(200).json({ result: user });;
-=======
     
   login: (req, res, next) => {
     passport.authenticate("local", function (err, user, info) {
@@ -82,40 +66,9 @@ module.exports = {
             })
             .catch((err) => {
               next(err);
->>>>>>> 9657de1ef657700bd89a930601ff738460753353
             });
         } else {
-<<<<<<< HEAD
-            let { email } = req.body;
-
-            try {
-                let user = await User.findOne({ email: email });
-
-                if (!user) {
-                    // xac nhan mail nay  chua dùng nên gữi mail đi và thông báo cho người dùng biết luôn là mail có tồn tại hay không để xác nhận.
-                    const token = Math.floor(Math.random() * 1000) + 1000;
-                    mailer.sentMailer('admin@gmail.com', req.body, 'confirm', `${token}`)
-                        .then(json => {
-                            return res.status(200).json({ result: token });
-                        }).catch(err => {
-                            return next({ error: { message: err, code: 422 } });
-                        })
-                } else {
-                    return next({ error: { message: 'Email already exist', code: 500 } });
-                }
-            } catch (err) {
-                return next({ error: { message: err, code: 500 } })
-            }
-        }
-    },
-
-    login_google: async (req, res, next) => {
-        if ((typeof req.body.profile === 'undefined')) {
-            next({ error: { message: 'Invalid value', code: 400 } });
-             
-=======
           return next({ error: { message: "Email already exist", code: 500 } });
->>>>>>> 9657de1ef657700bd89a930601ff738460753353
         }
       } catch (err) {
         return next({ error: { message: err, code: 500 } });
@@ -129,12 +82,6 @@ module.exports = {
       return;
     }
 
-<<<<<<< HEAD
-        passport.authenticate('local', function (err, user, info) {
-            if (err) {
-                return next({ error: { message: err, code: 422 } });
-            }
-=======
     let { googleId, name, imageUrl, email } = req.body.profile;
     let userPassport = null;
     // can check lai về vấn đề nó đã đăng kí = form trước. thì cần check lại.
@@ -160,7 +107,6 @@ module.exports = {
       }).save();
       userPassport = userSave;
     }
->>>>>>> 9657de1ef657700bd89a930601ff738460753353
 
     passport.authenticate("local", function (err, user, info) {
       if (err) {
@@ -191,12 +137,6 @@ module.exports = {
       return;
     }
 
-<<<<<<< HEAD
-            req.logIn(user._id, function (err) {
-                if (err) {
-                    return next({ error: { message: err, code: 422 } });
-                }
-=======
     let { email, password, fullName } = req.body;
     let regex = /^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i;
 
@@ -209,7 +149,6 @@ module.exports = {
       });
       return;
     }
->>>>>>> 9657de1ef657700bd89a930601ff738460753353
 
     let userFind = null;
 
@@ -220,59 +159,28 @@ module.exports = {
       return;
     }
 
-<<<<<<< HEAD
-    register: async (req, res, next) => {
-        if ((typeof req.body.email === 'undefined')
-            || (typeof req.body.password === 'undefined')
-            || typeof req.body.fullName === 'undefined'
-        ) {
-            next({ error: { message: 'Invalid data', code: 422 } });
-             
-        }
-=======
     if (userFind) {
       next({ error: { message: "Email already exist", code: 409 } });
       return;
     }
->>>>>>> 9657de1ef657700bd89a930601ff738460753353
 
     password = bcrypt.hashSync(password, 10);
 
-<<<<<<< HEAD
-        if (!regex.test(email) || password.length < 3) {
-            next({ error: { message: 'incorrect Email or password little than 3 characters', code: 422 } });
-             
-        }
-=======
     const newUser = new User({
       email: email,
       fullName: fullName,
       hashPass: password,
     });
->>>>>>> 9657de1ef657700bd89a930601ff738460753353
 
     try {
       await newUser.save();
 
-<<<<<<< HEAD
-        try {
-            userFind = await User.findOne({ 'email': email });
-        } catch (err) {
-            return next({ error: { message: err, code: 422 } });
-             
-        }
-
-        if (userFind) {
-            next({ error: { message: 'Email already exist', code: 409 } });
-             
-=======
       passport.authenticate("local", function (err, user, info) {
         if (err) {
           return next(err);
         }
         if (!user) {
           return next({ error: { message: info.message, code: 620 } });
->>>>>>> 9657de1ef657700bd89a930601ff738460753353
         }
 
         req.logIn(user._id, function (err) {
@@ -288,68 +196,6 @@ module.exports = {
     }
   },
 
-<<<<<<< HEAD
-        try {
-            await newUser.save();
-
-            passport.authenticate('local', function (err, user, info) {
-                if (err) {
-                    return next({ error: { message: err, code: 422 } });
-                }
-                if (!user) {
-                    return next({ error: { message: info.message, code: 620 } });
-                }
-
-                req.logIn(user._id, function (err) {
-                    if (err) {
-                        return next({ error: { message: err, code: 422 } });
-                    }
-                    return res.status(200).json({ result: user })
-                });
-            })(req, res, next);
-        }
-        catch (err) {
-            return next({ error: { message: err, code: 422 } });
-             
-        }
-    },
-
-    // verify account khi register
-    verifyToken: async (req, res, next) => {
-
-        if (typeof req.body.token === 'undefined') {
-            next({ error: { message: 'Invalid value', code: 402 } });
-             
-        }
-
-        let { token } = req.body;
-        let userNow = null;
-
-        try {
-            let id = req.user;
-            userNow = await User.findById(id);
-        } catch (err) {
-            return next({ error: { message: err, code: 422 } });
-        }
-
-        let tokenDB = userNow.TOKEN;
-
-        if (token != tokenDB) {
-            next({ error: { message: "OTP fail", code: 422 } });
-             
-        } else {
-            userNow.isActive = true;
-            userNow.TOKEN = "";
-
-            try {
-                await userNow.save();
-                res.status(200).json({ result: true });
-            } catch (err) {
-                next(err)
-            }
-        }
-    },
-=======
   // verify account khi register
   verifyToken: async (req, res, next) => {
     if (typeof req.body.token === "undefined") {
@@ -359,7 +205,6 @@ module.exports = {
 
     let { token } = req.body;
     let userNow = null;
->>>>>>> 9657de1ef657700bd89a930601ff738460753353
 
     try {
       let id = req.user;
@@ -368,21 +213,6 @@ module.exports = {
       next(err);
     }
 
-<<<<<<< HEAD
-        try {
-            let u = await User.findById(id);
-            res.status(200).json({ result: u });
-        } catch (err) {
-            return next({ error: { message: err, code: 422 } });
-        }
-    },
-
-    requestForgotPassword: async (req, res, next) => {
-        if (typeof req.body.email === 'undefined') {
-            next({ error: { message: "Invalid data", code: 422 } });
-             
-        }
-=======
     let tokenDB = userNow.TOKEN;
 
     if (token != tokenDB) {
@@ -391,7 +221,6 @@ module.exports = {
     } else {
       userNow.isActive = true;
       userNow.TOKEN = "";
->>>>>>> 9657de1ef657700bd89a930601ff738460753353
 
       try {
         await userNow.save();
@@ -402,18 +231,8 @@ module.exports = {
     }
   },
 
-<<<<<<< HEAD
-        try {
-            currentUser = await User.findOne({ 'email': email });
-        }
-        catch (err) {
-            return next({ error: { message: err, code: 422 } });
-             
-        }
-=======
   profile_user: async (req, res, next) => {
     let id = req.user;
->>>>>>> 9657de1ef657700bd89a930601ff738460753353
 
     try {
       let u = await User.findById(id);
@@ -432,28 +251,6 @@ module.exports = {
     let email = req.body.email;
     let currentUser = null;
 
-<<<<<<< HEAD
-                try {
-                    await currentUser.save();
-                }
-                catch (err) {
-                    return next({ error: { message: err, code: 422 } });
-                     
-                }
-
-                res.status(200).json({ result: true })
-            }).catch(err => {
-                return next({ error: { message: err, code: 422 } });
-            })
-    },
-
-    verifyForgotPassword: async (req, res, next) => {
-        if (typeof req.body.email === 'undefined'
-            || typeof req.body.otp === 'undefined') {
-            next({ error: { message: "Invalid data", code: 402 } });
-             
-        }
-=======
     try {
       currentUser = await User.findOne({ email: email });
     } catch (err) {
@@ -466,7 +263,6 @@ module.exports = {
     }
 
     let token = otp.generateOTP();
->>>>>>> 9657de1ef657700bd89a930601ff738460753353
 
     mailer
       .sentMailer("admin@gmail.com", email, "confirm", token)
@@ -474,68 +270,6 @@ module.exports = {
         currentUser.token = token;
 
         try {
-<<<<<<< HEAD
-            currentUser = await User.findOne({ 'email': email });
-        }
-        catch (err) {
-            return next({ error: { message: err, code: 422 } });
-             
-        }
-
-        if (currentUser == null) {
-            next({ error: { message: "Invalid data", code: 422 } });
-             
-        }
-
-        if (currentUser.token != otp) {
-            next({ error: { message: "OTP fail", code: 621 } });
-             
-        }
-
-        res.status(200).json({ result: true });
-    },
-
-    forgotPassword: async (req, res, next) => {
-        if (typeof req.body.email === 'undefined'
-            || typeof req.body.otp === 'undefined'
-            || typeof req.body.newPassword === 'undefined') {
-            next({ error: { message: "Invalid data", code: 402 } });
-             
-        }
-
-        let { email, otp, newPassword } = req.body;
-        let currentUser = null;
-
-        try {
-            currentUser = await User.findOne({ 'email': email });
-        }
-        catch (err) {
-            next(err)
-             
-        }
-
-        if (currentUser == null) {
-            next({ error: { message: "Invalid data", code: 422 } });
-             
-        }
-
-        if (currentUser.token != otp) {
-            next({ error: { message: "OTP fail", code: 422 } });
-             
-        }
-
-        currentUser.hashPass = bcrypt.hashSync(newPassword, 10);
-        currentUser.token = ""
-
-        try {
-            await currentUser.save();
-            res.status(200).json({ result: true })
-        }
-        catch (err) {
-            return next({ error: { message: err, code: 422 } });
-        }
-    },
-=======
           await currentUser.save();
         } catch (err) {
           next(err);
@@ -561,7 +295,6 @@ module.exports = {
 
     let { email, otp } = req.body;
     let currentUser = null;
->>>>>>> 9657de1ef657700bd89a930601ff738460753353
 
     try {
       currentUser = await User.findOne({ email: email });
@@ -570,20 +303,6 @@ module.exports = {
       return;
     }
 
-<<<<<<< HEAD
-        try {
-            currentUser = await User.findById(id);
-        }
-        catch (err) {
-            next(err)
-             
-        }
-
-        if (currentUser == null) {
-            next({ error: { message: "not found", code: 422 } });
-             
-        }
-=======
     if (currentUser == null) {
       next({ error: { message: "Invalid data", code: 422 } });
       return;
@@ -593,7 +312,6 @@ module.exports = {
       next({ error: { message: "OTP fail", code: 621 } });
       return;
     }
->>>>>>> 9657de1ef657700bd89a930601ff738460753353
 
     res.status(200).json({ result: true });
   },
@@ -611,46 +329,18 @@ module.exports = {
     let { email, otp, newPassword } = req.body;
     let currentUser = null;
 
-<<<<<<< HEAD
-    updatePassword: async (req, res, next) => {
-        if (typeof req.body.oldpassword === 'undefined'
-            || typeof req.body.newpassword === 'undefined') {
-            next({ error: { message: 'Invalid data', code: 422 } });
-             
-        }
-=======
     try {
       currentUser = await User.findOne({ email: email });
     } catch (err) {
       next(err);
       return;
     }
->>>>>>> 9657de1ef657700bd89a930601ff738460753353
 
     if (currentUser == null) {
       next({ error: { message: "Invalid data", code: 422 } });
       return;
     }
 
-<<<<<<< HEAD
-        try {
-            currentUser = await User.findById(id);
-        }
-        catch (err) {
-            next(err)
-             
-        }
-
-        if (currentUser == null) {
-            next({ error: { message: "Invalid data", code: 422 } });
-             
-        }
-
-        if (!bcrypt.compareSync(oldpassword, currentUser.hashPass)) {
-            next({ error: { message: 'Current password is wrong', code: 423 } });
-             
-        }
-=======
     if (currentUser.token != otp) {
       next({ error: { message: "OTP fail", code: 422 } });
       return;
@@ -689,7 +379,6 @@ module.exports = {
       next(err);
       return;
     }
->>>>>>> 9657de1ef657700bd89a930601ff738460753353
 
     if (currentUser == null) {
       next({ error: { message: "not found", code: 422 } });
@@ -828,16 +517,6 @@ module.exports = {
                   $gt: new Date(startDate || "1940-01-01"),
                   $lt: new Date(endDate || new Date().toString()),
                 },
-<<<<<<< HEAD
-                { $skip: (+numberRecord * (+pageNumber - 1)) },
-                { $limit: numberRecord }
-            ]);
-
-            res.status(200).json({ result: arrEvent });
-        } catch (err) {
-            return next({ error: { message: err, code: 422 } });
-        }
-=======
               },
               { "events.status": { $nin: ["HUY"] } },
             ],
@@ -853,7 +532,6 @@ module.exports = {
       res.status(200).json({ result: arrEvent });
     } catch (err) {
       next(err);
->>>>>>> 9657de1ef657700bd89a930601ff738460753353
     }
   },
 };
