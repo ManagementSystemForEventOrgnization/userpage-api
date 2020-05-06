@@ -46,7 +46,7 @@ module.exports = {
       next(err);
     }
   },
-
+  
   login_google: async (req, res, next) => {
     if (typeof req.body.profile === "undefined") {
       next({ error: { message: "Invalid value", code: 400 } });
@@ -235,10 +235,9 @@ module.exports = {
 
     let token = otp.generateOTP();
 
-    mailer
-      .sentMailer("admin@gmail.com", email, "confirm", token)
+    mailer.sentMailer("admin@gmail.com", {email}, "confirm", token)
       .then(async (json) => {
-        currentUser.token = token;
+        currentUser.TOKEN = token;
 
         try {
           await currentUser.save();
@@ -279,7 +278,8 @@ module.exports = {
       return;
     }
 
-    if (currentUser.token != otp) {
+    console.log("verifyForgotPassword", currentUser);
+    if (currentUser.TOKEN != otp) {
       next({ error: { message: "OTP fail", code: 621 } });
       return;
     }
@@ -312,13 +312,13 @@ module.exports = {
       return;
     }
 
-    if (currentUser.token != otp) {
+    if (currentUser.TOKEN != otp) {
       next({ error: { message: "OTP fail", code: 422 } });
       return;
     }
 
     currentUser.hashPass = bcrypt.hashSync(newPassword, 10);
-    currentUser.token = "";
+    currentUser.TOKEN = "";
 
     try {
       await currentUser.save();
