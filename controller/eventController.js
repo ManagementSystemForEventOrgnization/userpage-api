@@ -85,7 +85,7 @@ module.exports = {
     },
 
     getPageEvent: async (req, res, next) => {
-        let { eventId } = req.body;
+        let { eventId } = req.query;
         try {
             if(!eventId){
                 return next({error: {message: 'Event is not exists', code: 422}});
