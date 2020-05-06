@@ -10,6 +10,9 @@ const paymentSchema = new Schema({
     eventId: Schema.Types.ObjectId,
     cardId: String,
     chargeId: String,
+    zptransId: String,
+    payType: String,
+    isRefunded: Boolean,
     createdAt: { type: Date, default: Date() },
     updatedAt: Date
 })

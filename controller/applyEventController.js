@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const ApplyEvent = mongoose.model('applyEvent');
 const Event = mongoose.model('event');
 const Payment = mongoose.model('payment');
+const Notification = mongoose.model('notification');
 
 const payment_Controller = require('../controller/payment_Controller');
 
@@ -25,18 +26,14 @@ module.exports = {
             if (currentPayment) {
                 currentPayment.status = status == true ? "PAID" : "FAILED";
 
-                try {
-                    await currentPayment.save();
+                await currentPayment.save();
 
-                    if (status == true) {
-                        currentApplyEvent.qrcode = userId
-                        await currentApplyEvent.save();
-                    }
-
-                    return res.status(200).json({ result: true })
-                } catch (err) {
-                    next(err);
+                if (status == true) {
+                    currentApplyEvent.qrcode = userId
+                    await currentApplyEvent.save();
                 }
+
+                return res.status(200).json({ result: true })
             } else {
                 next({ error: { message: 'Not found this payment', code: 703 } });
             }
@@ -68,46 +65,38 @@ module.exports = {
 
                 currentEvent.joinNumber = joinNumber;
 
-                try {
-                    var currentApplyEvent = await ApplyEvent.findOne({userId: userId, eventId: eventId, joinTime: joinTime});
+                var currentApplyEvent = await ApplyEvent.findOne({userId: userId, eventId: eventId, joinTime: joinTime});
                 
-                    if (currentApplyEvent) {
-                        next({ error: { message: 'You have already joined in this event', code: 701 } });
-                    } else {
-                        const newApplyEvent = new ApplyEvent({
-                            userId: userId,
-                            eventId: eventId,
-                            joinTime: joinTime,
-                            isConfirm: true,
-                            createdAt: Date()
-                        });
+                if (currentApplyEvent) {
+                    next({ error: { message: 'You have already joined in this event', code: 701 } });
+                } else {
+                    const newApplyEvent = new ApplyEvent({
+                        userId: userId,
+                        eventId: eventId,
+                        joinTime: joinTime,
+                        isConfirm: true,
+                        createdAt: Date()
+                    });
                         
-                        try {
-                            if (currentEvent.isPayment != true) {
-                                newApplyEvent.qrcode = userId
-                            }
-
-                            await newApplyEvent.save();
-                            await currentEvent.save();
-
-                            if (currentEvent.isPayment) {
-                                req.body.amount = currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price;
-                                req.body.receiver = currentEvent.userId;
-
-                                if (payType === "CREDIT_CARD") {
-                                    await payment_Controller.create_charges(req, res, next);
-                                } else {
-                                    await payment_Controller.create_order(req, res, next);
-                                }
-                            } else {
-                                return res.status(200).json({ result: true })
-                            }
-                        } catch (err) {
-                            next(err);
-                        }
+                    if (currentEvent.isPayment != true) {
+                        newApplyEvent.qrcode = userId
                     }
-                } catch (err) {
-                    next(err);
+
+                    await newApplyEvent.save();
+                    await currentEvent.save();
+
+                    if (currentEvent.isPayment) {
+                        req.body.amount = currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price;
+                        req.body.receiver = currentEvent.userId;
+
+                        if (payType === "CREDIT_CARD") {
+                            await payment_Controller.create_charges(req, res, next);
+                        } else {
+                            await payment_Controller.create_order(req, res, next);
+                        }
+                    } else {
+                        return res.status(200).json({ result: true })
+                    }
                 }
             }
         }
@@ -135,21 +124,16 @@ module.exports = {
                 } else {
                     currentApplyEvent.isConfirm = false
                 }
+                await currentApplyEvent.save();
 
-                try {
-                    await currentApplyEvent.save();
-
-                    if (currentApplyEvent.isConfirm) {
-                        return res.status(200).json({ result: true });
+                if (currentApplyEvent.isConfirm) {
+                    return res.status(200).json({ result: true });
+                } else {
+                    if (currentApplyEvent.isReject) {
+                        next({ error: { message: 'Join user have rejected', code: 705 } });
                     } else {
-                        if (currentApplyEvent.isReject) {
-                            next({ error: { message: 'Join user have rejected', code: 705 } });
-                        } else {
-                            next({ error: { message: 'Join user have not payment for this event', code: 704 } });
-                        }
+                        next({ error: { message: 'Join user have not payment for this event', code: 704 } });
                     }
-                } catch (err) {
-                    next(err);
                 }
             } else {
                 next({ error: { message: 'Join user have not participated in this event', code: 702 } });
@@ -175,19 +159,32 @@ module.exports = {
             for (var applyEvent in applyEvents) {
                 applyEvent.isReject = true;
 
-                try {
-                    await applyEvent.save();
+                await applyEvent.save();
 
-                    await rejectEventMenberNoti(req, res, next);
+                // await rejectEventMenberNoti(req, res, next);
 
-                    if (applyEvent.qrcode == joinUserId) {
-                        req.paymentId = applyEvent.paymentId
-                        await payment_Controller.refund(req, res, next);
-                    }
-                } catch (err) {
-                    next(err);
-                }
+                if (applyEvent.qrcode == joinUserId) {
+                    req.paymentId = applyEvent.paymentId
+                    await payment_Controller.refund(req, res, next);
+                }   
             }
+
+            const newNotification = new Notification({
+                sender: userId,
+                receiver: [joinUserId],
+                type: "EVENT_REJECT",
+                message: "",
+                title: "{sender} rejected you form event {event}",
+                linkTo: {
+                    key: "EventDetail",
+                    _id: eventId,
+                },
+                isRead: false,
+                isDelete: false,
+                createdAt: Date()
+            });
+    
+            await newNotification.save();
 
             return res.status(200).json({ result: true });
         } catch (err) {
@@ -222,24 +219,44 @@ module.exports = {
                 applyEvents = await ApplyEvent.find({eventId: eventId});
             }
 
+            var joinUserIds = [];
+
             for (var applyEvent in applyEvents) {
                 applyEvent.isReject = true;
 
-                try {
-                    await applyEvent.save();
+                await applyEvent.save();
 
-                    await cancelJoinEventNoti(req, res, next);
+                // await cancelJoinEventNoti(req, res, next);
+                if (joinUserIds.indexOf(applyEvent.userId) === -1) {
+                    joinUserIds.push(applyEvent.userId);
+                }
 
-                    if (event.isPayment == true) {
-                        req.paymentId = applyEvent.paymentId
-                        await payment_Controller.refund(req, res, next);
-                    }
-                } catch (err) {
-                    next(err);
+                if (event.isPayment == true) {
+                    req.paymentId = applyEvent.paymentId;
+                    req.joinUserId = applyEvent.userId;
+                    
+                    await payment_Controller.refund(req, res, next);
                 }
             }
 
+            const newNotification = new Notification({
+                sender: userId,
+                receiver: joinUserIds,
+                type: "EVENT_CANCEL",
+                message: "",
+                title: "{sender} canceled event {event}",
+                linkTo: {
+                    key: "EventDetail",
+                    _id: eventId,
+                },
+                isRead: false,
+                isDelete: false,
+                createdAt: Date()
+            });
+    
+            await newNotification.save();
             await event.save();
+
             return res.status(200).json({ result: true });
         } catch (err) {
             next(err);
@@ -247,7 +264,7 @@ module.exports = {
     },
 
     rejectEventMenberNoti: async (req, res, next) => {
-       
+
     },
 
     cancelJoinEventNoti: async (req, res, next) => {

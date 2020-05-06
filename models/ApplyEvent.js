@@ -7,7 +7,7 @@ const applyEventSchema = new Schema({
     isConfirm: Boolean,
     isReject: Boolean,
     paymentId: Schema.Types.ObjectId,
-    joinTime: Date(),
+    joinTime: Date,
     qrcode: { type:String, "index": "text" },
     createdAt: { type: Date, default: Date() },
     updatedAt: Date
