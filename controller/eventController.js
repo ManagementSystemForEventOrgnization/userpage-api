@@ -57,10 +57,10 @@ module.exports = {
         try {
             eventId = eventId || '';
             let pageEvent = await PageEvent.find({ eventId });
-            if (pageEvent) {
+            if (pageEvent[0]) {
                 // xác nhận là đã lưu trước đó. chỉ cần update lại.
-                let _id = pageEvent._id;
-                let p = await PageEvent.findByIdAndUpdate({ _id }, { rows: block, updateAt: new Date() });
+                let _id = pageEvent[0]._id;
+                let p = await PageEvent.findByIdAndUpdate({ _id: ObjectId(_id) }, { rows: block, updateAt: new Date() });
                 if (!p) {
                     return next({ error: { message: 'Event is not exists', code: 422 } });
                 }
@@ -75,8 +75,9 @@ module.exports = {
                 if (!p) {
                     return next({ error: { message: 'Invalid data, can\' save data', code: 422 } });
                 }
-                res.json(200).json({ result: 'success' })
             }
+            res.json(200).json({ result: 'success' })
+
         } catch (err) {
             next({ error: { message: err, code: 500 } })
 
