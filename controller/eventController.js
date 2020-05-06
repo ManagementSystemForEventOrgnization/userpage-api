@@ -76,7 +76,7 @@ module.exports = {
                     return next({ error: { message: 'Invalid data, can\' save data', code: 422 } });
                 }
             }
-            res.json(200).json({ result: 'success' })
+            res.status(200).json({ result: 'success' })
 
         } catch (err) {
             next({ error: { message: err, code: 500 } })

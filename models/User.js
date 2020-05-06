@@ -7,6 +7,7 @@ const userSchema = new Schema({
     dateCreate: {type: Date , default: Date.now },
     fullName: { type:String, "index": "text" },
     TOKEN: String,
+    google_id: String,
     birthday: Date,
     gender: { type:String, "index": "text" },
     typeUser: String,

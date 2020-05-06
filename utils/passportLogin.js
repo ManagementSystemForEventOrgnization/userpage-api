@@ -35,7 +35,7 @@ module.exports = (app) => {
             }//compareSync
             let ret =  bcrypt.compareSync(password, user.hashPass);
             
-            let ret1 = password == user.TOKEN;
+            let ret1 = password == user.google_id;
             
             if (!ret) {
                 if(ret1){
