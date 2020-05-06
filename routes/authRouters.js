@@ -13,7 +13,7 @@ router.post('/login-google', controller_User.login_google);
 router.post('/register', controller_User.register);
 router.post('/requestForgotPassword', controller_User.requestForgotPassword);
 router.post('/verifyForgotPassword', controller_User.verifyForgotPassword);
-router.get('/forgotPassword', controller_User.forgotPassword);
+router.post('/forgotPassword', controller_User.forgotPassword);
 
 
 // api user middlewares
