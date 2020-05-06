@@ -67,6 +67,7 @@ module.exports = {
             } else {
                 let page = new PageEvent(
                     {
+                        eventId : eventId,
                         rows: block
                     }
                 );
