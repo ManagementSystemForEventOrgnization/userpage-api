@@ -19,7 +19,6 @@ module.exports = {
             return next({ error: { message: 'URL is wrong format.', code: 422 } });
         }
         let checkURL = await Event.find({ urlWeb });
-        console.log(checkURL);
         if (checkURL.length !== 0) {
             next({ error: { message: 'URL is used', code: 402 } });
             return;
@@ -52,6 +51,7 @@ module.exports = {
         }
     },
 
+
     savePageEvent: async (req, res, next) => {
         let { block, eventId } = req.body;
         try {
@@ -80,7 +80,6 @@ module.exports = {
             next({ error: { message: err, code: 500 } })
 
         }
-
     },
 
     getPageEvent: async (req, res, next) => {

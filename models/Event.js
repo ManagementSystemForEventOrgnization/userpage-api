@@ -3,7 +3,7 @@ const { Schema } = mongoose;
 
 const eventSchema = new Schema({
     name: { type:String, "index": "text" },
-    joinNumber: Number,
+    joinNumber: {type: Number, default: 0},
     userId: Schema.Types.ObjectId,
     isPayment: Boolean,
     typeOfEvent : String,
