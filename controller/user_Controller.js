@@ -11,7 +11,7 @@ const otp = require("../utils/otp");
 var passport = require("passport");
 
 module.exports = {
-    
+
   login: (req, res, next) => {
     passport.authenticate("local", function (err, user, info) {
       if (err) {
@@ -38,7 +38,6 @@ module.exports = {
 
   current_user: async (req, res, next) => {
     let id = req.user;
-
     try {
       let u = await User.findById(id);
       res.status(200).json({ result: u });
@@ -46,7 +45,7 @@ module.exports = {
       next(err);
     }
   },
-  
+
   login_google: async (req, res, next) => {
     if (typeof req.body.profile === "undefined") {
       next({ error: { message: "Invalid value", code: 400 } });
@@ -235,7 +234,7 @@ module.exports = {
 
     let token = otp.generateOTP();
 
-    mailer.sentMailer("admin@gmail.com", {email}, "confirm", token)
+    mailer.sentMailer("admin@gmail.com", { email }, "confirm", token)
       .then(async (json) => {
         currentUser.TOKEN = token;
 
