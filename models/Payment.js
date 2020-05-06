@@ -8,9 +8,10 @@ const paymentSchema = new Schema({
     status: String, //UNPAID, FAILED, WAITING, PAID
     discription: String,
     eventId: Schema.Types.ObjectId,
-    cardId: Schema.Types.ObjectId,
-    createAt: { type: Date, default: Date() },
-    updateAt: Date
+    cardId: String,
+    chargeId: String,
+    createdAt: { type: Date, default: Date() },
+    updatedAt: Date
 })
 
 mongoose.model('payment', paymentSchema);
