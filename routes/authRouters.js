@@ -20,9 +20,9 @@ router.get('/logout', Unauthorized, controller_User.logout);
 // check xem co active chua.
 router.get('/current_user', Unauthorized, Authorization, controller_User.current_user);
 router.post('/verifyToken', Unauthorized, controller_User.verifyToken);
-router.get('/updatePassword', Unauthorized, controller_User.updatePassword);
+router.post('/updatePassword', Unauthorized, controller_User.updatePassword);
 router.post('/user/updateInfo', Unauthorized, controller_User.updateInfor);
 router.get('/user/profile', Unauthorized, controller_User.profile_user);
-router.get('/user/history', Unauthorized, controller_User.get_History);
+router.post('/user/history', Unauthorized, controller_User.get_History);
 
 module.exports = router;
