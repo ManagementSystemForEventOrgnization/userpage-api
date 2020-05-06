@@ -46,36 +46,7 @@ module.exports = {
       next(err);
     }
   },
-
-  check_Mail: async (req, res, next) => {
-    if (typeof req.body.email === "undefined") {
-      return next({ error: { message: "Invalid value", code: 400 } });
-    } else {
-      let { email } = req.body;
-
-      try {
-        let user = await User.findOne({ email: email });
-
-        if (!user) {
-          // xac nhan mail nay  chua dùng nên gữi mail đi và thông báo cho người dùng biết luôn là mail có tồn tại hay không để xác nhận.
-          const token = Math.floor(Math.random() * 1000) + 1000;
-          mailer
-            .sentMailer("admin@gmail.com", req.body, "confirm", `${token}`)
-            .then((json) => {
-              return res.status(200).json({ result: token });
-            })
-            .catch((err) => {
-              next(err);
-            });
-        } else {
-          return next({ error: { message: "Email already exist", code: 500 } });
-        }
-      } catch (err) {
-        return next({ error: { message: err, code: 500 } });
-      }
-    }
-  },
-
+  
   login_google: async (req, res, next) => {
     if (typeof req.body.profile === "undefined") {
       next({ error: { message: "Invalid value", code: 400 } });

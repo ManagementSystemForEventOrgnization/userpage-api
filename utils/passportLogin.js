@@ -45,7 +45,7 @@ module.exports = (app) => {
             }
             if (!user.isActive) {
                 // false
-                let too = Math.floor( Math.random()*1000)+ 1000;
+                let too = otp.generateOTP();
                 try {
                     mailer.sentMailer('admin@gmail.com', { email: user.email }, 'confirm', `${too}`).then(json=>{
                         if(json.code==400){
@@ -63,9 +63,6 @@ module.exports = (app) => {
             }else{
                 return done(null, user);
             }
-
-            
-
         }).catch(err => {
             // nay la sai cai ten dn
             return done(err, false, { message: err });
