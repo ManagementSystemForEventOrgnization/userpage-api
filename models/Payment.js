@@ -6,7 +6,7 @@ const paymentSchema = new Schema({
     receiver: Schema.Types.ObjectId,
     amount: Number, 
     status: String, //UNPAID, FAILED, WAITING, PAID
-    discription: String,
+    description: String,
     eventId: Schema.Types.ObjectId,
     cardId: String,
     chargeId: String,

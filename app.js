@@ -32,6 +32,8 @@ require('./middlewares/loadMongoose');
 require('./utils/passport-google'); 
 require('./utils/passportLogin')(app);
 
+
+app.use('/api', require('./routes/eventRouter'));
 app.use('/api', require('./routes/notificationRouters'));
 app.use('/api', require('./routes/applyEventRouters'));
 app.use('/api', require('./routes/paymentRouters'));

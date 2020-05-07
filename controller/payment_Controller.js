@@ -147,39 +147,46 @@ module.exports = {
 				const data = config.appid + "|" + order.apptransid + "|" + order.appuser + "|" + order.amount + "|" + order.apptime + "|" + order.embeddata + "|" + order.item;
 				order.mac = CryptoJS.HmacSHA256(data, config.key1).toString();
 		
-				var {result, err} =  await axios.post(config.endpoint, null, { params: order })
+				var result =  await axios.post(config.endpoint, null, { params: order })
+				
+				if (result.data) {
+					let {zptranstoken} = result.data;
 
-				const newPayment = new Payment({
-					sender: userId,
-					eventId: eventId,
-					receiver: receiver,
-					amount: amount,
-					payType: "ZALOPAY",
-					discription: discription,
-					createdAt: Date()
-				});
+					console.log("start: ", zptranstoken);
 
-				currentApplyEvent.paymentId = newPayment._id;
-				currentApplyEvent.updatedAt = Date();
-
-				if (result) {
 					if (currentPayment) {
-						result.paymentId = currentPayment._id;
-						currentPayment.cardId = null;
-						currentPayment.zptransId = result.zptransid;
+						console.log("start1: ",currentPayment);
+						result.data.paymentId = currentPayment._id;
+						currentPayment.cardId = undefined;
+						currentPayment.zptransId = zptranstoken;
 						currentPayment.status = "PAID";
-
+						
+						console.log("start2: ",currentPayment);
 						await currentPayment.save();
 					} else {
-						result.paymentId = newPayment._id;
-						newPayment.zptransId = result.zptransid;
-						newPayment.status = "PAID";
-						
+						console.log("save info---");
+						const newPayment = new Payment({
+							sender: userId,
+							eventId: eventId,
+							receiver: receiver,
+							amount: amount,
+							description: description,
+							payType: "ZALOPAY",
+							zptransId: zptranstoken,
+							status: "PAID"
+						});
+
+						console.log("save info");
+						result.data.paymentId = newPayment._id;
+						currentApplyEvent.updatedAt = Date();
+						currentApplyEvent.paymentId = newPayment._id;
+						console.log("really save info");
 						await newPayment.save();
 						await currentApplyEvent.save();
 					}
-					
-					res.status(200).json({result: result});
+
+					console.log("123456:");
+					res.status(200).json({result: result.data});
 				} else {
 					if (currentPayment) {
 						currentPayment.cardId = null;
@@ -267,7 +274,7 @@ module.exports = {
 						receiver: receiver,
 						amount: amount,
 						payType: "CREDIT_CARD",
-						discription: discription,
+						description: description,
 						cardId: cardFind.id,
 						createdAt: Date()
 					});

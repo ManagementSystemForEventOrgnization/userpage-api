@@ -5,5 +5,7 @@ const Unauthorized = require('../middlewares/loginAuth');
 const Authorization = require('../middlewares/authorization');
 
 router.post('/save/event', Unauthorized ,eventController.saveEvent);
+router.get('/getPageEvent' ,eventController.getPageEvent);
+router.get('/getListEvent' ,eventController.getListEvent);
 
 module.exports = router;

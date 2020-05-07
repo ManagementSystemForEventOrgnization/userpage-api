@@ -8,19 +8,17 @@ const payment_Controller = require('../controller/payment_Controller');
 
 module.exports = {
     updatePaymentStatus: async (req, res, next) => {
-        if (typeof req.body.eventId === 'undefined' || 
-            typeof req.body.paymentId === 'undefined' ||
-            typeof req.body.receiverId === 'undefined'||
+        if (typeof req.body.paymentId === 'undefined' ||
             typeof req.body.status === 'undefined') {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
-        let { eventId, paymentId, receiverId, status } = req.body;
+        let { paymentId, status } = req.body;
         let userId = req.user; 
 
         try {
-            var currentPayment = await Payment.findOne({sender: userId, eventId: eventId, receiver: receiverId});
+            var currentPayment = await Payment.findById(paymentId);
             var currentApplyEvent = await ApplyEvent.findOne({paymentId: paymentId});
             
             if (currentPayment) {
@@ -53,8 +51,13 @@ module.exports = {
 
         try {
             var currentEvent = await Event.findById(eventId);
-
+            console.log(currentEvent.userId, " --- ", userId, currentEvent.userId == userId);
             if (currentEvent) {
+                // if (currentEvent.userId == userId) {
+                //     next({ error: { message: 'Can not join in yourself event', code: 706 } });
+                //     return;
+                // }
+
                 var joinNumber = currentEvent.joinNumber || 0;
                 joinNumber += 1;
 
@@ -68,6 +71,7 @@ module.exports = {
                 var currentApplyEvent = await ApplyEvent.findOne({userId: userId, eventId: eventId, joinTime: joinTime});
                 
                 if (currentApplyEvent) {
+                    if (currentApplyEvent.qrcode != userId )
                     next({ error: { message: 'You have already joined in this event', code: 701 } });
                 } else {
                     const newApplyEvent = new ApplyEvent({
@@ -78,14 +82,15 @@ module.exports = {
                         createdAt: Date()
                     });
                         
-                    if (currentEvent.isPayment != true) {
+                    if (currentEvent.isSellTicket != true) {
                         newApplyEvent.qrcode = userId
                     }
 
                     await newApplyEvent.save();
                     await currentEvent.save();
 
-                    if (currentEvent.isPayment) {
+                    if (currentEvent.isSellTicket) {
+                        console.log("-------currentEvent.isSellTicket");
                         req.body.amount = currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price;
                         req.body.receiver = currentEvent.userId;
 
@@ -98,6 +103,39 @@ module.exports = {
                         return res.status(200).json({ result: true })
                     }
                 }
+            }
+        }
+        catch (err) {
+            next(err);
+        }
+    },
+
+    prepayEvent: async (req, res, next) => {
+        if (typeof req.body.eventId === 'undefined' ||
+            typeof req.body.payType === 'undefined' ||
+            typeof req.body.joinTime === 'undefined') {
+            next({ error: { message: "Invalid data", code: 402 } });
+            return;
+        }
+
+        let { eventId, joinTime, payType } = req.body;
+        let userId = req.user; 
+
+        try {
+            var currentEvent = await Event.findById(eventId);
+            var currentApplyEvent = await ApplyEvent.findOne({userId: userId, eventId: eventId, joinTime: joinTime});
+                
+            if (currentEvent && currentApplyEvent) {
+                req.body.amount = currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price;
+                req.body.receiver = currentEvent.userId;
+
+                if (payType === "CREDIT_CARD") {
+                    await payment_Controller.create_charges(req, res, next);
+                } else {
+                    await payment_Controller.create_order(req, res, next);
+                }
+            } else {
+                next({ error: { message: 'Not found!', code: 707 } });
             }
         }
         catch (err) {
@@ -231,7 +269,7 @@ module.exports = {
                     joinUserIds.push(applyEvent.userId);
                 }
 
-                if (event.isPayment == true) {
+                if (event.isSellTicket == true && applyEvent.qrcode == applyEvent.userId) {
                     req.paymentId = applyEvent.paymentId;
                     req.joinUserId = applyEvent.userId;
                     
@@ -270,4 +308,15 @@ module.exports = {
     cancelJoinEventNoti: async (req, res, next) => {
        
     },
+
+    getListApplyEvent: async (req, res, next) => {
+        try {
+            let applyEvents = await ApplyEvent.find({userId: req.user});
+
+            res.status(200).json({ result: applyEvents });
+        } catch (err) {
+            next({ error: { message: 'Lỗi không lấy được dữ liệu', code: 500 } });
+        }
+
+    }
 }
