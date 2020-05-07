@@ -282,7 +282,6 @@ module.exports = {
       next({ error: { message: "OTP fail", code: 621 } });
       return;
     }
-
     res.status(200).json({ result: true });
   },
 
