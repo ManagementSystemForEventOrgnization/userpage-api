@@ -187,13 +187,13 @@ module.exports = {
 
     if (token != tokenDB) {
       next({ error: { message: "OTP fail", code: 422 } });
-      return;
     } else {
       userNow.isActive = true;
       userNow.TOKEN = "";
 
       try {
         await userNow.save();
+        return res.status(200).json({ result: true });
       } catch (err) {
         next(err);
       }
@@ -320,7 +320,7 @@ module.exports = {
 
     try {
       await currentUser.save();
-      res.status(200).json({ result: currentUser });
+      res.status(200).json({ result: true });
     } catch (err) {
       next(err);
     }
@@ -335,7 +335,7 @@ module.exports = {
       job,
       phone,
       discription,
-      avatarUrl,
+      avatarUrl
     } = req.body;
 
     console.log(req.body);
@@ -364,21 +364,7 @@ module.exports = {
 
     try {
       await currentUser.save();
-      res.status(200).json({
-        result: {
-          user: {
-            email: currentUser.email,
-            fullName: currentUser.fullName,
-            birthday: currentUser.birthday,
-            gender: currentUser.gender,
-            job: currentUser.job,
-            id: currentUser._id,
-            phone: currentUser.phone,
-            discription: currentUser.discription,
-            avatar: currentUser.avatar,
-          },
-        },
-      });
+      res.status(200).json({ result: currentUser });
     } catch (err) {
       next(err);
     }
