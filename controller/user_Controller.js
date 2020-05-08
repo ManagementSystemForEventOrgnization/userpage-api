@@ -33,7 +33,7 @@ module.exports = {
 
   logout: async (req, res) => {
     req.logout();
-    res.status(200).json({ result: { success: true } });
+    res.status(200).json({ result: true });
   },
 
   current_user: async (req, res, next) => {
@@ -194,7 +194,6 @@ module.exports = {
 
       try {
         await userNow.save();
-        res.status(200).json({ result: true });
       } catch (err) {
         next(err);
       }
@@ -317,10 +316,11 @@ module.exports = {
 
     currentUser.hashPass = bcrypt.hashSync(newPassword, 10);
     currentUser.TOKEN = "";
+    currentUser.isActive = true;
 
     try {
       await currentUser.save();
-      res.status(200).json({ result: true });
+      res.status(200).json({ result: currentUser });
     } catch (err) {
       next(err);
     }
