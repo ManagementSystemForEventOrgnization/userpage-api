@@ -33,7 +33,7 @@ module.exports = {
 
   logout: async (req, res) => {
     req.logout();
-    res.status(200).json({ result: { success: true } });
+    res.status(200).json({ result: true });
   },
 
   current_user: async (req, res, next) => {
@@ -187,14 +187,13 @@ module.exports = {
 
     if (token != tokenDB) {
       next({ error: { message: "OTP fail", code: 422 } });
-      return;
     } else {
       userNow.isActive = true;
       userNow.TOKEN = "";
 
       try {
         await userNow.save();
-        res.status(200).json({ result: true });
+        return res.status(200).json({ result: true });
       } catch (err) {
         next(err);
       }
@@ -317,6 +316,7 @@ module.exports = {
 
     currentUser.hashPass = bcrypt.hashSync(newPassword, 10);
     currentUser.TOKEN = "";
+    currentUser.isActive = true;
 
     try {
       await currentUser.save();
