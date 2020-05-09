@@ -26,4 +26,5 @@ router.post('/user/updateInfo', Unauthorized, controller_User.updateInfor);
 router.get('/user/profile', Unauthorized, controller_User.profile_user);
 router.post('/user/history', Unauthorized, controller_User.get_History);
 
+router.post('/user/historyCreate', Unauthorized, controller_User.get_HistoryCreate);
 module.exports = router;

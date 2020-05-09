@@ -6,7 +6,7 @@ module.exports = async (req, res, next) => {
 
     if (!u.isActive) {
         res.status(600).json({ error: { message: 'Not active', coe: 203 } });
-    } else {
+    } else {    
         return next();
     }
 }

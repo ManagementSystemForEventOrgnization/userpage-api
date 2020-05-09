@@ -336,10 +336,15 @@ module.exports = {
       phone,
       discription,
       avatarUrl,
+      orgName,
+      orgDes,
+      orgWeb,
+      orgPhone,
+      orgEmail,
+      orgUrl,
+      address
     } = req.body;
 
-    console.log(req.body);
-    console.log(fullName, birthday, gender, job, phone, discription, avatarUrl);
     let currentUser = null;
 
     try {
@@ -361,23 +366,17 @@ module.exports = {
     currentUser.phone = phone;
     currentUser.discription = discription;
     currentUser.avatar = avatarUrl;
-
+    currentUser.orgName = orgName;
+    currentUser.orgDes = orgDes;
+    currentUser.orgWeb = orgWeb;
+    currentUser.orgPhone = orgPhone;
+    currentUser.orgEmail = orgEmail;
+    currentUser.orgUrl = orgUrl;
+    currentUser.address = address;
     try {
-      await currentUser.save();
+      let u = await currentUser.save();
       res.status(200).json({
-        result: {
-          user: {
-            email: currentUser.email,
-            fullName: currentUser.fullName,
-            birthday: currentUser.birthday,
-            gender: currentUser.gender,
-            job: currentUser.job,
-            id: currentUser._id,
-            phone: currentUser.phone,
-            discription: currentUser.discription,
-            avatar: currentUser.avatar,
-          },
-        },
+        result: u
       });
     } catch (err) {
       next(err);
@@ -498,6 +497,41 @@ module.exports = {
         { $limit: numberRecord },
       ]);
 
+      res.status(200).json({ result: arrEvent });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  get_HistoryCreate: async (req, res, next) => {
+    let {
+      categoryEventId,
+      startDate,
+      endDate,
+      txtSearch,
+      pageNumber,
+      numberRecord,
+    } = req.body;
+    txtSearch = txtSearch || "";
+
+
+    pageNumber = pageNumber || 1;
+    numberRecord = numberRecord || 10;
+
+    let idUserLogin = req.user;
+    try {
+      let arrEvent = null;
+
+      let conditionQuery = {
+        userId : ObjectId(idUserLogin)
+      };
+      console.log(conditionQuery);
+      if (txtSearch != "") {
+        conditionQuery.$text = { $search: txtSearch };
+      }
+    
+      arrEvent = await Event.find(conditionQuery).skip(+numberRecord * (+pageNumber - 1) ).limit(+numberRecord);//.sort(conditionSort)
+      console.log(arrEvent);
       res.status(200).json({ result: arrEvent });
     } catch (err) {
       next(err);
