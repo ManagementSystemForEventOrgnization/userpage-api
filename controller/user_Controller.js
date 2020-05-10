@@ -431,7 +431,7 @@ module.exports = {
       txtSearch,
       pageNumber,
       numberRecord,
-    } = req.body;
+    } = req.query;
     txtSearch = txtSearch || "";
 
     pageNumber = pageNumber || 1;
@@ -511,7 +511,7 @@ module.exports = {
       txtSearch,
       pageNumber,
       numberRecord,
-    } = req.body;
+    } = req.query;
     txtSearch = txtSearch || "";
 
 
@@ -525,13 +525,11 @@ module.exports = {
       let conditionQuery = {
         userId : ObjectId(idUserLogin)
       };
-      console.log(conditionQuery);
       if (txtSearch != "") {
         conditionQuery.$text = { $search: txtSearch };
       }
-    
       arrEvent = await Event.find(conditionQuery).skip(+numberRecord * (+pageNumber - 1) ).limit(+numberRecord);//.sort(conditionSort)
-      console.log(arrEvent);
+      
       res.status(200).json({ result: arrEvent });
     } catch (err) {
       next(err);
