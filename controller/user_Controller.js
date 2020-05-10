@@ -168,12 +168,12 @@ module.exports = {
 
   // verify account khi register
   verifyToken: async (req, res, next) => {
-    if (typeof req.body.token === "undefined") {
+    if (typeof req.query.token === "undefined") {
       next({ error: { message: "Invalid value", code: 402 } });
       return;
     }
 
-    let { token } = req.body;
+    let { token } = req.query;
     let userNow = null;
 
     try {
@@ -513,7 +513,7 @@ module.exports = {
       numberRecord,
     } = req.query;
     txtSearch = txtSearch || "";
-
+    startDate = startDate || "";
 
     pageNumber = pageNumber || 1;
     numberRecord = numberRecord || 10;
@@ -523,13 +523,25 @@ module.exports = {
       let arrEvent = null;
 
       let conditionQuery = {
-        userId : ObjectId(idUserLogin)
+        $and: [{
+          userId: ObjectId(idUserLogin)
+        }]
       };
+      if (startDate !== "") {
+        conditionQuery.$and.push({
+          startTime : {
+            $gt: new Date(startDate),
+            $lt: new Date(endDate || new Date().toString()),
+          }
+        })
+      }
+
       if (txtSearch != "") {
         conditionQuery.$text = { $search: txtSearch };
       }
-      arrEvent = await Event.find(conditionQuery).skip(+numberRecord * (+pageNumber - 1) ).limit(+numberRecord);//.sort(conditionSort)
-      
+      console.log(conditionQuery);
+      arrEvent = await Event.find(conditionQuery).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord);//.sort(conditionSort)
+
       res.status(200).json({ result: arrEvent });
     } catch (err) {
       next(err);

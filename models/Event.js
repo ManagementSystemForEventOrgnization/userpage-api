@@ -22,7 +22,7 @@ const eventSchema = new Schema({
     endTime: Date,
     limitNumber: Number,
     startTime: { type: Date, default: Date() },
-    status: { type:String, "index": "text" },
+    status: { type:String, "index": "text", default: "PENDING" },
     urlWeb: String,
     createAt: { type: Date, default: Date() },
     updateAt: Date

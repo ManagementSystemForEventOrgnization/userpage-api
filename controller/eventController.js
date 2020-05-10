@@ -54,6 +54,7 @@ module.exports = {
 
     savePageEvent: async (req, res, next) => {
         let { block, eventId } = req.body;
+        console.log(block);
         try {
             eventId = eventId || '';
             let pageEvent = await PageEvent.find({ eventId });
@@ -85,7 +86,7 @@ module.exports = {
     },
 
     getPageEvent: async (req, res, next) => {
-        let { eventId } = req.body;
+        let { eventId } = req.query;
         try {
             if(!eventId){
                 return next({error: {message: 'Event is not exists', code: 422}});
