@@ -9,22 +9,23 @@ const pageEventSchema = new Schema({
         row: Number,
         section: Number
     },
-    rows: [{
-        title: String,
-        content: [String],
-        linkFile: [String],
-        image: [String],
-        index: Number,
-        contentColor: String,
-        titleColor: String,
-        titleFont: Number,
-        contentFont: Number,
-        titleIcon: String, // dấu chấm hay dấu sao trước text
-        contentIcon: String,
-        type: String, //banner, text, table, speaker
-        level: Number,
-        style: String //horizontal, vertical
-    }],
+    // rows: [{
+    //     title: String,
+    //     content: [String],
+    //     linkFile: [String],
+    //     image: [String],
+    //     index: Number,
+    //     contentColor: String,
+    //     titleColor: String,
+    //     titleFont: Number,
+    //     contentFont: Number,
+    //     titleIcon: String, // dấu chấm hay dấu sao trước text
+    //     contentIcon: String,
+    //     type: String, //banner, text, table, speaker
+    //     level: Number,
+    //     style: String //horizontal, vertical
+    // }],
+    rows: {type: Array},
     createAt: { type: Date, default: Date() },
     updateAt: Date
 })

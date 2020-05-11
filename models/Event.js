@@ -2,19 +2,19 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const eventSchema = new Schema({
+    name: { type:String, "index": "text" },
+    joinNumber: {type: Number, default: 0},
     userId: Schema.Types.ObjectId,
-    joinNumber: Number,
     limitNumber: Number,
     typeOfEvent : String,
     urlWeb: String,
     category: String,
     isSellTicket: Boolean,
-    name: { type:String, "index": "text" },
     ticket: {
         price: Number,
         discount: Number
     },
-    status: { type:String, "index": "text" },
+    status: { type:String, "index": "text", default: "PENDING" },
     map: [{
         long: String,
         lat: String
@@ -26,7 +26,7 @@ const eventSchema = new Schema({
     cancelTime: [Date],
     isCancel: Boolean,
     createdAt: { type: Date, default: Date() },
-    updatedAt: Date
+    updatedAt: Date,
 })
 
 mongoose.model('event', eventSchema);
