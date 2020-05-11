@@ -30,7 +30,7 @@ module.exports = {
 	refund: async (req, res, next) => {
 		let { paymentId, joinUserId, eventId } = req.body;
 		let userId = req.user;
-
+		
 		if (paymentId) {
 			try {
 				var currentPayment = await Payment.findOne({sender: joinUserId, eventId: eventId, receiver: userId});
@@ -47,8 +47,8 @@ module.exports = {
 							isDelete: false,
 							createdAt: Date()
 						});
-
-						currentPayment.isRefund = true;
+						
+						currentPayment.isRefund = type == "SUCCESS";
 						await currentPayment.save();
 						await newNotification.save();
 					}
