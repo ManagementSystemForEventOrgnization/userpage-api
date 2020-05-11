@@ -34,6 +34,7 @@ require('./utils/passportLogin')(app);
 
 app.use('/api', require('./routes/paymentRouters'));
 app.use('/api', require('./routes/authRouters'));
+app.use('/api', require('./routes/eventRouter'));
 app.use('/api/evenCategory', require('./routes/eventCategoryRouter'));
 app.use('/',  require('./routes/googleRouter'));
 

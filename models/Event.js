@@ -3,7 +3,7 @@ const { Schema } = mongoose;
 
 const eventSchema = new Schema({
     name: { type:String, "index": "text" },
-    joinNumber: Number,
+    joinNumber: {type: Number, default: 0},
     userId: Schema.Types.ObjectId,
     isPayment: Boolean,
     typeOfEvent : String,
@@ -22,7 +22,7 @@ const eventSchema = new Schema({
     endTime: Date,
     limitNumber: Number,
     startTime: { type: Date, default: Date() },
-    status: { type:String, "index": "text" },
+    status: { type:String, "index": "text", default: "PENDING" },
     urlWeb: String,
     createAt: { type: Date, default: Date() },
     updateAt: Date

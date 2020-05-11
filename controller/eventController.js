@@ -11,91 +11,96 @@ module.exports = {
     saveEvent: async (req, res, next) => {
         let { name, typeOfEvent, category, urlWeb, limitNumber, address, detailAddress, map, startTime, endTime, isSellTicket } = req.body;
         if (typeof eventName === undefined || typeof long === undefined || typeof address === undefined) {
-            return next({ error: { message: 'Thông tin chưa đúng kiểm trả lại', code: 602 } });
+            return next({ error: { message: 'Invalid value', code: 602 } });
         }
-        let userId = req.User;
+        let userId = req.user;
 
         if (myFunction.validateUrlWeb(urlWeb)) {
-            return next({ error: { message: 'Địa chỉ đường dẫn chứa kí tự không hợp lệ', code: 422 } });
+            return next({ error: { message: 'URL is wrong format.', code: 422 } });
         }
         let checkURL = await Event.find({ urlWeb });
-        if (checkURL) {
-            next({ error: { message: 'Địa chỉ này đã được dùng', code: 402 } });
+        if (checkURL.length !== 0) {
+            next({ error: { message: 'URL is used', code: 402 } });
             return;
         }
 
-        let e = new Event(
-            {
-                userId,
-                typeOfEvent,
-                name,
-                limitNumber,
-                category,
-                time,
-                address,
-                urlWeb,
-                detailAddress,
-                map,
-                startTime,
-                endTime,
-                isSellTicket
-            }
+        let e = new Event({
+            userId,
+            typeOfEvent,
+            name,
+            limitNumber,
+            category,
+            address,
+            urlWeb,
+            detailAddress,
+            map,
+            startTime,
+            endTime,
+            isSellTicket
+        }
         );
 
         try {
             let event = await e.save();
             if (!event) {
-                return next({ error: { message: 'Lỗi dữ liệu không thể lưu! vui lòng kiểm tra lại!', code: 505 } });
+                return next({ error: { message: 'Invalid data, can\'t save data', code: 505 } });
             }
             res.status(200).json({ result: event._id });
         } catch (error) {
-            next({ error: { message: 'Lưu dữ liệu không thành công', code: 500 } });
+            next({ error: { message: error, code: 500 } })
         }
     },
 
+
     savePageEvent: async (req, res, next) => {
         let { block, eventId } = req.body;
+        console.log(block);
         try {
+            eventId = eventId || '';
             let pageEvent = await PageEvent.find({ eventId });
-            if (pageEvent) {
+            if (pageEvent[0]) {
                 // xác nhận là đã lưu trước đó. chỉ cần update lại.
-                let _id = pageEvent._id;
-                let p = await PageEvent.findByIdAndUpdate({ _id }, { rows: block, updateAt: new Date() });
+                let _id = pageEvent[0]._id;
+                let p = await PageEvent.findByIdAndUpdate({ _id: ObjectId(_id) }, { rows: block, updateAt: new Date() });
                 if (!p) {
-                    return next({ error: { message: 'Lỗi sự kiện không tồn tại', code: 422 } });
+                    return next({ error: { message: 'Event is not exists', code: 422 } });
                 }
             } else {
                 let page = new PageEvent(
                     {
+                        eventId : eventId,
                         rows: block
                     }
                 );
                 let p = await page.save();
                 if (!p) {
-                    return next({ error: { message: 'Lưu không thành công', code: 422 } });
+                    return next({ error: { message: 'Invalid data, can\' save data', code: 422 } });
                 }
-                res.json(200).json({ result: 'success' })
             }
+            res.status(200).json({ result: 'success' })
+
         } catch (err) {
-            return next({ error: { message: 'Lưu không thành công', code: 500 } });
+            next({ error: { message: err, code: 500 } })
 
         }
-
     },
 
     getPageEvent: async (req, res, next) => {
-        let { eventId } = req.body;
+        let { eventId } = req.query;
         try {
+            if(!eventId){
+                return next({error: {message: 'Event is not exists', code: 422}});
+            }
             let page = await PageEvent.find({ eventId: new ObjectId(eventId) });
 
             if (!page) {
-                return next({ error: { message: 'Sự kiện không tồn tại', code: 500 } });
+                return next({ error: { message: 'Event is not exists', code: 500 } });
             }
-
             res.status(200).json({ result: page });
         } catch (err) {
-            next({ error: { message: 'Lỗi không lấy được dữ liệu', code: 500 } });
+            next({ error: { message: err, code: 500 } })
         }
 
     }
+
 }
