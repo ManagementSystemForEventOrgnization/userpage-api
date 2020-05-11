@@ -9,7 +9,7 @@ const PageEvent = mongoose.model('pageEvent');
 
 module.exports = {
     saveEvent: async (req, res, next) => {
-        let { name, typeOfEvent, category, urlWeb, limitNumber, address, detailAddress, map, startTime, endTime, isSellTicket } = req.body;
+        let { name, typeOfEvent, category, urlWeb, limitNumber, address, detailAddress, map, startTime, endTime, isSellTicket, ticket } = req.body;
         if (typeof eventName === undefined || typeof long === undefined || typeof address === undefined) {
             return next({ error: { message: 'Invalid value', code: 602 } });
         }
@@ -18,6 +18,7 @@ module.exports = {
         if (myFunction.validateUrlWeb(urlWeb)) {
             return next({ error: { message: 'URL is wrong format.', code: 422 } });
         }
+
         let checkURL = await Event.find({ urlWeb });
         if (checkURL.length !== 0) {
             next({ error: { message: 'URL is used', code: 402 } });
@@ -30,6 +31,7 @@ module.exports = {
             name,
             limitNumber,
             category,
+            ticket,
             address,
             urlWeb,
             detailAddress,
@@ -45,7 +47,7 @@ module.exports = {
             if (!event) {
                 return next({ error: { message: 'Invalid data, can\'t save data', code: 505 } });
             }
-            res.status(200).json({ result: event._id });
+            res.status(200).json({ result: event });
         } catch (error) {
             next({ error: { message: error, code: 500 } })
         }
@@ -87,6 +89,7 @@ module.exports = {
 
     getPageEvent: async (req, res, next) => {
         let { eventId } = req.query;
+
         try {
             if(!eventId){
                 return next({error: {message: 'Event is not exists', code: 422}});
@@ -99,6 +102,17 @@ module.exports = {
             res.status(200).json({ result: page });
         } catch (err) {
             next({ error: { message: err, code: 500 } })
+        }
+
+    },
+
+    getListEvent: async (req, res, next) => {
+        try {
+            let events = await Event.find();
+
+            res.status(200).json({ result: events });
+        } catch (err) {
+            next({ error: { message: 'Lỗi không lấy được dữ liệu', code: 500 } });
         }
 
     }

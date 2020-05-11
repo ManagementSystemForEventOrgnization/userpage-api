@@ -5,27 +5,28 @@ const eventSchema = new Schema({
     name: { type:String, "index": "text" },
     joinNumber: {type: Number, default: 0},
     userId: Schema.Types.ObjectId,
-    isPayment: Boolean,
+    limitNumber: Number,
     typeOfEvent : String,
-    map: {
-        long: String,
-        lat: String
-    },
-    address : { type:String, "index": "text" },
-    detailAddress: String,
+    urlWeb: String,
+    category: String,
     isSellTicket: Boolean,
     ticket: {
         price: Number,
         discount: Number
     },
-    category: String,
-    endTime: Date,
-    limitNumber: Number,
-    startTime: { type: Date, default: Date() },
     status: { type:String, "index": "text", default: "PENDING" },
-    urlWeb: String,
-    createAt: { type: Date, default: Date() },
-    updateAt: Date
+    map: [{
+        long: String,
+        lat: String
+    }],
+    address : [{ type:String, "index": "text" }],
+    detailAddress: [String],
+    endTime: [Date],
+    startTime: [{ type: Date, default: Date() }],
+    cancelTime: [Date],
+    isCancel: Boolean,
+    createdAt: { type: Date, default: Date() },
+    updatedAt: Date,
 })
 
 mongoose.model('event', eventSchema);

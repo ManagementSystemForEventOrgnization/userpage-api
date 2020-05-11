@@ -13,4 +13,6 @@ router.post('/payouts', payment_Controller.payouts);
 router.post('/zalopay_create_order', payment_Controller.create_order);
 router.post('/create_order_callback', payment_Controller.create_order_callback);
 
+router.post('/paymentHistory', payment_Controller.paymentHistory);
+
 module.exports = router;
