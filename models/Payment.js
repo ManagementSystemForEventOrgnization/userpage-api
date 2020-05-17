@@ -5,12 +5,16 @@ const paymentSchema = new Schema({
     sender: Schema.Types.ObjectId,
     receiver: Schema.Types.ObjectId,
     amount: Number, 
-    status: String,
-    discription: String,
+    status: String, //UNPAID, FAILED, WAITING, PAID
+    description: String,
     eventId: Schema.Types.ObjectId,
-    cardId: Schema.Types.ObjectId,
-    createAt: { type: Date, default: Date() },
-    updateAt: Date
+    cardId: String,
+    chargeId: String,
+    zptransId: String,
+    payType: String,
+    isRefunded: Boolean,
+    createdAt: { type: Date, default: Date() },
+    updatedAt: Date
 })
 
 mongoose.model('payment', paymentSchema);

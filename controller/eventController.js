@@ -23,6 +23,7 @@ module.exports = {
         if (myFunction.validateUrlWeb(urlWeb)) {
             return next({ error: { message: 'Formation URL is wrong.', code: 422 } });
         }
+
         let checkURL = await Event.find({ urlWeb });
         if (checkURL.length !== 0) {
             next({ error: { message: 'URL is used', code: 402 } });
@@ -46,7 +47,7 @@ module.exports = {
             if (!event) {
                 return next({ error: { message: 'Invalid data, can\'t save data', code: 505 } });
             }
-            res.status(200).json({ result: event._id });
+            res.status(200).json({ result: event });
         } catch (error) {
             next({ error: { message: error, code: 500 } })
         }

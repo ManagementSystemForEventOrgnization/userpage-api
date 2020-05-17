@@ -5,9 +5,12 @@ const applyEventSchema = new Schema({
     userId: Schema.Types.ObjectId,
     eventId: Schema.Types.ObjectId,
     isConfirm: Boolean,
+    isReject: Boolean,
+    paymentId: Schema.Types.ObjectId,
+    joinTime: Date,
     qrcode: { type:String, "index": "text" },
-    createAt: { type: Date, default: Date() },
-    updateAt: Date
+    createdAt: { type: Date, default: Date() },
+    updatedAt: Date
 })
 
 mongoose.model('applyEvent', applyEventSchema);
