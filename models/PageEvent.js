@@ -26,6 +26,8 @@ const pageEventSchema = new Schema({
     //     style: String //horizontal, vertical
     // }],
     rows: {type: Array},
+    headerHtml: {type: String},
+    unEditableHtml: {type: Array},
     createAt: { type: Date, default: Date() },
     updateAt: Date
 })

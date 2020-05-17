@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const eventCategory = mongoose.model('eventCategory');
 
-
+ 
 module.exports = {
     getCategory: async (req, res, next) => {
         try {

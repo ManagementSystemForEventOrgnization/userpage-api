@@ -6,17 +6,22 @@ const User = mongoose.model('users');
 const myFunction = require('../utils/function');
 const Event = mongoose.model('event');
 const PageEvent = mongoose.model('pageEvent');
+var jssCompress = require("js-string-compression");
+var hm = new jssCompress.Hauffman();
 
 module.exports = {
+
+
+
     saveEvent: async (req, res, next) => {
-        let { name, typeOfEvent, category, urlWeb, limitNumber, address, detailAddress, map, startTime, endTime, isSellTicket } = req.body;
+        let { name, typeOfEvent, category, urlWeb, limitNumber, session, isSellTicket } = req.body;
         if (typeof eventName === undefined || typeof long === undefined || typeof address === undefined) {
             return next({ error: { message: 'Invalid value', code: 602 } });
         }
         let userId = req.user;
 
         if (myFunction.validateUrlWeb(urlWeb)) {
-            return next({ error: { message: 'URL is wrong format.', code: 422 } });
+            return next({ error: { message: 'Formation URL is wrong.', code: 422 } });
         }
         let checkURL = await Event.find({ urlWeb });
         if (checkURL.length !== 0) {
@@ -30,12 +35,8 @@ module.exports = {
             name,
             limitNumber,
             category,
-            address,
             urlWeb,
-            detailAddress,
-            map,
-            startTime,
-            endTime,
+            session,
             isSellTicket
         }
         );
@@ -51,34 +52,48 @@ module.exports = {
         }
     },
 
-
     savePageEvent: async (req, res, next) => {
-        let { block, eventId } = req.body;
-        console.log(block);
-        try {
-            eventId = eventId || '';
-            let pageEvent = await PageEvent.find({ eventId });
-            if (pageEvent[0]) {
-                // xác nhận là đã lưu trước đó. chỉ cần update lại.
-                let _id = pageEvent[0]._id;
-                let p = await PageEvent.findByIdAndUpdate({ _id: ObjectId(_id) }, { rows: block, updateAt: new Date() });
-                if (!p) {
-                    return next({ error: { message: 'Event is not exists', code: 422 } });
-                }
-            } else {
-                let page = new PageEvent(
-                    {
-                        eventId : eventId,
-                        rows: block
-                    }
-                );
-                let p = await page.save();
-                if (!p) {
-                    return next({ error: { message: 'Invalid data, can\' save data', code: 422 } });
-                }
-            }
-            res.status(200).json({ result: 'success' })
+        let { block, eventId, unEditableHtml, isPreview, headerHtml } = req.body;
 
+        try {
+            //unEditableHtml[0].innerHtml = hm.compress(unEditableHtml[0].innerHtml);
+            eventId = eventId || '';
+            let idUser = req.user;
+            Promise.all([
+                Event.findByIdAndUpdate({_id: ObjectId(eventId), userId: ObjectId(idUser)},{isPreview: isPreview}),
+                PageEvent.find({ eventId })
+            ])
+            .then(async([e, pageEvent])=>{
+
+                if(!e){
+                    next({error: { message:'Event not exists', code: 300}});
+                }
+
+                if (pageEvent[0]) {
+                    // xác nhận là đã lưu trước đó. chỉ cần update lại.
+                    let _id = pageEvent[0]._id;
+                    let p = await PageEvent.findByIdAndUpdate({ _id: ObjectId(_id) }, { rows: block, updateAt: new Date(), unEditableHtml, headerHtml });
+                    if (!p) {
+                        return next({ error: { message: 'Event is not exists', code: 422 } });
+                    }
+                } else {
+                    let page = new PageEvent(
+                        {
+                            eventId: eventId,
+                            rows: block,
+                            unEditableHtml,
+                            headerHtml
+                        }
+                    );
+                    let p = await page.save();
+                    if (!p) {
+                        return next({ error: { message: 'Invalid data, can\'t save data', code: 422 } });
+                    }
+                }
+                res.status(200).json({ result: 'success' })
+            }).catch(()=>{
+                return next({error: {message: 'Something is wrong', code: 300}});
+            })
         } catch (err) {
             next({ error: { message: err, code: 500 } })
 
@@ -86,21 +101,50 @@ module.exports = {
     },
 
     getPageEvent: async (req, res, next) => {
-        let { eventId } = req.query;
+        let { eventId, route } = req.query;
+        route= route||'home';
         try {
-            if(!eventId){
-                return next({error: {message: 'Event is not exists', code: 422}});
+            if (!eventId) {
+                return next({ error: { message: 'Event is not exists', code: 422 } });
             }
-            let page = await PageEvent.find({ eventId: new ObjectId(eventId) });
-
-            if (!page) {
+            let page = await PageEvent.find({ eventId: new ObjectId(eventId), 'unEditableHtml.route': route },{rows: 0, createAt: 0, });
+            //page[0].unEditableHtml[0].innerHtml = hm.decompress(page[0].unEditableHtml[0].innerHtml);
+            if (!page[0]) {
                 return next({ error: { message: 'Event is not exists', code: 500 } });
             }
             res.status(200).json({ result: page });
         } catch (err) {
             next({ error: { message: err, code: 500 } })
         }
+    },
 
+    getPageEventEdit: async (req, res,next) => {
+        let { eventId } = req.query;
+        try {
+            if (!eventId) {
+                return next({ error: { message: 'Event is not exists', code: 422 } });
+            }
+            let idUser = req.user;
+            Promise.all([
+                PageEvent.find({ eventId: new ObjectId(eventId) }, {unEditableHtml: 0 }),
+                Event.findOne({userId : new ObjectId(idUser)})
+            ])
+            .then(([page, event])=>{
+                if(!event){
+                    return next({error: {message: 'Event not EXISTS!', code: 300}});
+                }
+
+                if (!page) {
+                    return next({ error: { message: 'Event is not exists', code: 500 } });
+                }
+                res.status(200).json({ result: page });
+            }).catch(([p, e])=>{
+                next({error: {message: 'Something is wrong!', code: 400}});
+            })
+        } catch (error) {
+            next({ error: { message: error, code: 500 } })
+        }
     }
+
 
 }

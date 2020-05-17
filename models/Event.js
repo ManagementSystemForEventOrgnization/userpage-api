@@ -18,6 +18,7 @@ const eventSchema = new Schema({
         price: Number,
         discount: Number
     },
+    session :{type : Array},
     category: String,
     endTime: Date,
     limitNumber: Number,
@@ -25,6 +26,7 @@ const eventSchema = new Schema({
     status: { type:String, "index": "text", default: "PENDING" },
     urlWeb: String,
     createAt: { type: Date, default: Date() },
+    isPreview: {type: Boolean},
     updateAt: Date
 })
 
