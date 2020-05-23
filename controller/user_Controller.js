@@ -359,20 +359,50 @@ module.exports = {
       return;
     }
 
-    currentUser.fullName = fullName;
-    currentUser.birthday = birthday;
-    currentUser.gender = gender;
-    currentUser.job = job;
-    currentUser.phone = phone;
-    currentUser.discription = discription;
-    currentUser.avatar = avatarUrl;
-    currentUser.orgName = orgName;
-    currentUser.orgDes = orgDes;
-    currentUser.orgWeb = orgWeb;
-    currentUser.orgPhone = orgPhone;
-    currentUser.orgEmail = orgEmail;
-    currentUser.orgUrl = orgUrl;
-    currentUser.address = address;
+	if (fullName != undefined && fullName != null) {
+    	currentUser.fullName = fullName;
+    }
+    if (birthday != undefined && birthday != null) {
+    	currentUser.birthday = birthday;
+    }
+    if (gender != undefined && gender != null) {
+    	currentUser.gender = gender;
+    }
+    if (job != undefined && job != null) {
+    	currentUser.job = job;
+    }
+    if (phone != undefined && phone != null) {
+    	currentUser.phone = phone;
+    }
+    if (discription != undefined && discription != null) {
+    	currentUser.discription = discription;
+    }
+    if (avatarUrl != undefined && avatarUrl != null) {
+    	currentUser.avatar = avatarUrl;
+    }
+    
+    if (orgName != undefined && orgName != null) {
+    	currentUser.orgName = orgName;
+    }
+    if (orgDes != undefined && orgDes != null) {
+    	currentUser.orgDes = orgDes;
+    }
+    if (orgWeb != undefined && orgWeb != null) {
+    	currentUser.orgWeb = orgWeb;
+    }
+    if (orgPhone != undefined && orgPhone != null) {
+    	currentUser.orgPhone = orgPhone;
+    }
+    if (orgEmail != undefined && orgEmail != null) {
+    	currentUser.orgEmail = orgEmail;
+    }
+    if (orgUrl != undefined && orgUrl != null) {
+    	currentUser.orgUrl = orgUrl;
+    }
+    if (address != undefined && address != null) {
+    	currentUser.address = address;
+    }
+    
     try {
       let u = await currentUser.save();
       res.status(200).json({
