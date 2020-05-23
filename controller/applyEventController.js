@@ -15,12 +15,12 @@ module.exports = {
         }
 
         let { paymentId, status } = req.body;
-        let userId = req.user; 
+        let userId = req.user;
 
         try {
             var currentPayment = await Payment.findById(paymentId);
-            var currentApplyEvent = await ApplyEvent.findOne({paymentId: paymentId});
-            
+            var currentApplyEvent = await ApplyEvent.findOne({ paymentId: paymentId });
+
             if (currentPayment) {
                 currentPayment.status = status == true ? "PAID" : "FAILED";
 
@@ -47,32 +47,32 @@ module.exports = {
         }
 
         let { eventId, joinTime, payType } = req.body;
-        let userId = req.user; 
+        let userId = req.user;
 
         try {
             var currentEvent = await Event.findById(eventId);
-            
+
             if (currentEvent) {
                 if (currentEvent.userId == userId) {
                     next({ error: { message: 'Can not join in yourself event', code: 706 } });
                     return;
                 }
 
-                var joinNumber = currentEvent.joinNumber || 0;
+                var joinNumber = +currentEvent.joinNumber || 0;
                 joinNumber += 1;
 
-                if (joinNumber > currentEvent.limitNumber) {
+                if (joinNumber > +currentEvent.limitNumber) {
                     next({ error: { message: 'Exceeded the amount possible', code: 700 } });
                     return;
                 }
 
                 currentEvent.joinNumber = joinNumber;
 
-                var currentApplyEvent = await ApplyEvent.findOne({userId: userId, eventId: eventId, joinTime: joinTime});
-                
+                var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId, joinTime: joinTime });
+
                 if (currentApplyEvent) {
-                    if (currentApplyEvent.qrcode != userId )
-                    next({ error: { message: 'You have already joined in this event', code: 701 } });
+                    if (currentApplyEvent.qrcode != userId)
+                        next({ error: { message: 'You have already joined in this event', code: 701 } });
                 } else {
                     const newApplyEvent = new ApplyEvent({
                         userId: userId,
@@ -81,13 +81,21 @@ module.exports = {
                         isConfirm: true,
                         createdAt: Date()
                     });
-                        
+
                     if (currentEvent.isSellTicket != true) {
                         newApplyEvent.qrcode = userId
                     }
+                    // await newApplyEvent.save();
+                    // await currentEvent.save();
+                    Promise.all([
+                        newApplyEvent.save(),
+                        currentEvent.save()])
+                        .then(([apply, current]) => {
 
-                    await newApplyEvent.save();
-                    await currentEvent.save();
+                        }).catch(([err1, err2]) => {
+
+                        })
+
 
                     if (currentEvent.isSellTicket) {
                         req.body.amount = currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price;
@@ -102,6 +110,8 @@ module.exports = {
                         return res.status(200).json({ result: true })
                     }
                 }
+            } else {
+                next({ error: { message: 'Event not exists', code: 403 } });
             }
         }
         catch (err) {
@@ -118,12 +128,12 @@ module.exports = {
         }
 
         let { eventId, joinTime, payType } = req.body;
-        let userId = req.user; 
+        let userId = req.user;
 
         try {
             var currentEvent = await Event.findById(eventId);
-            var currentApplyEvent = await ApplyEvent.findOne({userId: userId, eventId: eventId, joinTime: joinTime});
-                
+            var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId, joinTime: joinTime });
+
             if (currentEvent && currentApplyEvent) {
                 req.body.amount = currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price;
                 req.body.receiver = currentEvent.userId;
@@ -143,8 +153,8 @@ module.exports = {
     },
 
     verifyEventMember: async (req, res, next) => {
-        if (typeof req.body.eventId === 'undefined' || 
-            typeof req.body.joinUserId === 'undefined' || 
+        if (typeof req.body.eventId === 'undefined' ||
+            typeof req.body.joinUserId === 'undefined' ||
             typeof req.body.joinTime === 'undefined') {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
@@ -153,7 +163,7 @@ module.exports = {
         let { joinUserId, eventId, joinTime } = req.body;
 
         try {
-            var currentApplyEvent = await ApplyEvent.findOne({userId: joinUserId, eventId: eventId, joinTime: joinTime});
+            var currentApplyEvent = await ApplyEvent.findOne({ userId: joinUserId, eventId: eventId, joinTime: joinTime });
 
             if (currentApplyEvent) {
                 if (currentApplyEvent.isReject != true && currentApplyEvent.qrcode == joinUserId) {
@@ -181,7 +191,7 @@ module.exports = {
     },
 
     rejectEventMenber: async (req, res, next) => {
-        if (typeof req.body.eventId === 'undefined' || 
+        if (typeof req.body.eventId === 'undefined' ||
             typeof req.body.joinUserId === 'undefined') {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
@@ -191,16 +201,16 @@ module.exports = {
         let userId = req.user;
 
         try {
-            var applyEvents = await ApplyEvent.find({userId: joinUserId, eventId: eventId});
-            var notification = await Notification.findOne({sender: userId, "linkTo._id": eventId, receiver: joinUserId });
-            
+            var applyEvents = await ApplyEvent.find({ userId: joinUserId, eventId: eventId });
+            var notification = await Notification.findOne({ sender: userId, "linkTo._id": eventId, receiver: joinUserId });
+
             if (notification) {
                 next({ error: { message: 'you have rejected', code: 710 } });
             }
 
             for (var index in applyEvents) {
                 applyEvents[index].isReject = true;
-                
+
                 await applyEvents[index].save();
 
                 // await rejectEventMenberNoti(req, res, next);
@@ -208,9 +218,9 @@ module.exports = {
                 if (applyEvents[index].qrcode == joinUserId) {
                     req.body.paymentId = applyEvents[index].paymentId
                     await payment_Controller.refund(req, res, next);
-                }   
+                }
             }
-            
+
             const newNotification = new Notification({
                 sender: userId,
                 receiver: [joinUserId],
@@ -225,9 +235,9 @@ module.exports = {
                 isDelete: false,
                 createdAt: Date()
             });
-            
+
             await newNotification.save();
-            
+
             return res.status(200).json({ result: true });
         } catch (err) {
             next(err);
@@ -254,32 +264,32 @@ module.exports = {
                 if (index > -1) {
                     event.startTime.splice(index, 1);
                 }
-                
-                applyEvents = await ApplyEvent.find({eventId: eventId, joinTime: time});
+
+                applyEvents = await ApplyEvent.find({ eventId: eventId, joinTime: time });
             } else {
                 event.isCancel = true;
-                applyEvents = await ApplyEvent.find({eventId: eventId});
+                applyEvents = await ApplyEvent.find({ eventId: eventId });
             }
-            
+
             var joinUserIds = [];
             for (var index in applyEvents) {
                 applyEvents[index].isReject = true;
 
                 await applyEvents[index].save();
-                
+
                 // await cancelJoinEventNoti(req, res, next);
                 if (joinUserIds.indexOf(applyEvents[index].userId) === -1) {
                     joinUserIds.push(applyEvents[index].userId);
                 }
-               
+
                 if (event.isSellTicket == true && applyEvents[index].qrcode == applyEvents[index].userId) {
                     req.body.paymentId = applyEvents[index].paymentId;
                     req.body.joinUserId = applyEvents[index].userId;
-                    
+
                     await payment_Controller.refund(req, res, next);
                 }
             }
-            
+
             const newNotification = new Notification({
                 sender: userId,
                 receiver: joinUserIds,
@@ -294,7 +304,7 @@ module.exports = {
                 isDelete: false,
                 createdAt: Date()
             });
-    
+
             await newNotification.save();
             await event.save();
 
@@ -309,12 +319,12 @@ module.exports = {
     },
 
     cancelJoinEventNoti: async (req, res, next) => {
-       
+
     },
 
     getListApplyEvent: async (req, res, next) => {
         try {
-            let applyEvents = await ApplyEvent.find({userId: req.user});
+            let applyEvents = await ApplyEvent.find({ userId: req.user });
 
             res.status(200).json({ result: applyEvents });
         } catch (err) {

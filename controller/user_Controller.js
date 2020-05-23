@@ -40,6 +40,7 @@ module.exports = {
     let id = req.user;
     try {
       let u = await User.findById(id);
+      console.log(req.isUnauthenticated());
       res.status(200).json({ result: u });
     } catch (err) {
       next(err);
@@ -359,50 +360,50 @@ module.exports = {
       return;
     }
 
-	if (fullName != undefined && fullName != null) {
-    	currentUser.fullName = fullName;
+    if (fullName != undefined && fullName != null) {
+      currentUser.fullName = fullName;
     }
     if (birthday != undefined && birthday != null) {
-    	currentUser.birthday = birthday;
+      currentUser.birthday = birthday;
     }
     if (gender != undefined && gender != null) {
-    	currentUser.gender = gender;
+      currentUser.gender = gender;
     }
     if (job != undefined && job != null) {
-    	currentUser.job = job;
+      currentUser.job = job;
     }
     if (phone != undefined && phone != null) {
-    	currentUser.phone = phone;
+      currentUser.phone = phone;
     }
     if (discription != undefined && discription != null) {
-    	currentUser.discription = discription;
+      currentUser.discription = discription;
     }
     if (avatarUrl != undefined && avatarUrl != null) {
-    	currentUser.avatar = avatarUrl;
+      currentUser.avatar = avatarUrl;
     }
-    
+
     if (orgName != undefined && orgName != null) {
-    	currentUser.orgName = orgName;
+      currentUser.orgName = orgName;
     }
     if (orgDes != undefined && orgDes != null) {
-    	currentUser.orgDes = orgDes;
+      currentUser.orgDes = orgDes;
     }
     if (orgWeb != undefined && orgWeb != null) {
-    	currentUser.orgWeb = orgWeb;
+      currentUser.orgWeb = orgWeb;
     }
     if (orgPhone != undefined && orgPhone != null) {
-    	currentUser.orgPhone = orgPhone;
+      currentUser.orgPhone = orgPhone;
     }
     if (orgEmail != undefined && orgEmail != null) {
-    	currentUser.orgEmail = orgEmail;
+      currentUser.orgEmail = orgEmail;
     }
     if (orgUrl != undefined && orgUrl != null) {
-    	currentUser.orgUrl = orgUrl;
+      currentUser.orgUrl = orgUrl;
     }
     if (address != undefined && address != null) {
-    	currentUser.address = address;
+      currentUser.address = address;
     }
-    
+
     try {
       let u = await currentUser.save();
       res.status(200).json({
@@ -559,7 +560,7 @@ module.exports = {
       };
       if (startDate !== "") {
         conditionQuery.$and.push({
-          startTime : {
+          startTime: {
             $gt: new Date(startDate),
             $lt: new Date(endDate || new Date().toString()),
           }
