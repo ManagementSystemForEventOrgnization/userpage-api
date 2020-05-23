@@ -14,7 +14,8 @@ const notificationSchema = new Schema({
     isRead: Boolean,
     isDelete: Boolean,
     createAt: { type: Date, default: Date() },
-    updateAt: Date
+    updateAt: Date,
+    session: [String],
 })
 
 mongoose.model('notification', notificationSchema);

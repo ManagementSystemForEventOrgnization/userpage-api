@@ -14,7 +14,8 @@ const paymentSchema = new Schema({
     payType: String,
     isRefunded: Boolean,
     createdAt: { type: Date, default: Date() },
-    updatedAt: Date
+    updatedAt: Date,
+    session: [String],
 })
 
 mongoose.model('payment', paymentSchema);
