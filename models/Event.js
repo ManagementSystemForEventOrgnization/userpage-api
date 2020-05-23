@@ -21,6 +21,7 @@ const eventSchema = new Schema({
     // startTime: { type: Date, default: Date() },
     status: { type:String, "index": "text", default: "PENDING" },
     urlWeb: String,
+    banner: {type: String},
     createAt: { type: Date, default: Date() },
     isPreview: {type: Boolean},
     updateAt: Date

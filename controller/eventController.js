@@ -12,7 +12,7 @@ module.exports = {
 
 
     saveEvent: async (req, res, next) => {
-        let { name, typeOfEvent, category, urlWeb, limitNumber, session, isSellTicket } = req.body;
+        let { name, typeOfEvent, category, urlWeb, limitNumber, session, isSellTicket, banner } = req.body;
         if (typeof eventName === undefined || typeof long === undefined || typeof address === undefined) {
             return next({ error: { message: 'Invalid value', code: 602 } });
         }
@@ -21,7 +21,6 @@ module.exports = {
         if (myFunction.validateUrlWeb(urlWeb)) {
             return next({ error: { message: 'Formation URL is wrong.', code: 422 } });
         }
-
         let checkURL = await Event.find({ urlWeb });
         if (checkURL.length !== 0) {
             next({ error: { message: 'URL is used', code: 402 } });
@@ -36,7 +35,8 @@ module.exports = {
             category,
             urlWeb,
             session,
-            isSellTicket
+            isSellTicket,
+            banner
         }
         );
 
@@ -158,16 +158,16 @@ module.exports = {
 
     },
 
-    getListEvent : async(req,res,next)=>{
-        let {categoryEventId,
+    getListEvent: async (req, res, next) => {
+        let { categoryEventId,
             startDate,
             endDate,
             txtSearch,
             pageNumber,
-            numberRecord, }= req.query;
+            numberRecord, } = req.query;
         let e = await Event.find({});
-        return next({error: {message: 'loi'}});
-        res.status(200).json({result: e});
+        return next({ error: { message: 'loi' } });
+        res.status(200).json({ result: e });
     }
 
 
