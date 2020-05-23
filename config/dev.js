@@ -3,4 +3,5 @@ module.exports = {
     googleClientSecret: 'dAAWBwIp6rW2Y74qCVdlqJ64',
     mongoURI: "mongodb+srv://admin:datn.qlsk.2020@cluster0-9m5xy.mongodb.net/test?retryWrites=true&w=majority",
     cookieKey:'asdasdqwewqxxzcvcvfgadgaafds'
+    
 }
