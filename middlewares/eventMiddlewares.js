@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
-const User = mongoose.model('users');
+const Event = mongoose.model('event');
 
 module.exports = async (req, res, next) => {
-    // req.user chi luu id cua user login
+    let _id = req.user;
+    let e = Event.findOne({})
     if (!req.user) {
         res.status(601).json({ error: { message: 'Unauthorized', code: 401 } });
     } else {

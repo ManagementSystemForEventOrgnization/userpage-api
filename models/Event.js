@@ -14,19 +14,16 @@ const eventSchema = new Schema({
         price: Number,
         discount: Number
     },
+    session :{type : Array},
+    category: String,
+    endTime: Date,
+    limitNumber: Number,
+    startTime: { type: Date, default: Date() },
     status: { type:String, "index": "text", default: "PENDING" },
-    map: [{
-        long: String,
-        lat: String
-    }],
-    address : [{ type:String, "index": "text" }],
-    detailAddress: [String],
-    endTime: [Date],
-    startTime: [{ type: Date, default: Date() }],
-    cancelTime: [Date],
-    isCancel: Boolean,
-    createdAt: { type: Date, default: Date() },
-    updatedAt: Date,
+    urlWeb: String,
+    createAt: { type: Date, default: Date() },
+    isPreview: {type: Boolean},
+    updateAt: Date
 })
 
 mongoose.model('event', eventSchema);

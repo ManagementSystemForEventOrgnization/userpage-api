@@ -332,14 +332,14 @@ module.exports = {
 		let cardFind = null;
 		
         try {
-            cardFind = await Cards.findOne({ 'userId': req.body.userId });
+            cardFind = await Cards.findOne({ 'userId': req.user });
         } catch (err) {
             next(err);
             return;
         }
         
         if (cardFind == null || cardFind.customerId == null) {
-			res.status(600).json({ error: { message: "card customer not found", code: 900 } });
+			res.status(200).json({result: []});
         } else  {
         	console.log("customerId: ", cardFind.customerId)
 			stripe.customers.listSources(
@@ -368,7 +368,7 @@ module.exports = {
 		let cardFind = null;
 		
         try {
-            cardFind = await Cards.findOne({ 'userId': req.body.userId });
+            cardFind = await Cards.findOne({ 'userId': req.user});
         } catch (err) {
             next(err);
             return;
@@ -405,7 +405,7 @@ module.exports = {
 		let cardFind = null;
 		
         try {
-            cardFind = await Cards.findOne({ 'userId': req.body.userId });
+            cardFind = await Cards.findOne({ 'userId': req.user });
         } catch (err) {
             next(err);
             return;
@@ -433,7 +433,7 @@ module.exports = {
 		let cardFind = null;
 		
         try {
-            cardFind = await Cards.findOne({ 'userId': req.body.userId });
+            cardFind = await Cards.findOne({ 'userId': req.user });
         } catch (err) {
             next(err);
             return;
@@ -457,7 +457,7 @@ module.exports = {
 			
 			try {
 				if (confirmation.deleted) {
-					await Cards.remove({ 'userId': req.body.userId });
+					await Cards.remove({ 'userId': req.user });
 					res.status(200).json({result: true})
 				} else {
 					res.status(200).json({result: false})
@@ -477,7 +477,7 @@ module.exports = {
 		let cardFind = null;
 		
         try {
-            cardFind = await Cards.findOne({ 'userId': req.body.userId });
+            cardFind = await Cards.findOne({ 'userId': req.user });
         } catch (err) {
             next(err);
             return;
@@ -517,7 +517,7 @@ module.exports = {
  		 		if (customer) {
   					const newCard = new Cards({
             			customerId: customer.id,
-            			userId: req.body.userId
+            			userId: req.user
         			});
         			
        				console.log("save customer: ", newCard, "\n")

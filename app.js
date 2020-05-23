@@ -9,7 +9,7 @@ const passport = require('passport');
 const mongoose = require('mongoose');
 
 
-mongoose.connect(keys.mongoURI,  {useNewUrlParser: true, useUnifiedTopology: true,'useCreateIndex': true});
+mongoose.connect(keys.mongoURI,  {useNewUrlParser: true, useUnifiedTopology: true,'useCreateIndex': true, useFindAndModify: false});
 
 var app = express();
 

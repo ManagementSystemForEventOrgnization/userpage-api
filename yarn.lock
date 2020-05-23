@@ -929,6 +929,11 @@ isexe@^2.0.0:
   resolved "https://registry.yarnpkg.com/isexe/-/isexe-2.0.0.tgz#e8fbf374dc556ff8947a10dcb0572d633f2cfa10"
   integrity sha1-6PvzdNxVb/iUehDcsFctYz8s+hA=
 
+js-string-compression@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/js-string-compression/-/js-string-compression-1.0.1.tgz#8b68e630cb9054c556f78f825f73900ecd166c67"
+  integrity sha1-i2jmMMuQVMVW94+CX3OQDs0WbGc=
+
 json-parse-better-errors@^1.0.1:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/json-parse-better-errors/-/json-parse-better-errors-1.0.2.tgz#bb867cfb3450e69107c131d1c514bab3dc8bcaa9"
