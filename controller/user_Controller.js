@@ -329,23 +329,6 @@ module.exports = {
 
   updateInfor: async (req, res, next) => {
     let id = req.user;
-    let {
-      fullName,
-      birthday,
-      gender,
-      job,
-      phone,
-      discription,
-      avatarUrl,
-      orgName,
-      orgDes,
-      orgWeb,
-      orgPhone,
-      orgEmail,
-      orgUrl,
-      address
-    } = req.body;
-
     let currentUser = null;
 
     try {
@@ -359,49 +342,26 @@ module.exports = {
       next({ error: { message: "not found", code: 422 } });
       return;
     }
-
-    if (fullName != undefined && fullName != null) {
-      currentUser.fullName = fullName;
-    }
-    if (birthday != undefined && birthday != null) {
-      currentUser.birthday = birthday;
-    }
-    if (gender != undefined && gender != null) {
-      currentUser.gender = gender;
-    }
-    if (job != undefined && job != null) {
-      currentUser.job = job;
-    }
-    if (phone != undefined && phone != null) {
-      currentUser.phone = phone;
-    }
-    if (discription != undefined && discription != null) {
-      currentUser.discription = discription;
-    }
-    if (avatarUrl != undefined && avatarUrl != null) {
-      currentUser.avatar = avatarUrl;
-    }
-
-    if (orgName != undefined && orgName != null) {
-      currentUser.orgName = orgName;
-    }
-    if (orgDes != undefined && orgDes != null) {
-      currentUser.orgDes = orgDes;
-    }
-    if (orgWeb != undefined && orgWeb != null) {
-      currentUser.orgWeb = orgWeb;
-    }
-    if (orgPhone != undefined && orgPhone != null) {
-      currentUser.orgPhone = orgPhone;
-    }
-    if (orgEmail != undefined && orgEmail != null) {
-      currentUser.orgEmail = orgEmail;
-    }
-    if (orgUrl != undefined && orgUrl != null) {
-      currentUser.orgUrl = orgUrl;
-    }
-    if (address != undefined && address != null) {
-      currentUser.address = address;
+    
+    const keys = ['fullName', 
+    			  'birthday', 
+    			  'gender', 
+    			  'job', 
+    			  'phone', 
+    			  'discription', 
+    			  'avatar', 
+    			  'orgName', 
+    			  'orgDes', 
+    			  'orgWeb', 
+    			  'orgPhone', 
+    			  'orgEmail', 
+    			  'orgUrl', 
+    			  'address'];
+    
+    for (let key in req.body) {
+    	if (keys.includes(key) && req.body[key] !== null) {
+    		currentUser[key] = req.body[key]
+    	} 
     }
 
     try {
