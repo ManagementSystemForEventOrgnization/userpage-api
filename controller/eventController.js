@@ -9,11 +9,9 @@ const PageEvent = mongoose.model('pageEvent');
 
 module.exports = {
 
-
-
     saveEvent: async (req, res, next) => {
-        let { name, typeOfEvent, category, urlWeb, limitNumber, session, isSellTicket, banner } = req.body;
-        if (typeof eventName === undefined || typeof long === undefined || typeof address === undefined) {
+        let { name, typeOfEvent, category, urlWeb, session, isSellTicket, banner } = req.body;
+        if (typeof name === undefined) {
             return next({ error: { message: 'Invalid value', code: 602 } });
         }
         let userId = req.user;
@@ -31,14 +29,12 @@ module.exports = {
             userId,
             typeOfEvent,
             name,
-            limitNumber,
             category,
             urlWeb,
             session,
             isSellTicket,
             banner
-        }
-        );
+        });
 
         try {
             let event = await e.save();
@@ -119,34 +115,6 @@ module.exports = {
         }
     },
 
-    getPageEventEdit: async (req, res, next) => {
-        let { eventId } = req.query;
-        try {
-            if (!eventId) {
-                return next({ error: { message: 'Event is not exists', code: 422 } });
-            }
-            let idUser = req.user;
-            Promise.all([
-                PageEvent.find({ eventId: new ObjectId(eventId) }, { unEditableHtml: 0 }),
-                Event.findOne({ userId: new ObjectId(idUser) })
-            ])
-                .then(([page, event]) => {
-                    if (!event) {
-                        return next({ error: { message: 'Event not EXISTS!', code: 300 } });
-                    }
-
-                    if (!page) {
-                        return next({ error: { message: 'Event is not exists', code: 500 } });
-                    }
-                    res.status(200).json({ result: page });
-                }).catch(([p, e]) => {
-                    next({ error: { message: 'Something is wrong!', code: 400 } });
-                })
-        } catch (error) {
-            next({ error: { message: error, code: 500 } })
-        }
-    },
-
     test: async (req, res, next) => {
         myFunction.funcPromiseAll([Event.find({}), Event.find({}), (() => { return Promise.reject('err') }).call()])
             .then(val => {
@@ -165,8 +133,31 @@ module.exports = {
             txtSearch,
             pageNumber,
             numberRecord, } = req.query;
-        let e = await Event.find({});
-        return next({ error: { message: 'loi' } });
+
+        pageNumber = pageNumber || 1;
+        numberRecord = numberRecord || 10;
+
+        let idUserLogin = req.user;
+        let query = { 'status': { $nin: ["CANCEL"] } };
+        if (txtSearch != "") {
+            query.$text = { $search: txtSearch };
+        }
+
+        let e = await Event.aggregate([
+            { $match: query },
+            {
+                $lookup:
+                {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    as: "users"
+                }
+            },
+            { $skip: +numberRecord * (+pageNumber - 1) },
+            { $limit: numberRecord },
+            { $sort: { createdAt: 1 } }
+        ])
         res.status(200).json({ result: e });
     }
 
