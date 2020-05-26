@@ -58,15 +58,44 @@ module.exports = {
     },
 
     getListNotification: async (req, res, next) => {
-        // let { pageNumber, numberRecord } = req.query;
-        
-        // pageNumber = pageNumber || 1;
-        // numberRecord = numberRecord || 10;
+        let { pageNumber, numberRecord } = req.query;
+        let idUser = req.user;
+        pageNumber = pageNumber || 1;
+        numberRecord = numberRecord || 10;
+        let condition = {};
 
         try {
-            let notìications = await Notification.find();
-
-            res.status(200).json({ result: notìications });
+            let notifications =  await Notification.aggregate([
+                { $match: condition },
+                {
+                    $lookup:
+                    {
+                        from: "users",
+                        localField: "receiver",
+                        foreignField: "_id",
+                        as: "users_receiver"
+                    }
+                },
+                {
+                    $unwind: "$users_receiver"
+                },
+                {
+                    $lookup:
+                    {
+                        from: "users",
+                        localField: "sender",
+                        foreignField: "_id",
+                        as: "users_sender"
+                    }
+                },
+                {
+                    $unwind: "$users_sender"
+                },
+                { $skip: +numberRecord * (+pageNumber - 1) },
+                { $limit: numberRecord },
+                { $sort: { createdAt: 1 } }
+            ]);
+            res.status(200).json({ result: notifications });
         } catch (err) {
             next({ error: { message: 'Lỗi không lấy được dữ liệu', code: 500 } });
         }

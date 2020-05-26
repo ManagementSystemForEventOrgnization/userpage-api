@@ -342,26 +342,26 @@ module.exports = {
       next({ error: { message: "not found", code: 422 } });
       return;
     }
-    
-    const keys = ['fullName', 
-    			  'birthday', 
-    			  'gender', 
-    			  'job', 
-    			  'phone', 
-    			  'discription', 
-    			  'avatar', 
-    			  'orgName', 
-    			  'orgDes', 
-    			  'orgWeb', 
-    			  'orgPhone', 
-    			  'orgEmail', 
-    			  'orgUrl', 
-    			  'address'];
-    
+
+    const keys = ['fullName',
+      'birthday',
+      'gender',
+      'job',
+      'phone',
+      'discription',
+      'avatar',
+      'orgName',
+      'orgDes',
+      'orgWeb',
+      'orgPhone',
+      'orgEmail',
+      'orgUrl',
+      'address'];
+
     for (let key in req.body) {
-    	if (keys.includes(key) && req.body[key] !== null) {
-    		currentUser[key] = req.body[key]
-    	} 
+      if (keys.includes(key) && req.body[key] !== null) {
+        currentUser[key] = req.body[key]
+      }
     }
 
     try {
@@ -427,7 +427,8 @@ module.exports = {
 
     pageNumber = pageNumber || 1;
     numberRecord = numberRecord || 10;
-
+    categoryEventId = categoryEventId || '';
+    startDate = startDate || '';
     let idUserLogin = req.user;
     try {
       let arrEvent = null;
@@ -436,20 +437,33 @@ module.exports = {
         $expr: {
           $and: [
             { $eq: ["$_id", "$$event_id"] },
-            {
-              $cond: [
-                categoryEventId,
-                { $eq: ["$category", categoryEventId] },
-                {},
-              ],
-            },
           ],
         },
       };
 
+      if (categoryEventId != "") {
+        conditionQuery["$expr"]["$and"].push({ $eq: ["$category", categoryEventId] });
+      }
+
       if (txtSearch != "") {
         conditionQuery.$text = { $search: txtSearch };
       }
+      let conditionMath = {
+        $and: [
+          { "events.status": { $nin: ["HUY"] } },
+        ],
+      };
+
+      if (startDate != "") {
+        conditionMath["$and"].push(
+          {
+            "events.startTime": {
+              $gt: new Date(startDate || "1940-01-01"),
+              $lt: new Date(endDate || new Date().toString()),
+            },
+          })
+      }
+
       arrEvent = await ApplyEvent.aggregate([
         {
           $match: {
@@ -469,17 +483,7 @@ module.exports = {
           },
         },
         {
-          $match: {
-            $and: [
-              {
-                "events.startTime": {
-                  $gt: new Date(startDate || "1940-01-01"),
-                  $lt: new Date(endDate || new Date().toString()),
-                },
-              },
-              { "events.status": { $nin: ["HUY"] } },
-            ],
-          },
+          $match: conditionMath,
         },
         {
           $project: { events: 1 },
@@ -502,7 +506,9 @@ module.exports = {
       txtSearch,
       pageNumber,
       numberRecord,
+      status,
     } = req.query;
+    status=status||'DRAFT';
     txtSearch = txtSearch || "";
     startDate = startDate || "";
 
@@ -515,9 +521,11 @@ module.exports = {
 
       let conditionQuery = {
         $and: [{
-          userId: ObjectId(idUserLogin)
+          userId: ObjectId(idUserLogin),
+          status
         }]
       };
+ 
       if (startDate !== "") {
         conditionQuery.$and.push({
           startTime: {
@@ -530,8 +538,8 @@ module.exports = {
       if (txtSearch != "") {
         conditionQuery.$text = { $search: txtSearch };
       }
-      console.log(conditionQuery);
-      arrEvent = await Event.find(conditionQuery).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord);//.sort(conditionSort)
+
+      arrEvent = await Event.find(conditionQuery).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord).sort({createAt: 1});
 
       res.status(200).json({ result: arrEvent });
     } catch (err) {

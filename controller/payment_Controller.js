@@ -43,10 +43,25 @@ module.exports = {
 				$lookup:
 				{
 					from: "users",
+					localField: "receiver",
+					foreignField: "_id",
+					as: "users_receiver"
+				}
+			},
+			{
+				$unwind: "$users_receiver"
+			},
+			{
+				$lookup:
+				{
+					from: "users",
 					localField: "sender",
 					foreignField: "_id",
-					as: "users"
+					as: "users_sender"
 				}
+			},
+			{
+				$unwind: "$users_sender"
 			},
 			{ $skip: +numberRecord * (+pageNumber - 1) },
 			{ $limit: numberRecord },
@@ -78,8 +93,23 @@ module.exports = {
 					from: "users",
 					localField: "receiver",
 					foreignField: "_id",
-					as: "users"
+					as: "users_receiver"
 				}
+			},
+			{
+				$unwind: "$users_receiver"
+			},
+			{
+				$lookup:
+				{
+					from: "users",
+					localField: "sender",
+					foreignField: "_id",
+					as: "users_sender"
+				}
+			},
+			{
+				$unwind: "$users_sender"
 			},
 			{ $skip: +numberRecord * (+pageNumber - 1) },
 			{ $limit: numberRecord },

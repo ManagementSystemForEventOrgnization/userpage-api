@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const ObjectId  = mongoose.Types.ObjectId;
 const Chat = mongoose.model('chat');
 
 module.exports = {
@@ -6,7 +7,6 @@ module.exports = {
     getList: async (req, res, next) => {
         let {
             sender,
-            receive,
             content,
             pageNumber,
             numberRecord,
@@ -16,9 +16,9 @@ module.exports = {
         pageNumber = pageNumber || 1;
         numberRecord = numberRecord || 50;
 
-        Chat
+        let c = await Chat.find({$or: [{sender : ObjectId(sender)}, {receiver: ObjectId(sender)}]}).skip((+pageNumber -1)*numberRecord).limit(+numberRecord);
 
-
+        req.status(200).json({result: c});
     },
 
     saveChat: async (req, res, next) => {
@@ -28,7 +28,10 @@ module.exports = {
             content,
             pageNumber,
             numberRecord,
-        } = req.query;
+        } = req.body;
+
+        
+
     },
 
 

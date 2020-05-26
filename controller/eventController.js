@@ -127,39 +127,204 @@ module.exports = {
     },
 
     getListEvent: async (req, res, next) => {
-        let { categoryEventId,
-            startDate,
-            endDate,
-            txtSearch,
-            pageNumber,
-            numberRecord, } = req.query;
+        try {
+            let {
+                categoryEventId,
+                startDate,
+                endDate,
+                txtSearch,
+                pageNumber,
+                numberRecord, } = req.query;
 
-        pageNumber = pageNumber || 1;
-        numberRecord = numberRecord || 10;
+            pageNumber = pageNumber || 1;
+            numberRecord = numberRecord || 10;
+            txtSearch = txtSearch || '';
+            categoryEventId = categoryEventId || '';
 
-        let idUserLogin = req.user;
-        let query = { 'status': { $nin: ["CANCEL"] } };
-        if (txtSearch != "") {
-            query.$text = { $search: txtSearch };
-        }
+            let idUserLogin = req.user;
+            let query = { 'status': { $nin: ["CANCEL", "DRAFT"] } };
+            if (txtSearch != "") {
+                query.$text = { $search: txtSearch };
+            }
 
-        let e = await Event.aggregate([
-            { $match: query },
-            {
-                $lookup:
+            if (categoryEventId != "") {
+                query.category = categoryEventId
+            }
+
+            let e = await Event.aggregate([
+                { $match: query },
                 {
-                    from: "users",
-                    localField: "userId",
-                    foreignField: "_id",
-                    as: "users"
-                }
-            },
-            { $skip: +numberRecord * (+pageNumber - 1) },
-            { $limit: numberRecord },
-            { $sort: { createdAt: 1 } }
-        ])
-        res.status(200).json({ result: e });
-    }
+                    $lookup:
+                    {
+                        from: "users",
+                        localField: "userId",
+                        foreignField: "_id",
+                        as: "users"
+                    }
+                },
+                {
+                    $unwind: "$users"
+                },
+                { $skip: +numberRecord * (+pageNumber - 1) },
+                { $limit: numberRecord },
+                { $sort: { createdAt: 1 } }
+            ]);
+            res.status(200).json({ result: e });
+        } catch (error) {
+            next({ error: { message: 'Something is wrong!', code: 700 } });
+        }
+    },
+
+    getListEventComingUp: async (req, res, next) => {
+        try {
+            let {
+                categoryEventId,
+                startDate,
+                endDate,
+                txtSearch,
+                pageNumber,
+                numberRecord, } = req.query;
+
+            pageNumber = pageNumber || 1;
+            numberRecord = numberRecord || 10;
+            txtSearch = txtSearch || '';
+            categoryEventId = categoryEventId || '';
+
+            let idUserLogin = req.user;
+            let query = { 'status': { $nin: ["CANCEL", "DRAFT"] } };
+
+            if (txtSearch != "") {
+                query.$text = { $search: txtSearch };
+            }
+
+            if (categoryEventId != "") {
+                query.category = categoryEventId
+            }
+
+            let e = await Event.aggregate([
+                { $match: query },
+                {
+                    $lookup:
+                    {
+                        from: "users",
+                        localField: "userId",
+                        foreignField: "_id",
+                        as: "users"
+                    }
+                },
+                // {$project: { 'users.fullName': 1 }},
+                {
+                    $unwind: "$users"
+                },
+                { $skip: +numberRecord * (+pageNumber - 1) },
+                { $limit: numberRecord },
+                { $sort: { 'session.day': 1 } }
+            ])
+            res.status(200).json({ result: e });
+        } catch (error) {
+            next({ error: { message: 'Something is wrong!', code: 700 } });
+        }
+    },
+
+    getListEventStart: async (req, res, next) => {
+        try {
+            let {
+                categoryEventId,
+                startDate,
+                endDate,
+                txtSearch,
+                pageNumber,
+                numberRecord, } = req.query;
+
+            pageNumber = pageNumber || 1;
+            numberRecord = numberRecord || 10;
+            txtSearch = txtSearch || '';
+            categoryEventId = categoryEventId || '';
+
+            let idUserLogin = req.user;
+            let query = { 'status': 'START', userId: idUserLogin };
+            // if (txtSearch != "") {
+            //     query.$text = { $search: txtSearch };
+            // }
+
+            if (categoryEventId != "") {
+                query.category = categoryEventId
+            }
+
+            let e = await Event.aggregate([
+                { $match: query },
+                {
+                    $lookup:
+                    {
+                        from: "users",
+                        localField: "userId",
+                        foreignField: "_id",
+                        as: "users"
+                    }
+                },
+                // {$project: { 'users.fullName': 1 }},
+                {
+                    $unwind: "$users"
+                },
+                { $skip: +numberRecord * (+pageNumber - 1) },
+                { $limit: numberRecord },
+                { $sort: { 'session.day': 1 } }
+            ])
+            res.status(200).json({ result: e });
+        } catch (error) {
+            next({ error: { message: 'Something is wrong!', code: 700 } });
+        }
+    },
+
+    getListEventDraft: async (req, res, next) => {
+        try {
+            let {
+                categoryEventId,
+                startDate,
+                endDate,
+                txtSearch,
+                pageNumber,
+                numberRecord, } = req.query;
+
+            pageNumber = pageNumber || 1;
+            numberRecord = numberRecord || 10;
+            txtSearch = txtSearch || '';
+            categoryEventId = categoryEventId || '';
+
+            let idUserLogin = req.user;
+            let query = { 'status': 'DRAFT', userId: idUserLogin };
+            // if (txtSearch != "") {
+            //     query.$text = { $search: txtSearch };
+            // }
+
+            if (categoryEventId != "") {
+                query.category = categoryEventId
+            }
+
+            let e = await Event.aggregate([
+                { $match: query },
+                {
+                    $lookup:
+                    {
+                        from: "users",
+                        localField: "userId",
+                        foreignField: "_id",
+                        as: "users"
+                    }
+                },
+                // {$project: { 'users.fullName': 1 }},
+                {
+                    $unwind: "$users"
+                },
+                { $skip: +numberRecord * (+pageNumber - 1) },
+                { $limit: numberRecord },
+                { $sort: { 'session.day': 1 } }
+            ])
+            res.status(200).json({ result: e });
+        } catch (error) {
+            next({ error: { message: 'Something is wrong!', code: 700 } });
+        }
+    },
 
 
 }
