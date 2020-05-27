@@ -11,14 +11,14 @@ module.exports = {
 
     saveEvent: async (req, res, next) => {
         let { name, typeOfEvent, category, urlWeb, session, isSellTicket, banner } = req.body;
-        if (typeof name === undefined) {
+        if (!name || !session) {
             return next({ error: { message: 'Invalid value', code: 602 } });
         }
         let userId = req.user;
-
         if (myFunction.validateUrlWeb(urlWeb)) {
             return next({ error: { message: 'Formation URL is wrong.', code: 422 } });
         }
+
         let checkURL = await Event.find({ urlWeb });
         if (checkURL.length !== 0) {
             next({ error: { message: 'URL is used', code: 402 } });
@@ -51,7 +51,7 @@ module.exports = {
         let { blocks, eventId, isPreview, header } = req.body;
 
         try {
-            //unEditableHtml[0].innerHtml = hm.compress(unEditableHtml[0].innerHtml);
+            
             eventId = eventId || '';
             let idUser = req.user;
 
@@ -66,7 +66,7 @@ module.exports = {
 
                 if (pageEvent[0]) {
                     // xác nhận là đã lưu trước đó. chỉ cần update lại.
-                    let _idE = e[0]._id;
+                    let _idE = e._id;
                     let _id = pageEvent[0]._id;
                     let p = await PageEvent.findByIdAndUpdate({ _id: ObjectId(_id) }, { rows: blocks, updateAt: new Date(), header });
 
