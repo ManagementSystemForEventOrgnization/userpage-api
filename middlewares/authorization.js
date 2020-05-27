@@ -3,9 +3,13 @@ const User = mongoose.model('users');
 
 module.exports = async (req, res, next) => {
     let u = await User.findById(req.user); 
-
+    if(!u){
+        res.status(602).json({error: {message: 'You have to login', code : 700}})
+        return;
+    }
     if (!u.isActive) {
-        res.status(602).json({ error: { message: 'Not active', coe: 203 } });
+        res.status(602).json({ error: { message: 'Not active', code: 203 } });
+        return;
     } else {    
         return next();
     }
