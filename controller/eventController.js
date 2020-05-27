@@ -48,68 +48,91 @@ module.exports = {
     },
 
     savePageEvent: async (req, res, next) => {
-        let { block, eventId, isPreview, header } = req.body;
+        let { blocks, eventId, isPreview, header } = req.body;
 
         try {
             //unEditableHtml[0].innerHtml = hm.compress(unEditableHtml[0].innerHtml);
             eventId = eventId || '';
             let idUser = req.user;
+
             Promise.all([
-                Event.findByIdAndUpdate({ _id: ObjectId(eventId), userId: ObjectId(idUser) }, { isPreview: isPreview }),
+                Event.findOne({ _id: ObjectId(eventId), userId: ObjectId(idUser) }),
                 PageEvent.find({ eventId })
-            ])
-                .then(async ([e, pageEvent]) => {
+            ]).then(async ([e, pageEvent]) => {
 
-                    if (!e) {
-                        next({ error: { message: 'Event not exists', code: 300 } });
-                    }
+                if (!e) {
+                    return next({ error: { message: 'Event not exists', code: 300 } });
+                }
 
-                    let Header = [];
-                    Header.push(header);
+                if (pageEvent[0]) {
+                    // xác nhận là đã lưu trước đó. chỉ cần update lại.
+                    let _idE = e[0]._id;
+                    let _id = pageEvent[0]._id;
+                    let p = await PageEvent.findByIdAndUpdate({ _id: ObjectId(_id) }, { rows: blocks, updateAt: new Date(), header });
 
-                    if (pageEvent[0]) {
-                        // xác nhận là đã lưu trước đó. chỉ cần update lại.
-
-                        let _id = pageEvent[0]._id;
-                        let p = await PageEvent.findByIdAndUpdate({ _id: ObjectId(_id) }, { rows: block, updateAt: new Date(), Header });
+                    Promise.all([
+                        Event.findByIdAndUpdate({ _id: ObjectId(_idE) }, { isPreview: isPreview }),
+                        PageEvent.findByIdAndUpdate({ _id: ObjectId(_id) }, { rows: blocks, updateAt: new Date(), header })
+                    ]).then(([e, pe]) => {
                         if (!p) {
                             return next({ error: { message: 'Event is not exists', code: 422 } });
                         }
-                    } else {
-                        let page = new PageEvent(
-                            {
-                                eventId: eventId,
-                                rows: block,
-                                header: Header
-                            }
-                        );
-                        let p = await page.save();
+                    })
+                } else {
+                    let page = new PageEvent(
+                        {
+                            eventId: eventId,
+                            rows: blocks,
+                            header: header
+                        }
+                    );
+
+                    Promise.all([
+                        Event.findByIdAndUpdate({ _id: ObjectId(_idE) }, { isPreview: isPreview }),
+                        page.save()
+                    ]).then(([e, pe]) => {
                         if (!p) {
                             return next({ error: { message: 'Invalid data, can\'t save data', code: 422 } });
                         }
-                    }
-                    res.status(200).json({ result: 'success' })
-                }).catch(() => {
-                    return next({ error: { message: 'Something is wrong', code: 300 } });
-                })
+                    })
+
+                    // let p = await page.save();
+                    // if (!p) {
+                    //     return next({ error: { message: 'Invalid data, can\'t save data', code: 422 } });
+                    // }
+                }
+                res.status(200).json({ result: 'success' })
+            }).catch((err) => {
+                console.log(err);
+                return next({ error: { message: 'Something is wrong', code: 300 } });
+            })
         } catch (err) {
             next({ error: { message: err, code: 500 } })
         }
     },
 
     getPageEvent: async (req, res, next) => {
-        let { eventId, route } = req.query;
-        route = route || 'home';
+        let { eventId, index } = req.query; // eventId, index: 0,1,2,3,4
+        //trả lên header, rows[index];
+
+        index = index || 0;
+
         try {
             if (!eventId) {
                 return next({ error: { message: 'Event is not exists', code: 422 } });
             }
-            let page = await PageEvent.find({ eventId: new ObjectId(eventId), 'rows.route': route });
 
-            if (!page[0]) {
+            let  p =await PageEvent.findOne({eventId: new ObjectId(eventId)},{_id: 0, __v: 0, createAt: 0, updateAt: 0});
+            console.log(p);
+            //let page = await PageEvent.find({ eventId: new ObjectId(eventId), 'rows.route': route });
+            let result = {};
+            result.header = p.header;
+            result.eventId = p.eventId;
+            result.rows = p.rows[index];
+            if (!p) {
                 return next({ error: { message: 'Event is not exists', code: 500 } });
             }
-            res.status(200).json({ result: page });
+            res.status(200).json({ result: result });
         } catch (err) {
             next({ error: { message: err, code: 500 } })
         }
@@ -151,6 +174,9 @@ module.exports = {
                 query.category = categoryEventId
             }
 
+            let a = await PageEvent.findOne({ eventId: ObjectId('5ec62d723666f306645951a2'), "rows.1": {$exists: true} }, {'rows.1': 1});
+
+            return res.json({ result: a });
             let e = await Event.aggregate([
                 { $match: query },
                 {
@@ -171,7 +197,7 @@ module.exports = {
             ]);
             res.status(200).json({ result: e });
         } catch (error) {
-            next({ error: { message: 'Something is wrong!', code: 700 } });
+            next({ error: { message: error, code: 700 } });
         }
     },
 
