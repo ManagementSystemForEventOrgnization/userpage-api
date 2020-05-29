@@ -4,6 +4,7 @@ const stripe = require('stripe')('sk_test_baGlYFE4mbVp9TgpMLM2MuqQ002wIAF0zR');
 
 const ApplyEvent = mongoose.model('applyEvent');
 const Payment = mongoose.model('payment');
+const Event = mongoose.model('event');
 const Notification = mongoose.model('notification');
 
 const axios = require('axios');
@@ -123,11 +124,12 @@ module.exports = {
 
 	refund: async (req, res, next) => {
 		let { paymentId, joinUserId, eventId, joinTime } = req.body;
-		let userId = req.user;
+		let userId = "5ec8e500bc1ae931e85dfa3c"//req.user;
 
 		if (paymentId) {
 			try {
-				var currentPayment = await Payment.findOne({ sender: joinUserId, eventId: eventId, receiver: userId });
+				var currentPayment = await Payment.findById(paymentId)
+				var event = await Event.findById(eventId)
 
 				if (!currentPayment.sessionRefunded.includes(joinTime)) {
 					var refundNoti = async function (type) {
@@ -136,28 +138,40 @@ module.exports = {
 							receiver: joinUserId,
 							type: type,
 							message: "",
-							title: "{sender} refunded for event" + eventId,
+							title: "{sender} refunded for event " + event.name,
+							linkTo: {
+								key: "PaymentInfo",
+								_id: paymentId
+							},
 							isRead: false,
 							isDelete: false,
 							createdAt: Date(),
 							session: [joinTime]
 						});
 
-						currentPayment.sessionRefunded.push(joinTime);
-						await currentPayment.save();
-						await newNotification.save();
+						// Promise.all([
+							await Payment.findByIdAndUpdate({ _id: currentPayment._id }, { sessionRefunded: currentPayment.sessionRefunded });
+							await newNotification.save();
+						// ]).then(([payment, noti]) => {
+						// }).catch(([err1, err2]) => {
+						// 	next({ error: { message: 'Save error from server!', code: 800 } });
+						// })
 					}
 
-					if (currentPayment.payType == "CREDIT_CARD") {
+					console.log(currentPayment.payType)
+
+					if (currentPayment.payType === "CREDIT_CARD") {
 						stripe.refunds.create(
 							{ charge: currentPayment.chargeId, 
 								amount: (currentPayment.amount / currentPayment.session.length)
 							},
 							function (err, refund) {
 								if (err) {
-									refundNoti("FAILED")
+									console.log("FAILED")
+									refundNoti("CREDIT_REFUND_FAILED")
 								} else {
-									refundNoti("SUCCESS")
+									console.log("SUCCESS")
+									refundNoti("CREDIT_REFUND_SUCCESS")
 								}
 							}
 						);
@@ -181,11 +195,11 @@ module.exports = {
 						axios.post(config.endpoint, null, { params })
 							.then(res => {
 								console.log(res.data);
-								refundNoti("SUCCESS");
+								refundNoti("ZALOPAY_REFUND_SUCCESS");
 							})
 							.catch(err => {
 								console.log(err);
-								refundNoti("FAILED");
+								refundNoti("ZALOPAY_REFUND_FAILED");
 							});
 					}
 				} else {
@@ -226,12 +240,6 @@ module.exports = {
 
 		try {
 			var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId});
-			var currentPayments = await Payment.findOne({ sender: userId, eventId: eventId, receiver: receiver });
-			let currentPayment = currentPayments.forEach(ele => {
-				if (JSON.stringify(joinTimes)==JSON.stringify(ele.session)) {
-					return ele
-				}
-			})[0]
 			
 			if (currentApplyEvent) {
 				const items = [];
@@ -252,7 +260,7 @@ module.exports = {
 				order.mac = CryptoJS.HmacSHA256(data, config.key1).toString();
 
 				var result = await axios.post(config.endpoint, null, { params: order })
-
+				
 				const newPayment = new Payment({
 					sender: userId,
 					eventId: eventId,
@@ -260,59 +268,31 @@ module.exports = {
 					amount: amount,
 					description: description,
 					payType: "ZALOPAY",
-					zptransId: zptranstoken,
 					status: "WAITING",
 					session: joinTimes
 				});
 
-				if (result.data) {
-					let { zptranstoken } = result.data;
-
-					console.log("start: ", zptranstoken);
-
-					if (currentPayment) {
-						result.data.paymentId = currentPayment._id;
-						currentPayment.cardId = undefined;
-						currentPayment.zptransId = zptranstoken;
-						currentPayment.status = "WAITING";
-
-						await currentPayment.save();
-					} else {
-						console.log("save info");
-						result.data.paymentId = newPayment._id;
-						currentApplyEvent.updatedAt = Date();
-						
-						currentApplyEvent.session.forEach(element => { 
-							if (joinTimes.includes(element.day)) {
-								element.paymentId = newPayment._id;
-							}
-						})
-
-						console.log("really save info");
-						await newPayment.save();
-						await currentApplyEvent.save();
+				currentApplyEvent.updatedAt = Date();
+				currentApplyEvent.session.forEach(element => { 
+					if (joinTimes.includes(element.day)) {
+						element.paymentId = newPayment._id;
 					}
+				})
 
-					console.log("123456:");
+				console.log(newPayment, currentApplyEvent)
+
+				if (result.data) {
+					result.data.paymentId = newPayment._id;
+					newPayment.zptransId = result.data.zptranstoken;
+					await newPayment.save();
+					await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
+
 					res.status(200).json({ result: result.data });
 				} else {
-					if (currentPayment) {
-						currentPayment.cardId = null;
-						currentPayment.status = "FAILED";
-
-						await currentPayment.save();
-					} else {
-						currentApplyEvent.session.forEach(element => { 
-							if (joinTimes.includes(element.day)) {
-								element.paymentId = newPayment._id;
-							}
-						})
-
-						newPayment.status = "UNPAID";
-						await newPayment.save();
-						await currentApplyEvent.save();
-					}
-
+					newPayment.status = "UNPAID";
+					await newPayment.save();
+					await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
+                    
 					next({ error: { message: 'Create payment failed', code: 901 } });
 				}
 			} else {
@@ -365,15 +345,9 @@ module.exports = {
 
 		let { eventId, joinTimes, amount, description, receiver } = req.body;
 		let userId = req.user;
-
+		
 		try {
 			var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId});
-			var currentPayments = await Payment.findOne({ sender: userId, eventId: eventId, receiver: receiver });
-			let currentPayment = currentPayments.forEach(ele => {
-				if (JSON.stringify(joinTimes)==JSON.stringify(ele.session)) {
-					return ele
-				}
-			})[0]
 
 			if (currentApplyEvent) {
 				let cardFind = await Cards.findOne({ userId: req.user });
@@ -400,50 +374,27 @@ module.exports = {
 					});
 
 					currentApplyEvent.updatedAt = Date();
+					currentApplyEvent.session.forEach(element => { 
+						if (joinTimes.includes(element.day)) {
+							element.paymentId = newPayment._id;
+						}
+					})
 
 					if (charge) {
-						currentApplyEvent.qrcode = userId
+							console.log(currentApplyEvent)
+							console.log(newPayment)
+						newPayment.cardId = cardFind.id;
+						newPayment.chargeId = charge.id;
+						newPayment.status = "PAID";
 
-						if (currentPayment) {
-							currentPayment.chargeId = charge.id;
-							currentPayment.cardId = cardFind.id;
-							currentPayment.status = "PAID";
-
-							await currentPayment.save();
-						} else {
-							currentApplyEvent.session.forEach(element => { 
-								if (joinTimes.includes(element.day)) {
-									element.paymentId = newPayment._id;
-								}
-							})
-
-							newPayment.cardId = cardFind.id;
-							newPayment.chargeId = charge.id;
-							newPayment.status = "PAID";
-
-							await newPayment.save();
-						}
-
-						await currentApplyEvent.save();
-
+						await newPayment.save();
+						await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
+                    
 						res.status(200).json({ result: true });
 					} else {
-						if (currentPayment) {
-							currentPayment.cardId = cardFind.id;
-							currentPayment.status = "FAILED";
-
-							await currentPayment.save();
-						} else {
-							currentApplyEvent.session.forEach(element => { 
-								if (joinTimes.includes(element.day)) {
-									element.paymentId = newPayment._id;
-								}
-							})
-
-							newPayment.status = "FAILED";
-							await newPayment.save();
-							await currentApplyEvent.save();
-						}
+						newPayment.status = "FAILED";
+						await newPayment.save();
+						await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
 
 						next({ error: { message: 'Payment failed', code: 901 } });
 					}
