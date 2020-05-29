@@ -12,7 +12,7 @@ const paymentSchema = new Schema({
     chargeId: String,
     zptransId: String,
     payType: String,
-    isRefunded: Boolean,
+    sessionRefunded: [String],
     createdAt: { type: Date, default: Date() },
     updatedAt: Date,
     session: [String],

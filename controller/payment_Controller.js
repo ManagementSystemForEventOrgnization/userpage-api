@@ -4,6 +4,7 @@ const stripe = require('stripe')('sk_test_baGlYFE4mbVp9TgpMLM2MuqQ002wIAF0zR');
 
 const ApplyEvent = mongoose.model('applyEvent');
 const Payment = mongoose.model('payment');
+const Event = mongoose.model('event');
 const Notification = mongoose.model('notification');
 
 const axios = require('axios');
@@ -122,39 +123,55 @@ module.exports = {
 
 
 	refund: async (req, res, next) => {
-		let { paymentId, joinUserId, eventId } = req.body;
-		let userId = req.user;
+		let { paymentId, joinUserId, eventId, joinTime } = req.body;
+		let userId = "5ec8e500bc1ae931e85dfa3c"//req.user;
 
 		if (paymentId) {
 			try {
-				var currentPayment = await Payment.findOne({ sender: joinUserId, eventId: eventId, receiver: userId });
+				var currentPayment = await Payment.findById(paymentId)
+				var event = await Event.findById(eventId)
 
-				if (currentPayment.isRefund != true) {
+				if (!currentPayment.sessionRefunded.includes(joinTime)) {
 					var refundNoti = async function (type) {
 						const newNotification = new Notification({
 							sender: userId,
 							receiver: joinUserId,
 							type: type,
 							message: "",
-							title: "{sender} refunded for event" + eventId,
+							title: "{sender} refunded for event " + event.name,
+							linkTo: {
+								key: "PaymentInfo",
+								_id: paymentId
+							},
 							isRead: false,
 							isDelete: false,
-							createdAt: Date()
+							createdAt: Date(),
+							session: [joinTime]
 						});
 
-						currentPayment.isRefund = type == "SUCCESS";
-						await currentPayment.save();
-						await newNotification.save();
+						// Promise.all([
+							await Payment.findByIdAndUpdate({ _id: currentPayment._id }, { sessionRefunded: currentPayment.sessionRefunded });
+							await newNotification.save();
+						// ]).then(([payment, noti]) => {
+						// }).catch(([err1, err2]) => {
+						// 	next({ error: { message: 'Save error from server!', code: 800 } });
+						// })
 					}
 
-					if (currentPayment.payType == "CREDIT_CARD") {
+					console.log(currentPayment.payType)
+
+					if (currentPayment.payType === "CREDIT_CARD") {
 						stripe.refunds.create(
-							{ charge: currentPayment.chargeId },
+							{ charge: currentPayment.chargeId, 
+								amount: (currentPayment.amount / currentPayment.session.length)
+							},
 							function (err, refund) {
 								if (err) {
-									refundNoti("FAILED")
+									console.log("FAILED")
+									refundNoti("CREDIT_REFUND_FAILED")
 								} else {
-									refundNoti("SUCCESS")
+									console.log("SUCCESS")
+									refundNoti("CREDIT_REFUND_SUCCESS")
 								}
 							}
 						);
@@ -167,7 +184,7 @@ module.exports = {
 							mrefundid: `${moment().format('YYMMDD')}_${config.appid}_${uid}`,
 							timestamp, // miliseconds
 							zptransid: currentPayment.zptransId,
-							amount: currentPayment.amount,
+							amount: (currentPayment.amount / currentPayment.session.length),
 							description: currentPayment.receiver + ' Refund for event',
 						};
 
@@ -178,13 +195,15 @@ module.exports = {
 						axios.post(config.endpoint, null, { params })
 							.then(res => {
 								console.log(res.data);
-								refundNoti("SUCCESS");
+								refundNoti("ZALOPAY_REFUND_SUCCESS");
 							})
 							.catch(err => {
 								console.log(err);
-								refundNoti("FAILED");
+								refundNoti("ZALOPAY_REFUND_FAILED");
 							});
 					}
+				} else {
+					next({ error: { message: 'Not found session for refund', code: 850 } });
 				}
 			} catch (err) {
 				next(err);
@@ -216,13 +235,12 @@ module.exports = {
 			return;
 		}
 
-		let { eventId, joinTime, amount, description, receiver } = req.body;
+		let { eventId, joinTimes, amount, description, receiver } = req.body;
 		let userId = req.user;
 
 		try {
-			var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId, joinTime: joinTime });
-			var currentPayment = await Payment.findOne({ sender: userId, eventId: eventId, receiver: receiver });
-
+			var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId});
+			
 			if (currentApplyEvent) {
 				const items = [];
 
@@ -242,58 +260,40 @@ module.exports = {
 				order.mac = CryptoJS.HmacSHA256(data, config.key1).toString();
 
 				var result = await axios.post(config.endpoint, null, { params: order })
+				
+				const newPayment = new Payment({
+					sender: userId,
+					eventId: eventId,
+					receiver: receiver,
+					amount: amount,
+					description: description,
+					payType: "ZALOPAY",
+					status: "WAITING",
+					session: joinTimes
+				});
+
+				currentApplyEvent.updatedAt = Date();
+				currentApplyEvent.session.forEach(element => { 
+					if (joinTimes.includes(element.day)) {
+						element.paymentId = newPayment._id;
+					}
+				})
+
+				console.log(newPayment, currentApplyEvent)
 
 				if (result.data) {
-					let { zptranstoken } = result.data;
+					result.data.paymentId = newPayment._id;
+					newPayment.zptransId = result.data.zptranstoken;
+					await newPayment.save();
+					await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
 
-					console.log("start: ", zptranstoken);
-
-					if (currentPayment) {
-						console.log("start1: ", currentPayment);
-						result.data.paymentId = currentPayment._id;
-						currentPayment.cardId = undefined;
-						currentPayment.zptransId = zptranstoken;
-						currentPayment.status = "PAID";
-
-						console.log("start2: ", currentPayment);
-						await currentPayment.save();
-					} else {
-						console.log("save info---");
-						const newPayment = new Payment({
-							sender: userId,
-							eventId: eventId,
-							receiver: receiver,
-							amount: amount,
-							description: description,
-							payType: "ZALOPAY",
-							zptransId: zptranstoken,
-							status: "PAID"
-						});
-
-						console.log("save info");
-						result.data.paymentId = newPayment._id;
-						currentApplyEvent.updatedAt = Date();
-						currentApplyEvent.paymentId = newPayment._id;
-						console.log("really save info");
-						await newPayment.save();
-						await currentApplyEvent.save();
-					}
-
-					console.log("123456:");
 					res.status(200).json({ result: result.data });
 				} else {
-					if (currentPayment) {
-						currentPayment.cardId = null;
-						currentPayment.status = "FAILED";
-
-						await currentPayment.save();
-					} else {
-						newPayment.status = "FAILED";
-						await newPayment.save();
-						await currentApplyEvent.save();
-					}
-
-					next({ error: { message: 'Payment failed', code: 901 } });
+					newPayment.status = "UNPAID";
+					await newPayment.save();
+					await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
+                    
+					next({ error: { message: 'Create payment failed', code: 901 } });
 				}
 			} else {
 				next({ error: { message: 'You have not participated in this event', code: 702 } });
@@ -343,15 +343,14 @@ module.exports = {
 			return;
 		}
 
-		let { eventId, joinTime, amount, description, receiver } = req.body;
+		let { eventId, joinTimes, amount, description, receiver } = req.body;
 		let userId = req.user;
-
+		
 		try {
-			var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId, joinTime: joinTime });
-			var currentPayment = await Payment.findOne({ sender: userId, eventId: eventId, receiver: receiver });
+			var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId});
 
 			if (currentApplyEvent) {
-				let cardFind = await Cards.findOne({ 'userId': req.user });
+				let cardFind = await Cards.findOne({ userId: req.user });
 
 				if (cardFind) {
 					let charge = await stripe.charges.create(
@@ -370,44 +369,32 @@ module.exports = {
 						payType: "CREDIT_CARD",
 						description: description,
 						cardId: cardFind.id,
-						createdAt: Date()
+						createdAt: Date(),
+						session: joinTimes
 					});
 
 					currentApplyEvent.updatedAt = Date();
+					currentApplyEvent.session.forEach(element => { 
+						if (joinTimes.includes(element.day)) {
+							element.paymentId = newPayment._id;
+						}
+					})
 
 					if (charge) {
-						currentApplyEvent.qrcode = userId
+							console.log(currentApplyEvent)
+							console.log(newPayment)
+						newPayment.cardId = cardFind.id;
+						newPayment.chargeId = charge.id;
+						newPayment.status = "PAID";
 
-						if (currentPayment) {
-							currentPayment.chargeId = charge.id;
-							currentPayment.cardId = cardFind.id;
-							currentPayment.status = "PAID";
-
-							await currentPayment.save();
-						} else {
-							currentApplyEvent.paymentId = newPayment._id;
-							newPayment.cardId = cardFind.id;
-							newPayment.chargeId = charge.id;
-							newPayment.status = "PAID";
-
-							await newPayment.save();
-						}
-
-						await currentApplyEvent.save();
-
+						await newPayment.save();
+						await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
+                    
 						res.status(200).json({ result: true });
 					} else {
-						if (currentPayment) {
-							currentPayment.cardId = cardFind.id;
-							currentPayment.status = "FAILED";
-
-							await currentPayment.save();
-						} else {
-							currentApplyEvent.paymentId = newPayment._id;
-							newPayment.status = "FAILED";
-							await newPayment.save();
-							await currentApplyEvent.save();
-						}
+						newPayment.status = "FAILED";
+						await newPayment.save();
+						await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
 
 						next({ error: { message: 'Payment failed', code: 901 } });
 					}
