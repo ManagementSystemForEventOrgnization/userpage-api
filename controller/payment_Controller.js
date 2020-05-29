@@ -122,14 +122,14 @@ module.exports = {
 
 
 	refund: async (req, res, next) => {
-		let { paymentId, joinUserId, eventId } = req.body;
+		let { paymentId, joinUserId, eventId, joinTime } = req.body;
 		let userId = req.user;
 
 		if (paymentId) {
 			try {
 				var currentPayment = await Payment.findOne({ sender: joinUserId, eventId: eventId, receiver: userId });
 
-				if (currentPayment.isRefund != true) {
+				if (!currentPayment.sessionRefunded.includes(joinTime)) {
 					var refundNoti = async function (type) {
 						const newNotification = new Notification({
 							sender: userId,
@@ -139,17 +139,20 @@ module.exports = {
 							title: "{sender} refunded for event" + eventId,
 							isRead: false,
 							isDelete: false,
-							createdAt: Date()
+							createdAt: Date(),
+							session: [joinTime]
 						});
 
-						currentPayment.isRefund = type == "SUCCESS";
+						currentPayment.sessionRefunded.push(joinTime);
 						await currentPayment.save();
 						await newNotification.save();
 					}
 
 					if (currentPayment.payType == "CREDIT_CARD") {
 						stripe.refunds.create(
-							{ charge: currentPayment.chargeId },
+							{ charge: currentPayment.chargeId, 
+								amount: (currentPayment.amount / currentPayment.session.length)
+							},
 							function (err, refund) {
 								if (err) {
 									refundNoti("FAILED")
@@ -167,7 +170,7 @@ module.exports = {
 							mrefundid: `${moment().format('YYMMDD')}_${config.appid}_${uid}`,
 							timestamp, // miliseconds
 							zptransid: currentPayment.zptransId,
-							amount: currentPayment.amount,
+							amount: (currentPayment.amount / currentPayment.session.length),
 							description: currentPayment.receiver + ' Refund for event',
 						};
 
@@ -185,6 +188,8 @@ module.exports = {
 								refundNoti("FAILED");
 							});
 					}
+				} else {
+					next({ error: { message: 'Not found session for refund', code: 850 } });
 				}
 			} catch (err) {
 				next(err);
@@ -216,13 +221,18 @@ module.exports = {
 			return;
 		}
 
-		let { eventId, joinTime, amount, description, receiver } = req.body;
+		let { eventId, joinTimes, amount, description, receiver } = req.body;
 		let userId = req.user;
 
 		try {
-			var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId, joinTime: joinTime });
-			var currentPayment = await Payment.findOne({ sender: userId, eventId: eventId, receiver: receiver });
-
+			var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId});
+			var currentPayments = await Payment.findOne({ sender: userId, eventId: eventId, receiver: receiver });
+			let currentPayment = currentPayments.forEach(ele => {
+				if (JSON.stringify(joinTimes)==JSON.stringify(ele.session)) {
+					return ele
+				}
+			})[0]
+			
 			if (currentApplyEvent) {
 				const items = [];
 
@@ -243,37 +253,41 @@ module.exports = {
 
 				var result = await axios.post(config.endpoint, null, { params: order })
 
+				const newPayment = new Payment({
+					sender: userId,
+					eventId: eventId,
+					receiver: receiver,
+					amount: amount,
+					description: description,
+					payType: "ZALOPAY",
+					zptransId: zptranstoken,
+					status: "WAITING",
+					session: joinTimes
+				});
+
 				if (result.data) {
 					let { zptranstoken } = result.data;
 
 					console.log("start: ", zptranstoken);
 
 					if (currentPayment) {
-						console.log("start1: ", currentPayment);
 						result.data.paymentId = currentPayment._id;
 						currentPayment.cardId = undefined;
 						currentPayment.zptransId = zptranstoken;
-						currentPayment.status = "PAID";
+						currentPayment.status = "WAITING";
 
-						console.log("start2: ", currentPayment);
 						await currentPayment.save();
 					} else {
-						console.log("save info---");
-						const newPayment = new Payment({
-							sender: userId,
-							eventId: eventId,
-							receiver: receiver,
-							amount: amount,
-							description: description,
-							payType: "ZALOPAY",
-							zptransId: zptranstoken,
-							status: "PAID"
-						});
-
 						console.log("save info");
 						result.data.paymentId = newPayment._id;
 						currentApplyEvent.updatedAt = Date();
-						currentApplyEvent.paymentId = newPayment._id;
+						
+						currentApplyEvent.session.forEach(element => { 
+							if (joinTimes.includes(element.day)) {
+								element.paymentId = newPayment._id;
+							}
+						})
+
 						console.log("really save info");
 						await newPayment.save();
 						await currentApplyEvent.save();
@@ -288,12 +302,18 @@ module.exports = {
 
 						await currentPayment.save();
 					} else {
-						newPayment.status = "FAILED";
+						currentApplyEvent.session.forEach(element => { 
+							if (joinTimes.includes(element.day)) {
+								element.paymentId = newPayment._id;
+							}
+						})
+
+						newPayment.status = "UNPAID";
 						await newPayment.save();
 						await currentApplyEvent.save();
 					}
 
-					next({ error: { message: 'Payment failed', code: 901 } });
+					next({ error: { message: 'Create payment failed', code: 901 } });
 				}
 			} else {
 				next({ error: { message: 'You have not participated in this event', code: 702 } });
@@ -343,15 +363,20 @@ module.exports = {
 			return;
 		}
 
-		let { eventId, joinTime, amount, description, receiver } = req.body;
+		let { eventId, joinTimes, amount, description, receiver } = req.body;
 		let userId = req.user;
 
 		try {
-			var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId, joinTime: joinTime });
-			var currentPayment = await Payment.findOne({ sender: userId, eventId: eventId, receiver: receiver });
+			var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId});
+			var currentPayments = await Payment.findOne({ sender: userId, eventId: eventId, receiver: receiver });
+			let currentPayment = currentPayments.forEach(ele => {
+				if (JSON.stringify(joinTimes)==JSON.stringify(ele.session)) {
+					return ele
+				}
+			})[0]
 
 			if (currentApplyEvent) {
-				let cardFind = await Cards.findOne({ 'userId': req.user });
+				let cardFind = await Cards.findOne({ userId: req.user });
 
 				if (cardFind) {
 					let charge = await stripe.charges.create(
@@ -370,7 +395,8 @@ module.exports = {
 						payType: "CREDIT_CARD",
 						description: description,
 						cardId: cardFind.id,
-						createdAt: Date()
+						createdAt: Date(),
+						session: joinTimes
 					});
 
 					currentApplyEvent.updatedAt = Date();
@@ -385,7 +411,12 @@ module.exports = {
 
 							await currentPayment.save();
 						} else {
-							currentApplyEvent.paymentId = newPayment._id;
+							currentApplyEvent.session.forEach(element => { 
+								if (joinTimes.includes(element.day)) {
+									element.paymentId = newPayment._id;
+								}
+							})
+
 							newPayment.cardId = cardFind.id;
 							newPayment.chargeId = charge.id;
 							newPayment.status = "PAID";
@@ -403,7 +434,12 @@ module.exports = {
 
 							await currentPayment.save();
 						} else {
-							currentApplyEvent.paymentId = newPayment._id;
+							currentApplyEvent.session.forEach(element => { 
+								if (joinTimes.includes(element.day)) {
+									element.paymentId = newPayment._id;
+								}
+							})
+
 							newPayment.status = "FAILED";
 							await newPayment.save();
 							await currentApplyEvent.save();

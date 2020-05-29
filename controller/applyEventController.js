@@ -5,6 +5,7 @@ const Payment = mongoose.model('payment');
 const Notification = mongoose.model('notification');
 
 const payment_Controller = require('../controller/payment_Controller');
+const FreePaymentId = "FreeTicket"
 
 module.exports = {
     updatePaymentStatus: async (req, res, next) => {
@@ -41,16 +42,18 @@ module.exports = {
     },
 
     joinEvent: async (req, res, next) => {
-        if (typeof req.body.eventId === 'undefined') {
+        if (typeof req.body.eventId === 'undefined' ||
+            typeof req.body.joinTimes === 'undefined') 
+        {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
-        let { eventId, joinTime, payType } = req.body;
+        let { eventId, joinTimes, payType } = req.body;
         let userId = req.user;
 
         try {
-            var currentEvent = await Event.findById(eventId);
+            let currentEvent = await Event.findById(eventId);
 
             if (currentEvent) {
                 if (currentEvent.userId == userId) {
@@ -58,57 +61,82 @@ module.exports = {
                     return;
                 }
 
-                var joinNumber = +currentEvent.joinNumber || 0;
-                joinNumber += 1;
+                var sessions = []
 
-                if (joinNumber > +currentEvent.limitNumber) {
-                    next({ error: { message: 'Exceeded the amount possible', code: 700 } });
-                    return;
+                currentEvent.session.forEach(element => {
+                    if (joinTimes.includes(element.day)) {
+                        var joinNumber = element.joinNumber || 0;
+                        joinNumber += 1;
+
+                        if (joinNumber <= element.limitNumber) {
+                            element.joinNumber = joinNumber;
+                            sessions.push(element);
+                        } else {
+                            next({ error: { message: 'Exceeded the amount possible', code: 700 } });
+                            return;
+                        }
+                    }
+                })
+
+                let currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId});
+
+                if (sessions.length == 0 || sessions.length != joinTimes.length) {
+                    next({ error: { message: 'Not found session!', code: 725 } });
+                    return
                 }
 
-                currentEvent.joinNumber = joinNumber;
+                var updateSession = async function () {
+                    await Event.findByIdAndUpdate({ _id: currentEvent._id }, { session: currentEvent.session })
+                    
+                    sessions.forEach(element => { 
+                        element.status = "JOINED"
+                        element.isConfirm = false
+                        element.isReject = false
 
-                var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId, joinTime: joinTime });
+                        if (currentEvent.isSellTicket != true) {
+                            element.paymentId = FreePaymentId
+                        }
+                    })
+                }
 
                 if (currentApplyEvent) {
-                    if (currentApplyEvent.qrcode != userId)
-                        next({ error: { message: 'You have already joined in this event', code: 701 } });
+                    currentApplyEvent.session.forEach(element => {
+                        if (joinTimes.includes(element.day)) {
+                            next({ error: { message: 'You have already joined in one of these session', code: 701 } });
+                        }
+                    })
+                    
+                    await updateSession()
+                    let changeSession = currentApplyEvent.session.concat(sessions)
+
+                    await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: changeSession })
                 } else {
-                    const newApplyEvent = new ApplyEvent({
+                    await updateSession()
+
+                    let newApplyEvent = new ApplyEvent({
                         userId: userId,
                         eventId: eventId,
-                        joinTime: joinTime,
-                        isConfirm: true,
+                        session: sessions,
+                        qrcode: userId,
                         createdAt: Date()
                     });
 
-                    if (currentEvent.isSellTicket != true) {
-                        newApplyEvent.qrcode = userId
-                    }
-                    // await newApplyEvent.save();
-                    // await currentEvent.save();
-                    Promise.all([
-                        newApplyEvent.save(),
-                        currentEvent.save()])
-                        .then(([apply, current]) => {
+                    await newApplyEvent.save();
+                }
 
-                        }).catch(([err1, err2]) => {
+                console.log(currentEvent);
 
-                        })
+                if (currentEvent.isSellTicket) {
+                    req.body.amount = (currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price) * sessions.length;
+                    req.body.receiver = currentEvent.userId;
 
-
-                    if (currentEvent.isSellTicket) {
-                        req.body.amount = currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price;
-                        req.body.receiver = currentEvent.userId;
-
-                        if (payType === "CREDIT_CARD") {
-                            await payment_Controller.create_charges(req, res, next);
-                        } else {
-                            await payment_Controller.create_order(req, res, next);
-                        }
+                    if (payType === "CREDIT_CARD") {
+                        await payment_Controller.create_charges(req, res, next);
                     } else {
-                        return res.status(200).json({ result: true })
+                        await payment_Controller.create_order(req, res, next);
                     }
+                } else {
+                    return res.status(200).json({ result: true })
                 }
             } else {
                 next({ error: { message: 'Event not exists', code: 403 } });
@@ -122,20 +150,31 @@ module.exports = {
     prepayEvent: async (req, res, next) => {
         if (typeof req.body.eventId === 'undefined' ||
             typeof req.body.payType === 'undefined' ||
-            typeof req.body.joinTime === 'undefined') {
+            typeof req.body.joinTimes === 'undefined') {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
-        let { eventId, joinTime, payType } = req.body;
+        let { eventId, joinTimes, payType } = req.body;
         let userId = req.user;
 
         try {
             var currentEvent = await Event.findById(eventId);
-            var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId, joinTime: joinTime });
+            var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId });
+            var count = 0
+
+            currentApplyEvent.session.forEach(element => {
+                if (joinTimes.includes(element.day)) {
+                    count += 1;
+                }
+            })
+
+            if (count != joinTimes.length) {
+                next({ error: { message: 'Choose session pay failed, please!', code: 720 } })
+            }
 
             if (currentEvent && currentApplyEvent) {
-                req.body.amount = currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price;
+                req.body.amount = (currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price) * joinTimes.length;
                 req.body.receiver = currentEvent.userId;
 
                 if (payType === "CREDIT_CARD") {
@@ -163,24 +202,34 @@ module.exports = {
         let { joinUserId, eventId, joinTime } = req.body;
 
         try {
-            var currentApplyEvent = await ApplyEvent.findOne({ userId: joinUserId, eventId: eventId, joinTime: joinTime });
+            var currentApplyEvent = await ApplyEvent.findOne({ userId: joinUserId, eventId: eventId });
 
             if (currentApplyEvent) {
-                if (currentApplyEvent.isReject != true && currentApplyEvent.qrcode == joinUserId) {
-                    currentApplyEvent.isConfirm = true
-                } else {
-                    currentApplyEvent.isConfirm = false
-                }
+                let session = currentApplyEvent.session.find(element => {
+                    if (joinTime == element.day) {
+                        if (element.isReject != true && currentApplyEvent.qrcode == joinUserId) {
+                            element.isConfirm = true
+                        } else {
+                            element.isConfirm = false
+                        }
+                        return element
+                    }
+                })
+
                 await currentApplyEvent.save();
 
-                if (currentApplyEvent.isConfirm) {
-                    return res.status(200).json({ result: true });
-                } else {
-                    if (currentApplyEvent.isReject) {
-                        next({ error: { message: 'Join user have rejected', code: 705 } });
+                if (session) {
+                    if (session.isConfirm) {
+                        return res.status(200).json({ result: true });
                     } else {
-                        next({ error: { message: 'Join user have not payment for this event', code: 704 } });
+                        if (session.isReject) {
+                            next({ error: { message: 'Join user have rejected', code: 705 } });
+                        } else {
+                            next({ error: { message: 'Join user have not payment for this event', code: 704 } });
+                        }
                     }
+                } else {
+                    next({ error: { message: 'Not found session', code: 708 } });
                 }
             } else {
                 next({ error: { message: 'Join user have not participated in this event', code: 702 } });
@@ -192,53 +241,72 @@ module.exports = {
 
     rejectEventMenber: async (req, res, next) => {
         if (typeof req.body.eventId === 'undefined' ||
-            typeof req.body.joinUserId === 'undefined') {
+            typeof req.body.joinUserId === 'undefined' ||
+            typeof req.body.joinTime === 'undefined') 
+        {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
-        let { joinUserId, eventId } = req.body;
+        let { joinUserId, eventId, joinTime } = req.body;
         let userId = req.user;
 
         try {
-            var applyEvents = await ApplyEvent.find({ userId: joinUserId, eventId: eventId });
-            var notification = await Notification.findOne({ sender: userId, "linkTo._id": eventId, receiver: joinUserId });
+            var applyEvent = await ApplyEvent.find({ userId: joinUserId, eventId: eventId });
+            // var notification = await Notification.findOne({ sender: userId, "linkTo._id": eventId, receiver: joinUserId });
 
-            if (notification) {
-                next({ error: { message: 'you have rejected', code: 710 } });
-            }
+            // if (notification) {
+            //     next({ error: { message: 'you have rejected', code: 710 } });
+            // }
 
-            for (var index in applyEvents) {
-                applyEvents[index].isReject = true;
-
-                await applyEvents[index].save();
-
-                // await rejectEventMenberNoti(req, res, next);
-
-                if (applyEvents[index].qrcode == joinUserId) {
-                    req.body.paymentId = applyEvents[index].paymentId
-                    await payment_Controller.refund(req, res, next);
+            let session = applyEvent.session.find(element => {
+                if (joinTime == element.day) {
+                    return element
                 }
+            })
+
+            if (session) {
+                if (element.isReject != true ) {
+                    element.isReject = true
+                    element.status = "REJECT"
+
+                    if (element.paymentId !== undefined && element.paymentId !== null && element.paymentId !== FreePaymentId) {
+                        req.body.paymentId = element.paymentId
+                        await payment_Controller.refund(req, res, next);
+                    }
+        
+                    const newNotification = new Notification({
+                        sender: userId,
+                        receiver: [joinUserId],
+                        type: "EVENT_REJECT",
+                        message: "",
+                        title: "{sender} rejected you form event {event}",
+                        linkTo: {
+                            key: "EventDetail",
+                            _id: eventId,
+                        },
+                        session: [joinTime],
+                        isRead: false,
+                        isDelete: false,
+                        createdAt: Date()
+                    });
+        
+                    Promise.all([
+                        newNotification.save(),
+                        applyEvent.save(),
+                        // rejectEventMenberNoti(req, res, next)
+                    ]).then(([apply, current]) => {
+                            return res.status(200).json({ result: true });
+                    }).catch(([err1, err2]) => {
+                        next({ error: { message: 'Save error from server!', code: 800 } });
+                    })
+
+                } else {
+                    next({ error: { message: 'you have rejected', code: 710 } });
+                }
+            } else {
+                next({ error: { message: 'Not found session', code: 708 } });
             }
-
-            const newNotification = new Notification({
-                sender: userId,
-                receiver: [joinUserId],
-                type: "EVENT_REJECT",
-                message: "",
-                title: "{sender} rejected you form event {event}",
-                linkTo: {
-                    key: "EventDetail",
-                    _id: eventId,
-                },
-                isRead: false,
-                isDelete: false,
-                createdAt: Date()
-            });
-
-            await newNotification.save();
-
-            return res.status(200).json({ result: true });
         } catch (err) {
             next(err);
         }
@@ -250,45 +318,92 @@ module.exports = {
             return;
         }
 
-        let { eventId, time } = req.body;
+        let { eventId, sessionTime } = req.body;
         let userId = req.user;
 
         try {
             var event = await Event.findById(eventId);
             var applyEvents = null;
 
-            if (time) {
-                event.cancelTime.push(time);
-                const index = event.startTime.indexOf(time);
+            if (sessionTime) {
+                event.session.forEach(ele => {
+                    if (sessionTime == ele.day) {
+                        ele.isCancel = true
+                    }
+                })
 
-                if (index > -1) {
-                    event.startTime.splice(index, 1);
-                }
-
-                applyEvents = await ApplyEvent.find({ eventId: eventId, joinTime: time });
+                applyEvents = await ApplyEvent.find({ eventId: eventId, session: {$elemMatch: {day: sessionTime}} });
+            
             } else {
-                event.isCancel = true;
+                event.session.forEach(ele => {
+                    ele.isCancel = true
+                })
+
+                event.status = "CANCEL";
                 applyEvents = await ApplyEvent.find({ eventId: eventId });
             }
 
             var joinUserIds = [];
-            for (var index in applyEvents) {
-                applyEvents[index].isReject = true;
+            var sessionNoti = [];
+            var index = 0
 
-                await applyEvents[index].save();
+            while (index < applyEvents.length) {
+            // applyEvents.forEach(applyItem => {
+                let itemChanges = applyEvents[index].session.filter(element => {
+                    if (sessionTime) {
+                        if (sessionTime == element.day) {
+                            element.isCancel = true
+                            element.status = "CANCEL"
 
-                // await cancelJoinEventNoti(req, res, next);
+                            return element
+                        }
+                    } else {
+                        element.isCancel = true
+                        element.status = "CANCEL"
+
+                        return element
+                    }
+                })
+
+                var i = 0;
+                while (i < itemChanges.length) {
+                    if (sessionNoti.indexOf(itemChanges[i].day) === -1) {
+                        sessionNoti.push(itemChanges[i].day);
+                    }
+
+                    if (itemChanges[i].paymentId && itemChanges[i].paymentId !== FreePaymentId) {
+                        req.body.paymentId = itemChanges[i].paymentId;
+                        req.body.joinUserId = applyItem.userId;
+                        req.body.joinTime = itemChanges[i].day;
+    
+                        await payment_Controller.refund(req, res, next);
+                    }
+
+                    i++;
+                }
+
+                // itemChanges.forEach(ele => {
+                //     if (sessionNoti.indexOf(ele.startTime) === -1) {
+                //         sessionNoti.push(ele.startTime);
+                //     }
+
+                //     if (ele.paymentId && ele.paymentId !== FreePaymentId) {
+                //         req.body.paymentId = ele.paymentId;
+                //         req.body.joinUserId = applyItem.userId;
+                //         req.body.joinTime = ele.startTime;
+    
+                //         await payment_Controller.refund(req, res, next);
+                //     }
+                // })
+
                 if (joinUserIds.indexOf(applyEvents[index].userId) === -1) {
                     joinUserIds.push(applyEvents[index].userId);
                 }
 
-                if (event.isSellTicket == true && applyEvents[index].qrcode == applyEvents[index].userId) {
-                    req.body.paymentId = applyEvents[index].paymentId;
-                    req.body.joinUserId = applyEvents[index].userId;
-
-                    await payment_Controller.refund(req, res, next);
-                }
-            }
+                await applyEvents[index].save();
+                index++;
+            // });
+            }   
 
             const newNotification = new Notification({
                 sender: userId,
@@ -302,7 +417,8 @@ module.exports = {
                 },
                 isRead: false,
                 isDelete: false,
-                createdAt: Date()
+                createdAt: Date(),
+                session: sessionNoti
             });
 
             await newNotification.save();
