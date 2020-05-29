@@ -66,15 +66,15 @@ module.exports = {
 
                 if (pageEvent[0]) {
                     // xác nhận là đã lưu trước đó. chỉ cần update lại.
-                    let _idE = e._id;
+                    var _idE = e._id;
                     let _id = pageEvent[0]._id;
-                    let p = await PageEvent.findByIdAndUpdate({ _id: ObjectId(_id) }, { rows: blocks, updateAt: new Date(), header });
+                    //let p = await PageEvent.findByIdAndUpdate({ _id: ObjectId(_id) }, { rows: blocks, updateAt: new Date(), header });
 
                     Promise.all([
                         Event.findByIdAndUpdate({ _id: ObjectId(_idE) }, { isPreview: isPreview }),
                         PageEvent.findByIdAndUpdate({ _id: ObjectId(_id) }, { rows: blocks, updateAt: new Date(), header })
                     ]).then(([e, pe]) => {
-                        if (!p) {
+                        if (!pe) {
                             return next({ error: { message: 'Event is not exists', code: 422 } });
                         }
                     })
