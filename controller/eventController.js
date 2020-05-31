@@ -51,7 +51,7 @@ module.exports = {
         let { blocks, eventId, isPreview, header } = req.body;
 
         try {
-            
+
             eventId = eventId || '';
             let idUser = req.user;
 
@@ -122,7 +122,7 @@ module.exports = {
                 return next({ error: { message: 'Event is not exists', code: 422 } });
             }
 
-            let  p =await PageEvent.findOne({eventId: new ObjectId(eventId)},{_id: 0, __v: 0, createAt: 0, updateAt: 0});
+            let p = await PageEvent.findOne({ eventId: new ObjectId(eventId) }, { _id: 0, __v: 0, createAt: 0, updateAt: 0 });
             console.log(p);
             //let page = await PageEvent.find({ eventId: new ObjectId(eventId), 'rows.route': route });
             let result = {};
@@ -174,7 +174,7 @@ module.exports = {
                 query.category = categoryEventId
             }
 
-            let a = await PageEvent.findOne({ eventId: ObjectId('5ec62d723666f306645951a2'), "rows.1": {$exists: true} }, {'rows.1': 1});
+            let a = await PageEvent.findOne({ eventId: ObjectId('5ec62d723666f306645951a2'), "rows.1": { $exists: true } }, { 'rows.1': 1 });
 
             return res.json({ result: a });
             let e = await Event.aggregate([

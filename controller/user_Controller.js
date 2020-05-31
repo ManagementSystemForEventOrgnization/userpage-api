@@ -508,7 +508,7 @@ module.exports = {
       numberRecord,
       status,
     } = req.query;
-    status=status||'DRAFT';
+    status = status || 'DRAFT';
     txtSearch = txtSearch || "";
     startDate = startDate || "";
 
@@ -525,7 +525,7 @@ module.exports = {
           status
         }]
       };
- 
+
       if (startDate !== "") {
         conditionQuery.$and.push({
           startTime: {
@@ -539,7 +539,7 @@ module.exports = {
         conditionQuery.$text = { $search: txtSearch };
       }
 
-      arrEvent = await Event.find(conditionQuery).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord).sort({createAt: 1});
+      arrEvent = await Event.find(conditionQuery).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord).sort({ createAt: 1 });
 
       res.status(200).json({ result: arrEvent });
     } catch (err) {
