@@ -6,7 +6,7 @@ const commentSchema = new Schema({
     eventId: Schema.Types.ObjectId,
     content: String,
     isDelete: Boolean,
-    createAt: { type: Date, default: Date() },
+    createAt: { type: Date, default: new Date() },
     updateAt: Date
 })
 

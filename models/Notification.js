@@ -13,7 +13,7 @@ const notificationSchema = new Schema({
     },
     isRead: Boolean,
     isDelete: Boolean,
-    createAt: { type: Date, default: Date() },
+    createAt: { type: Date, default: new Date() },
     updateAt: Date,
     session: [String],
 })

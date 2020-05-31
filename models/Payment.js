@@ -4,7 +4,7 @@ const { Schema } = mongoose;
 const paymentSchema = new Schema({
     sender: Schema.Types.ObjectId,
     receiver: Schema.Types.ObjectId,
-    amount: Number, 
+    amount: Number,
     status: String, //UNPAID, FAILED, WAITING, PAID
     description: String,
     eventId: Schema.Types.ObjectId,

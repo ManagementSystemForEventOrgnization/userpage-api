@@ -11,7 +11,7 @@ const pageEventSchema = new Schema({
     // },
     rows: {type: Array},
     header: {type: Array},
-    createAt: { type: Date, default: Date() },
+    createAt: { type: Date, default: new Date() },
     updateAt: Date
 })
 

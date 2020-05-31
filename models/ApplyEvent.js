@@ -4,7 +4,7 @@ const { Schema } = mongoose;
 const applyEventSchema = new Schema({
     userId: Schema.Types.ObjectId,
     eventId: Schema.Types.ObjectId,
-    session : { type : Array },
+    session: { type: Array },
     qrcode: { type: String, "index": "text" },
     createdAt: { type: Date, default: Date() },
     updatedAt: Date

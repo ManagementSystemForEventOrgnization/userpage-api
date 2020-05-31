@@ -93,7 +93,7 @@ module.exports = {
                 },
                 { $skip: +numberRecord * (+pageNumber - 1) },
                 { $limit: numberRecord },
-                { $sort: { createdAt: 1 } }
+                { $sort: { createdAt: -1 } }
             ]);
             res.status(200).json({ result: notifications });
         } catch (err) {

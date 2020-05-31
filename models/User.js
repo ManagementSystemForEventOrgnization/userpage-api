@@ -24,8 +24,14 @@ const userSchema = new Schema({
     orgPhone: String,
     orgEmail: String,
     orgUrl: String,
+    bank: {
+        bankNumber: String,
+        bankName: String,
+        bankBranch: String,
+        accountOwner: String
+    },
     isActive:{type:Boolean,default: false},
-    createAt: { type: Date, default: Date() },
+    createAt: { type: Date, default: new Date() },
     updateAt: Date
 })
 
