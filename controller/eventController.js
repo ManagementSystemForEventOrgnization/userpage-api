@@ -159,8 +159,8 @@ module.exports = {
                 pageNumber,
                 numberRecord, } = req.query;
 
-            pageNumber = pageNumber || 1;
-            numberRecord = numberRecord || 10;
+            pageNumber = +pageNumber || 1;
+            numberRecord = +numberRecord || 10;
             txtSearch = txtSearch || '';
             categoryEventId = categoryEventId || '';
 
@@ -202,7 +202,7 @@ module.exports = {
                     $unwind: "$eventCategories"
                 },
                 { $skip: +numberRecord * (+pageNumber - 1) },
-                { $limit: numberRecord },
+                { $limit: +numberRecord },
                 { $sort: { createdAt: 1 } }
             ]);
             res.status(200).json({ result: e });
@@ -221,8 +221,8 @@ module.exports = {
                 pageNumber,
                 numberRecord, } = req.query;
 
-            pageNumber = pageNumber || 1;
-            numberRecord = numberRecord || 10;
+            pageNumber = +pageNumber || 1;
+            numberRecord = +numberRecord || 10;
             txtSearch = txtSearch || '';
             categoryEventId = categoryEventId || '';
 
@@ -285,8 +285,8 @@ module.exports = {
                 pageNumber,
                 numberRecord, } = req.query;
 
-            pageNumber = pageNumber || 1;
-            numberRecord = numberRecord || 10;
+            pageNumber = +pageNumber || 1;
+            numberRecord = +numberRecord || 10;
             txtSearch = txtSearch || '';
             categoryEventId = categoryEventId || '';
 
@@ -335,8 +335,8 @@ module.exports = {
                 pageNumber,
                 numberRecord, } = req.query;
 
-            pageNumber = pageNumber || 1;
-            numberRecord = numberRecord || 10;
+            pageNumber = +pageNumber || 1;
+            numberRecord = +numberRecord || 10;
             txtSearch = txtSearch || '';
             categoryEventId = categoryEventId || '';
 
@@ -366,7 +366,7 @@ module.exports = {
                     $unwind: "$users"
                 },
                 { $skip: +numberRecord * (+pageNumber - 1) },
-                { $limit: numberRecord },
+                { $limit: +numberRecord },
                 { $sort: { 'session.day': 1 } }
             ])
             res.status(200).json({ result: e });
