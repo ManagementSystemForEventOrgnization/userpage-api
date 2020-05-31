@@ -188,6 +188,19 @@ module.exports = {
                 {
                     $unwind: "$users"
                 },
+                {
+                    $lookup:
+                    {
+                        from: "eventCategory",
+                        localField: "category",
+                        foreignField: "_id",
+                        as: "eventCategories"
+                    }
+                },
+                // {$project: { 'users.fullName': 1 }},
+                {
+                    $unwind: "$eventCategories"
+                },
                 { $skip: +numberRecord * (+pageNumber - 1) },
                 { $limit: numberRecord },
                 { $sort: { createdAt: 1 } }
