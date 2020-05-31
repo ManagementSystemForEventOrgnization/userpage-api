@@ -191,7 +191,7 @@ module.exports = {
                 {
                     $lookup:
                     {
-                        from: "eventCategory",
+                        from: "eventcategories",
                         localField: "category",
                         foreignField: "_id",
                         as: "eventCategories"
@@ -255,7 +255,7 @@ module.exports = {
                 {
                     $lookup:
                     {
-                        from: "eventCategory",
+                        from: "eventcategories",
                         localField: "category",
                         foreignField: "_id",
                         as: "eventCategories"
@@ -266,7 +266,7 @@ module.exports = {
                     $unwind: "$eventCategories"
                 },
                 { $skip: +numberRecord * (+pageNumber - 1) },
-                { $limit: numberRecord },
+                { $limit: +numberRecord },
                 { $sort: { 'session.day': 1 } }
             ])
             console.log("Tcl:", e);
@@ -317,7 +317,7 @@ module.exports = {
                     $unwind: "$users"
                 },
                 { $skip: +numberRecord * (+pageNumber - 1) },
-                { $limit: numberRecord },
+                { $limit: +numberRecord },
                 { $sort: { 'session.day': 1 } }
             ])
             res.status(200).json({ result: e });
