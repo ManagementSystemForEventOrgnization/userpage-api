@@ -425,8 +425,8 @@ module.exports = {
     } = req.query;
     txtSearch = txtSearch || "";
 
-    pageNumber = pageNumber || 1;
-    numberRecord = numberRecord || 10;
+    pageNumber = +pageNumber || 1;
+    numberRecord = +numberRecord || 10;
     categoryEventId = categoryEventId || '';
     startDate = startDate || '';
     let idUserLogin = req.user;
@@ -445,12 +445,15 @@ module.exports = {
         switch (type) {
           case 'RECENT':
 
-          
+
             break;
           case 'PAST':
+            
             break;
 
-            case 'ALL':
+          case 'ALL':
+
+          break;
         }
       }
 
@@ -502,7 +505,7 @@ module.exports = {
           $project: { events: 1 },
         },
         { $skip: +numberRecord * (+pageNumber - 1) },
-        { $limit: numberRecord },
+        { $limit: +numberRecord },
       ]);
 
       res.status(200).json({ result: arrEvent });
@@ -525,8 +528,8 @@ module.exports = {
     txtSearch = txtSearch || "";
     startDate = startDate || "";
 
-    pageNumber = pageNumber || 1;
-    numberRecord = numberRecord || 10;
+    pageNumber = +pageNumber || 1;
+    numberRecord = +numberRecord || 10;
 
     let idUserLogin = req.user;
     try {
