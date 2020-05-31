@@ -11,8 +11,8 @@ const eventSchema = new Schema({
         price: Number,
         discount: Number
     },
-    session :{type : Array}, // limitNumber, joinNumber, endTime, startTime, detail, imageMap, address, linkfile, status, isCancel 
-    category: String,
+    session :{type : Array}, // limitNumber, joinNumber, endTime, startTime, detail, imageMap, address, linkfile, status 
+    category: Schema.Types.ObjectId,
     status: { type: String, "index": "text", default: "PENDING" }, //PENDING, START, FINISH, DRAFT, CANCEL
     bannerUrl: String,
     createdAt: { type: Date, default: new Date() },
