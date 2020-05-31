@@ -52,7 +52,7 @@ module.exports = {
         let { blocks, eventId, isPreview, header } = req.body;
 
         try {
-            
+
             eventId = eventId || '';
             let idUser = req.user;
 
@@ -67,7 +67,7 @@ module.exports = {
                 let _idE = e._id;
                 if (pageEvent[0]) {
                     // xác nhận là đã lưu trước đó. chỉ cần update lại.
-                    
+
                     let _id = pageEvent[0]._id;
                     //let p = await PageEvent.findByIdAndUpdate({ _id: ObjectId(_id) }, { rows: blocks, updateAt: new Date(), header });
 
@@ -122,7 +122,7 @@ module.exports = {
                 return next({ error: { message: 'Event is not exists', code: 422 } });
             }
 
-            let  p =await PageEvent.findOne({eventId: new ObjectId(eventId)},{_id: 0, __v: 0, createAt: 0, updateAt: 0});
+            let p = await PageEvent.findOne({ eventId: new ObjectId(eventId) }, { _id: 0, __v: 0, createAt: 0, updateAt: 0 });
             console.log(p);
             //let page = await PageEvent.find({ eventId: new ObjectId(eventId), 'rows.route': route });
             let result = {};
@@ -227,11 +227,16 @@ module.exports = {
             categoryEventId = categoryEventId || '';
 
             let idUserLogin = req.user;
-            let query = { 'status': { $nin: ["CANCEL", "DRAFT"] } };
+            let query = {
+                'status': { $nin: ["CANCEL", "DRAFT"] },
+                'session.day': { $gt: `${new Date().toISOString()}` }
+            };
 
             if (txtSearch != "") {
                 query.$text = { $search: txtSearch };
             }
+
+
 
             if (categoryEventId != "") {
                 query.category = categoryEventId
@@ -248,7 +253,6 @@ module.exports = {
                         as: "users"
                     }
                 },
-                // {$project: { 'users.fullName': 1 }},
                 {
                     $unwind: "$users"
                 },
@@ -261,7 +265,6 @@ module.exports = {
                         as: "eventCategories"
                     }
                 },
-                // {$project: { 'users.fullName': 1 }},
                 {
                     $unwind: "$eventCategories"
                 },
