@@ -14,6 +14,7 @@ module.exports = {
         if (!name || !session) {
             return next({ error: { message: 'Invalid value', code: 602 } });
         }
+        console.log(banner);
         let userId = req.user;
         if (myFunction.validateUrlWeb(urlWeb)) {
             return next({ error: { message: 'Formation URL is wrong.', code: 422 } });
@@ -237,6 +238,19 @@ module.exports = {
                 // {$project: { 'users.fullName': 1 }},
                 {
                     $unwind: "$users"
+                },
+                {
+                    $lookup:
+                    {
+                        from: "eventCategory",
+                        localField: "category",
+                        foreignField: "_id",
+                        as: "eventCategories"
+                    }
+                },
+                // {$project: { 'users.fullName': 1 }},
+                {
+                    $unwind: "$eventCategories"
                 },
                 { $skip: +numberRecord * (+pageNumber - 1) },
                 { $limit: numberRecord },

@@ -39,8 +39,7 @@ module.exports = {
   current_user: async (req, res, next) => {
     let id = req.user;
     try {
-      let u = await User.findById(id);
-      console.log(req.isUnauthenticated());
+      let u = await User.findById(id, { bank: 0 });
       res.status(200).json({ result: u });
     } catch (err) {
       next(err);
@@ -205,7 +204,7 @@ module.exports = {
     let id = req.user;
 
     try {
-      let u = await User.findById(id);
+      let u = await User.findById(id, { bank: 0 });
       res.status(200).json({ result: u });
     } catch (err) {
       next(err);
@@ -422,6 +421,7 @@ module.exports = {
       txtSearch,
       pageNumber,
       numberRecord,
+      type,
     } = req.query;
     txtSearch = txtSearch || "";
 
@@ -440,6 +440,19 @@ module.exports = {
           ],
         },
       };
+      type = type || 'ALL';
+      if (type) {
+        switch (type) {
+          case 'RECENT':
+
+          
+            break;
+          case 'PAST':
+            break;
+
+            case 'ALL':
+        }
+      }
 
       if (categoryEventId != "") {
         conditionQuery["$expr"]["$and"].push({ $eq: ["$category", categoryEventId] });
@@ -508,7 +521,7 @@ module.exports = {
       numberRecord,
       status,
     } = req.query;
-    status=status||'DRAFT';
+    status = status || 'DRAFT';
     txtSearch = txtSearch || "";
     startDate = startDate || "";
 
@@ -525,7 +538,7 @@ module.exports = {
           status
         }]
       };
- 
+
       if (startDate !== "") {
         conditionQuery.$and.push({
           startTime: {
@@ -539,11 +552,35 @@ module.exports = {
         conditionQuery.$text = { $search: txtSearch };
       }
 
-      arrEvent = await Event.find(conditionQuery).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord).sort({createAt: 1});
+      arrEvent = await Event.find(conditionQuery).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord).sort({ createAt: 1 });
 
       res.status(200).json({ result: arrEvent });
     } catch (err) {
       next(err);
     }
   },
+
+  getBankInf: async (req, res, next) => {
+    let _id = req.user;
+
+    let user = await User.findById(_id, { bank: 1 });
+
+    console.log(user);
+
+    res.status(200).json({ result: user });
+
+  },
+
+  updateBankInf: async (req, res, next) => {
+    let { bankName, bankNumber, accountOwner, bankBranch } = req.body;
+    let _id = req.user;
+    let user = User.findByIdAndUpdate(_id, { bank: { bankName, bankNumber, accountOwner, bankBranch } });
+    if (!user) {
+      return next({ error: { message: 'User is not exists!' } });
+    }
+
+    res.status(200).json({ result: 'success' });
+
+  }
+
 };

@@ -25,6 +25,11 @@ router.post('/updatePassword', Unauthorized, controller_User.updatePassword);
 router.post('/user/updateInfo', Unauthorized, controller_User.updateInfor);
 router.get('/user/profile', Unauthorized, controller_User.profile_user);
 router.get('/user/history', Unauthorized, controller_User.get_History);
-
 router.get('/user/historyCreate', Unauthorized, controller_User.get_HistoryCreate);
+
+// update bank inf
+
+router.get('/user/bank_inf',Unauthorized, controller_User.getBankInf);
+router.post('/user/update_bank_inf', Unauthorized, controller_User.updateBankInf);
+
 module.exports = router;
