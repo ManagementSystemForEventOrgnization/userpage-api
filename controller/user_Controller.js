@@ -574,7 +574,8 @@ module.exports = {
   updateBankInf: async (req, res, next) => {
     let { bankName, bankNumber, accountOwner, bankBranch } = req.body;
     let _id = req.user;
-    let user = User.findByIdAndUpdate(_id, { bank: { bankName, bankNumber, accountOwner, bankBranch } });
+    let user = await User.findByIdAndUpdate(_id, { bank: { bankName, bankNumber, accountOwner, bankBranch } });
+    console.log(user);
     if (!user) {
       return next({ error: { message: 'User is not exists!' } });
     }
