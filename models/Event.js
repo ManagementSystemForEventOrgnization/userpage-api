@@ -12,7 +12,7 @@ const eventSchema = new Schema({
         discount: Number
     },
     session :{type : Array}, // limitNumber, joinNumber, endTime, startTime, detail, imageMap, address, linkfile, status 
-    category: String,
+    category: Schema.Types.ObjectId,
     status: { type: String, "index": "text", default: "PENDING" }, //PENDING, START, FINISH, DRAFT, CANCEL
     bannerUrl: String,
     createdAt: { type: Date, default: new Date() },
