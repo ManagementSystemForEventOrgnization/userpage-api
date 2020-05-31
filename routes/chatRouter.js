@@ -4,8 +4,8 @@ const chatController = require('../controller/chatController');
 const Unauthorized = require('../middlewares/loginAuth');
 const Authorization = require('../middlewares/authorization');
 
-router.post('/chat/saveChat',chatController.saveChat);
+router.post('/chat/save',chatController.saveChat);
 
-router.get('/chat/getList',chatController.getList);
+router.get('/chat/get_list',chatController.getList);
 
 module.exports = router;

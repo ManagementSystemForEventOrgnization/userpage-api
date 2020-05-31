@@ -2,12 +2,12 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const chatSchema = new Schema({
-    sender: Schema.Types.ObjectId,
-    receiver: Schema.Types.ObjectId,
+    sender: String,// Schema.Types.ObjectId,
+    receiver: String,// Schema.Types.ObjectId,
     content: String,
     isSeen: Boolean,
     isDelete: Boolean,
-    createAt: { type: Date, default: Date() },
+    createAt: { type: Date, default: new Date() },
     updateAt: Date
 })
 

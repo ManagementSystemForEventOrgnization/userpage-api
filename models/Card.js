@@ -6,7 +6,7 @@ const cardSchema = new Schema({
     userId: Schema.Types.ObjectId,
     cardNumber: String,
     cardExpire: String,
-    createAt: { type: Date, default: Date() },
+    createAt: { type: Date, default: new Date() },
     updateAt: Date
 })
 

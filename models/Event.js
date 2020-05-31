@@ -15,7 +15,7 @@ const eventSchema = new Schema({
     category: String,
     status: { type: String, "index": "text", default: "PENDING" }, //PENDING, START, FINISH, DRAFT, CANCEL
     bannerUrl: String,
-    createdAt: { type: Date, default: Date() },
+    createdAt: { type: Date, default: new Date() },
     isPreview: {type: Boolean},
     updatedAt: Date
 })

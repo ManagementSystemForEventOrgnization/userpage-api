@@ -9,7 +9,7 @@ const applyEventSchema = new Schema({
     paymentId: Schema.Types.ObjectId,
     session : { type : Array },
     qrcode: { type:String, "index": "text" },
-    createdAt: { type: Date, default: Date() },
+    createdAt: { type: Date, default: new Date() },
     updatedAt: Date
 })
 

@@ -25,7 +25,7 @@ const userSchema = new Schema({
     orgEmail: String,
     orgUrl: String,
     isActive:{type:Boolean,default: false},
-    createAt: { type: Date, default: Date() },
+    createAt: { type: Date, default: new Date() },
     updateAt: Date
 })
 

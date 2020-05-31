@@ -33,7 +33,7 @@ module.exports = {
             urlWeb,
             session,
             isSellTicket,
-            banner
+            bannerUrl: banner
         });
 
         try {
@@ -63,10 +63,10 @@ module.exports = {
                 if (!e) {
                     return next({ error: { message: 'Event not exists', code: 300 } });
                 }
-
+                let _idE = e._id;
                 if (pageEvent[0]) {
                     // xác nhận là đã lưu trước đó. chỉ cần update lại.
-                    var _idE = e._id;
+                    
                     let _id = pageEvent[0]._id;
                     //let p = await PageEvent.findByIdAndUpdate({ _id: ObjectId(_id) }, { rows: blocks, updateAt: new Date(), header });
 
@@ -114,7 +114,6 @@ module.exports = {
     getPageEvent: async (req, res, next) => {
         let { eventId, index } = req.query; // eventId, index: 0,1,2,3,4
         //trả lên header, rows[index];
-
         index = index || 0;
 
         try {
@@ -174,9 +173,6 @@ module.exports = {
                 query.category = categoryEventId
             }
 
-            let a = await PageEvent.findOne({ eventId: ObjectId('5ec62d723666f306645951a2'), "rows.1": {$exists: true} }, {'rows.1': 1});
-
-            return res.json({ result: a });
             let e = await Event.aggregate([
                 { $match: query },
                 {
