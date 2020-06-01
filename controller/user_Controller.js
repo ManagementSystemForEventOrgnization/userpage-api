@@ -275,8 +275,6 @@ module.exports = {
       next({ error: { message: "Invalid data", code: 422 } });
       return;
     }
-
-    console.log("verifyForgotPassword", currentUser);
     if (currentUser.TOKEN != otp) {
       next({ error: { message: "OTP fail", code: 621 } });
       return;
@@ -413,7 +411,7 @@ module.exports = {
     }
   },
 
-  get_History: async (req, res, next) => {
+  get_history_take_part_in: async (req, res, next) => {
     let {
       categoryEventId,
       startDate,
@@ -425,8 +423,8 @@ module.exports = {
     } = req.query;
     txtSearch = txtSearch || "";
 
-    pageNumber = pageNumber || 1;
-    numberRecord = numberRecord || 10;
+    pageNumber = +pageNumber || 1;
+    numberRecord = +numberRecord || 10;
     categoryEventId = categoryEventId || '';
     startDate = startDate || '';
     let idUserLogin = req.user;
@@ -441,40 +439,59 @@ module.exports = {
         },
       };
       type = type || 'ALL';
-      if (type) {
-        switch (type) {
-          case 'RECENT':
-
-          
-            break;
-          case 'PAST':
-            break;
-
-            case 'ALL':
-        }
-      }
+      
 
       if (categoryEventId != "") {
         conditionQuery["$expr"]["$and"].push({ $eq: ["$category", categoryEventId] });
       }
 
-      if (txtSearch != "") {
+      if (txtSearch) {
         conditionQuery.$text = { $search: txtSearch };
       }
+
+      
       let conditionMath = {
         $and: [
-          { "events.status": { $nin: ["HUY"] } },
+          { "events.status": { $nin: ["CANCEL"] } },
         ],
       };
 
       if (startDate != "") {
         conditionMath["$and"].push(
           {
-            "events.startTime": {
+            "events.session.day": {
               $gt: new Date(startDate || "1940-01-01"),
               $lt: new Date(endDate || new Date().toString()),
             },
           })
+      }
+      if (type) {
+        switch (type) {
+          case 'RECENT':
+            conditionMath["$and"].push(
+              {
+                'events.session.day' : {
+                  $gt: new Date(),
+                }
+              }
+            );
+
+
+            break;
+          case 'PAST':
+            conditionMath["$and"].push(
+              {
+                'events.session.day' : {
+                  $lt: new Date(),
+                }
+              }
+            );
+            break;
+
+          case 'ALL':
+
+          break;
+        }
       }
 
       arrEvent = await ApplyEvent.aggregate([
@@ -496,13 +513,16 @@ module.exports = {
           },
         },
         {
+          $unwind: "$events"
+        },
+        {
           $match: conditionMath,
         },
         {
           $project: { events: 1 },
         },
         { $skip: +numberRecord * (+pageNumber - 1) },
-        { $limit: numberRecord },
+        { $limit: +numberRecord },
       ]);
 
       res.status(200).json({ result: arrEvent });
@@ -525,8 +545,8 @@ module.exports = {
     txtSearch = txtSearch || "";
     startDate = startDate || "";
 
-    pageNumber = pageNumber || 1;
-    numberRecord = numberRecord || 10;
+    pageNumber = +pageNumber || 1;
+    numberRecord = +numberRecord || 10;
 
     let idUserLogin = req.user;
     try {
@@ -565,7 +585,6 @@ module.exports = {
 
     let user = await User.findById(_id, { bank: 1 });
 
-    console.log(user);
 
     res.status(200).json({ result: user });
 
@@ -574,7 +593,8 @@ module.exports = {
   updateBankInf: async (req, res, next) => {
     let { bankName, bankNumber, accountOwner, bankBranch } = req.body;
     let _id = req.user;
-    let user = User.findByIdAndUpdate(_id, { bank: { bankName, bankNumber, accountOwner, bankBranch } });
+    let user = await User.findByIdAndUpdate(_id, { bank: { bankName, bankNumber, accountOwner, bankBranch } });
+    
     if (!user) {
       return next({ error: { message: 'User is not exists!' } });
     }
