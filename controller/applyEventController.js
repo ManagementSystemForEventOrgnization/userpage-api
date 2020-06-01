@@ -4,6 +4,8 @@ const Event = mongoose.model('event');
 const Payment = mongoose.model('payment');
 const Notification = mongoose.model('notification');
 
+const ObjectId = mongoose.Types.ObjectId;
+
 const payment_Controller = require('../controller/payment_Controller');
 const FreePaymentId = "FreeTicket"
 
@@ -35,13 +37,13 @@ module.exports = {
 
     joinEvent: async (req, res, next) => {
         if (typeof req.body.eventId === 'undefined' ||
-            typeof req.body.joinTimes === 'undefined') 
+            typeof req.body.sessionIds === 'undefined') 
         {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
-        let { eventId, joinTimes, payType } = req.body;
+        let { eventId, sessionIds, payType } = req.body;
         let userId = req.user;
 
         try {
@@ -52,11 +54,20 @@ module.exports = {
                     next({ error: { message: 'Can not join in yourself event', code: 706 } });
                     return;
                 }
+                if (currentEvent.status === "CANCEL") {
+                    next({ error: { message: 'Event cancelled', code: 719 } });
+                    return;
+                }
 
                 var sessions = []
 
                 currentEvent.session.forEach(element => {
-                    if (joinTimes.includes(element.day)) {
+                    if (element.isCancel == true) {
+                        next({ error: { message: 'Some session cancelled, can you reload and choose again', code: 718 } });
+                        return;
+                    }
+
+                    if (sessionIds.includes(element.id)) {
                         var joinNumber = element.joinNumber || 0;
                         joinNumber += 1;
 
@@ -72,7 +83,7 @@ module.exports = {
 
                 let currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId});
 
-                if (sessions.length == 0 || sessions.length != joinTimes.length) {
+                if (sessions.length == 0 || sessions.length != sessionIds.length) {
                     next({ error: { message: 'Not found session!', code: 725 } });
                     return
                 }
@@ -93,7 +104,7 @@ module.exports = {
 
                 if (currentApplyEvent) {
                     currentApplyEvent.session.forEach(element => {
-                        if (joinTimes.includes(element.day)) {
+                        if (sessionIds.includes(element.id)) {
                             next({ error: { message: 'You have already joined in one of these session', code: 701 } });
                         }
                     })
@@ -140,12 +151,12 @@ module.exports = {
     prepayEvent: async (req, res, next) => {
         if (typeof req.body.eventId === 'undefined' ||
             typeof req.body.payType === 'undefined' ||
-            typeof req.body.joinTimes === 'undefined') {
+            typeof req.body.sessionIds === 'undefined') {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
-        let { eventId, joinTimes, payType } = req.body;
+        let { eventId, sessionIds, payType } = req.body;
         let userId = req.user;
 
         try {
@@ -154,17 +165,17 @@ module.exports = {
             var count = 0
 
             currentApplyEvent.session.forEach(element => {
-                if (joinTimes.includes(element.day)) {
+                if (sessionIds.includes(element.id)) {
                     count += 1;
                 }
             })
 
-            if (count != joinTimes.length) {
+            if (count != sessionIds.length) {
                 next({ error: { message: 'Choose session pay failed, please!', code: 720 } })
             }
 
             if (currentEvent && currentApplyEvent) {
-                req.body.amount = (currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price) * joinTimes.length;
+                req.body.amount = (currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price) * sessionIds.length;
                 req.body.receiver = currentEvent.userId;
 
                 if (payType === "CREDIT_CARD") {
@@ -184,19 +195,23 @@ module.exports = {
     verifyEventMember: async (req, res, next) => {
         if (typeof req.body.eventId === 'undefined' ||
             typeof req.body.joinUserId === 'undefined' ||
-            typeof req.body.joinTime === 'undefined') {
+            typeof req.body.sessionId === 'undefined') {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
-        let { joinUserId, eventId, joinTime } = req.body;
+        let { joinUserId, eventId, sessionId } = req.body;
 
         try {
             var currentApplyEvent = await ApplyEvent.findOne({ userId: joinUserId, eventId: eventId });
 
             if (currentApplyEvent) {
                 let session = currentApplyEvent.session.find(element => {
-                    if (joinTime == element.day) {
+                    if (sessionId === element.id) {
+                        if (element.isConfirm == true) {
+                            next({ error: { message: 'Menber has verified!', code: 721 } });
+                        }
+
                         if (element.isReject != true && currentApplyEvent.qrcode == joinUserId) {
                             element.isConfirm = true
                         } else {
@@ -232,20 +247,20 @@ module.exports = {
     rejectEventMenber: async (req, res, next) => {
         if (typeof req.body.eventId === 'undefined' ||
             typeof req.body.joinUserId === 'undefined' ||
-            typeof req.body.joinTime === 'undefined') 
+            typeof req.body.sessionId === 'undefined') 
         {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
-        let { joinUserId, eventId, joinTime } = req.body;
-        let userId = req.user;
+        let { joinUserId, eventId, sessionId } = req.body;
+        let userId = "5ec8e500bc1ae931e85dfa3c";// req.user;
 
         try {
             var currentEvent = await Event.findById(eventId);
             var applyEvent = await ApplyEvent.findOne({ userId: joinUserId, eventId: eventId });
             let session = applyEvent.session.find(element => {
-                if (joinTime === element.day) {
+                if (sessionId === element.id) {
                     return element
                 }
             })
@@ -265,14 +280,14 @@ module.exports = {
                             key: "EventDetail",
                             _id: eventId,
                         },
-                        session: [joinTime],
+                        session: [sessionId],
                         isRead: false,
                         isDelete: false,
                         createdAt: Date()
                     });
 
                     currentEvent.session.forEach(ele => {
-                        if (ele.day == joinTime) {
+                        if (ele.id === sessionId) {
                             ele.joinNumber = ele.joinNumber == 0 ? 0 : (ele.joinNumber - 1)
                         }
                     })
@@ -297,7 +312,7 @@ module.exports = {
                     next({ error: { message: 'you have rejected', code: 710 } });
                 }
             } else {
-                next({ error: { message: 'Not found session', code: 708 } });
+                next({ error: { message: 'Session not found', code: 723 } });
             }
         } catch (err) {
             next(err);
@@ -310,26 +325,31 @@ module.exports = {
             return;
         }
 
-        let { eventId, sessionTime } = req.body;
-        let userId = "5ec8e500bc1ae931e85dfa3c" //req.user;
+        let { eventId, sessionId } = req.body;
+        let userId = "5ec8e500bc1ae931e85dfa3c";// req.user;
 
         try {
             var event = await Event.findById(eventId);
 
             if (!event) {
                 next({ error: { message: "Event not found!", code: 724 } });
+                return;
             }
 
             var applyEvents = null;
 
-            if (sessionTime) {
+            if (sessionId) {
                 event.session.forEach(ele => {
-                    if (sessionTime == ele.day) {
-                        ele.isCancel = true
+                    if (sessionId === ele.id) {
+                        if (userId == event.userId) {
+                            ele.isCancel = true
+                        } else {
+                            ele.joinNumber = ele.joinNumber == 0 ? 0 : (ele.joinNumber - 1)
+                        }
                     }
                 })
 
-                applyEvents = await ApplyEvent.find({ eventId: eventId, session: {$elemMatch: {day: sessionTime}} });
+                applyEvents = await ApplyEvent.find({ eventId: eventId, session: {$elemMatch: {id: sessionId}} });
             } else {
                 event.session.forEach(ele => {
                     ele.isCancel = true
@@ -341,37 +361,57 @@ module.exports = {
 
             var joinUserIds = [];
             var sessionNoti = [];
+            var typeNoti = "EVENT_CANCEL";
             var index = 0
+            var isCancelled = false
+
+            if (applyEvents.length == 0) {
+                next({ error: { message: "Session not found!", code: 723 } });
+                return;
+            }
             
             while (index < applyEvents.length) {
                 let itemChanges = applyEvents[index].session.filter(element => {
-                    if (sessionTime) {
-                        if (sessionTime == element.day) {
+                    
+                    console.log(element)
+                    if (sessionId) {
+                        if (sessionId === element.id) {
+                            if (element.isCancel == true && userId != event.userId) {
+                                next({ error: { message: "Some session cancelled!", code: 722 } });
+                                isCancelled = true;
+                                return;
+                            }
+
+                            if (element.isCancel != true) {
+                                element.isCancel = true
+                                element.status = element.status != "REJECT" ? "CANCEL" : "REJECT"
+
+                                return element
+                            }
+                        }
+                    } else {
+                        if (element.isCancel != true) {
                             element.isCancel = true
                             element.status = "CANCEL"
 
                             return element
                         }
-                    } else {
-                        element.isCancel = true
-                        element.status = "CANCEL"
-
-                        return element
                     }
                 })
 
                 var i = 0;
                 while (i < itemChanges.length) {
-                    if (sessionNoti.indexOf(itemChanges[i].day) === -1) {
-                        sessionNoti.push(itemChanges[i].day);
+                    if (sessionNoti.indexOf(itemChanges[i].id) === -1) {
+                        sessionNoti.push(itemChanges[i].id);
                     }
                     
-                    console.log(itemChanges[i])
                     if (itemChanges[i].paymentId !== FreePaymentId) {
                         req.body.paymentId = itemChanges[i].paymentId;
                         req.body.joinUserId = applyEvents[index].userId;
-                        req.body.joinTime = itemChanges[i].day;
+                        req.body.sessionId = itemChanges[i].id;
                         console.log(req.body)
+
+
                         await payment_Controller.refund(req, res, next);
                     }
 
@@ -386,26 +426,31 @@ module.exports = {
                         
                 index++;
             }   
-            
-            const newNotification = new Notification({
-                sender: userId,
-                receiver: joinUserIds,
-                type: "EVENT_CANCEL",
-                message: "",
-                title: "{sender} canceled event {event}",
-                linkTo: {
-                    key: "EventDetail",
-                    _id: eventId,
-                },
-                isRead: false,
-                isDelete: false,
-                createdAt: Date(),
-                session: sessionNoti
-            });
 
-            await newNotification.save();
-            await Event.findByIdAndUpdate({ _id: event._id }, { session: event.session });
-                 
+            if (sessionId) {
+                typeNoti = "SESSION_CANCEL"
+            }
+            
+            if (!isCancelled) {
+                const newNotification = new Notification({
+                    sender: userId,
+                    receiver: userId == event.userId ? joinUserIds : [event.userId],
+                    type: typeNoti,
+                    message: "",
+                    title: "{sender} cancelled event {event}",
+                    linkTo: {
+                        key: "EventDetail",
+                        _id: eventId,
+                    },
+                    isRead: false,
+                    isDelete: false,
+                    createdAt: Date(),
+                    session: sessionNoti
+                });
+
+                await newNotification.save();
+                await Event.findByIdAndUpdate({ _id: event._id }, { session: event.session, status: event.status });
+            }
             return res.status(200).json({ result: true });
         } catch (err) {
             next(err);
