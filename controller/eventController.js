@@ -57,6 +57,11 @@ module.exports = {
 
             eventId = eventId || '';
             let idUser = req.user;
+            let checkEventUrl = await Event.findOne({ urlWeb: eventId });
+            if (!checkEventUrl) {
+                return next({ error: { message: 'Url is not exists!', code: 404 } });
+            }
+            eventId = await checkEventUrl._id;
 
             Promise.all([
                 Event.findOne({ _id: ObjectId(eventId), userId: ObjectId(idUser) }),
@@ -124,17 +129,33 @@ module.exports = {
                 return next({ error: { message: 'Event is not exists', code: 422 } });
             }
 
-            let p = await PageEvent.findOne({ eventId: new ObjectId(eventId) }, { _id: 0, __v: 0, createAt: 0, updateAt: 0 });
-            console.log(p);
-            //let page = await PageEvent.find({ eventId: new ObjectId(eventId), 'rows.route': route });
-            let result = {};
-            result.header = p.header;
-            result.eventId = p.eventId;
-            result.rows = p.rows[index];
-            if (!p) {
-                return next({ error: { message: 'Event is not exists', code: 500 } });
+            let checkEventUrl = await Event.findOne({ urlWeb: eventId });
+            if (!checkEventUrl) {
+                return next({ error: { message: 'Url is not exists!', code: 404 } });
             }
-            res.status(200).json({ result: result });
+            eventId = await checkEventUrl._id;
+
+            Promise.all([
+                Event.findById(eventId),
+                PageEvent.findOne({ eventId: new ObjectId(eventId) }, { _id: 0, __v: 0, createAt: 0, updateAt: 0 })
+            ]).then(([e, p]) => {
+
+                if (!e) {
+                    return next({ error: { message: 'Event is not exists', code: 422 } });
+                }
+
+                let result = {};
+                result.event = e;
+                result.header = p.header;
+                result.eventId = p.eventId;
+                result.rows = p.rows[index] || {};
+                if (!p) {
+                    return next({ error: { message: 'Event is not exists!', code: 500 } });
+                }
+                res.status(200).json({ result: result });
+            }).catch(err => {
+                return next({ error: { message: 'Event is not exists!', code: 700 } });
+            })
         } catch (err) {
             next({ error: { message: err, code: 500 } })
         }
@@ -306,11 +327,10 @@ module.exports = {
                     let eventSession = event.session;
                     for (let j = 0; j < sessionApply.session.length; j++) {
                         let e = sessionApply.session[j];
-                       
+
                         for (let i = 0; i < eventSession.length; i++) {
                             let element = eventSession[i];
-                            console.log(element.id)
-                            if(element.id == e.id){
+                            if (element.id == e.id) {
                                 eventSession[i].status = e.status;
                                 eventSession[i].isConfirm = e.isConfirm;
                                 eventSession[i].isReject = e.isReject;
@@ -320,7 +340,7 @@ module.exports = {
                             }
                         }
                     }
-                    
+
                     event.session = eventSession;
                     res.status(200).json({ result: { event, countComment } });
 
