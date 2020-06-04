@@ -439,7 +439,7 @@ module.exports = {
         },
       };
       type = type || 'ALL';
-      
+
 
       if (categoryEventId != "") {
         conditionQuery["$expr"]["$and"].push({ $eq: ["$category", categoryEventId] });
@@ -449,7 +449,7 @@ module.exports = {
         conditionQuery.$text = { $search: txtSearch };
       }
 
-      
+
       let conditionMath = {
         $and: [
           { "events.status": { $nin: ["CANCEL"] } },
@@ -470,7 +470,7 @@ module.exports = {
           case 'RECENT':
             conditionMath["$and"].push(
               {
-                'events.session.day' : {
+                'events.session.day': {
                   $gt: new Date(),
                 }
               }
@@ -481,7 +481,7 @@ module.exports = {
           case 'PAST':
             conditionMath["$and"].push(
               {
-                'events.session.day' : {
+                'events.session.day': {
                   $lt: new Date(),
                 }
               }
@@ -490,44 +490,73 @@ module.exports = {
 
           case 'ALL':
 
-          break;
+            break;
         }
       }
 
-      arrEvent = await ApplyEvent.aggregate([
-        {
-          $match: {
-            userId: ObjectId(idUserLogin),
-          },
-        },
-        {
-          $lookup: {
-            from: "events",
-            let: { event_id: "$eventId" },
-            pipeline: [
-              {
-                $match: conditionQuery,
+      Promise.all([
+        ApplyEvent.aggregate([
+            {
+              $match: {
+                userId: ObjectId(idUserLogin),
               },
-            ],
-            as: "event",
-          },
-        },
-        {
-          $unwind: "$event"
-        },
-        {
-          $match: conditionMath,
-        },
-        {
-          $project: { event: 1 },
-        },
-        { $skip: +numberRecord * (+pageNumber - 1) },
-        { $limit: +numberRecord },
-      ]);
+            },
+            {
+              $lookup: {
+                from: "events",
+                let: { event_id: "$eventId" },
+                pipeline: [
+                  {
+                    $match: conditionQuery,
+                  },
+                ],
+                as: "events",
+              },
+            },
+            {
+              $unwind: "$events"
+            },
+            {
+              $lookup:
+              {
+                from: "eventcategories",
+                localField: "events.category",
+                foreignField: "_id",
+                as: "eventCategories"
+              }
+            },
+            {
+              $unwind: "$eventCategories"
+            },
+            {
+              $match: conditionMath,
+            },
+            {
+              $project: { events: 1, eventCategories: 1, _id:0 },
+            },
+            { $skip: +numberRecord * (+pageNumber - 1) },
+            { $limit: +numberRecord },
+          ]),
+          User.findById(req.user)
+      ]).then(([arrEvent,user])=>{
+        if(!user){
+            next({error: {message: 'You have to login', code: 700}});
+        }
+        let result = [];
+        arrEvent.forEach((e,i) => {
+            let temp = e.events;
+            temp.eventCategory = e.eventCategories;
+            temp.user = user;
+            result.push(temp);
+        });
 
-      res.status(200).json({ result: arrEvent });
+      res.status(200).json({ result: result });
+
+      }).catch(err=>{
+        next({error: {message: 'Error', code: 700}});
+      })
     } catch (err) {
-      next(err);
+      next({error: {message: err, code: 700}});
     }
   },
 
@@ -541,7 +570,7 @@ module.exports = {
       numberRecord,
       status,
     } = req.query;
-    status = status || 'DRAFT';
+    status = status || '';
     txtSearch = txtSearch || "";
     startDate = startDate || "";
 
@@ -554,10 +583,12 @@ module.exports = {
 
       let conditionQuery = {
         $and: [{
-          userId: ObjectId(idUserLogin),
-          status
+          userId: ObjectId(idUserLogin)
         }]
       };
+      if(status){
+        conditionQuery.$and.push({status});
+      }
 
       if (startDate !== "") {
         conditionQuery.$and.push({
@@ -572,9 +603,40 @@ module.exports = {
         conditionQuery.$text = { $search: txtSearch };
       }
 
-      arrEvent = await Event.find(conditionQuery).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord).sort({ createAt: 1 });
+      //arrEvent = await Event.find(conditionQuery).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord).sort({ createAt: 1 });
 
-      res.status(200).json({ result: arrEvent });
+      let e = await Event.aggregate([
+        { $match: conditionQuery },
+        {
+            $lookup:
+            {
+                from: "users",
+                localField: "userId",
+                foreignField: "_id",
+                as: "user"
+            }
+        },
+        {
+            $unwind: "$user"
+        },
+        {
+            $lookup:
+            {
+                from: "eventcategories",
+                localField: "category",
+                foreignField: "_id",
+                as: "eventCategory"
+            }
+        },
+        {
+            $unwind: "$eventCategory"
+        },
+        { $skip: +numberRecord * (+pageNumber - 1) },
+        { $limit: +numberRecord },
+        { $sort: { 'session.day': 1 } }
+    ])
+
+      res.status(200).json({ result: e });
     } catch (err) {
       next(err);
     }
@@ -594,7 +656,7 @@ module.exports = {
     let { bankName, bankNumber, accountOwner, bankBranch } = req.body;
     let _id = req.user;
     let user = await User.findByIdAndUpdate(_id, { bank: { bankName, bankNumber, accountOwner, bankBranch } });
-    
+
     if (!user) {
       return next({ error: { message: 'User is not exists!' } });
     }
