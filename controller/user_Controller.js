@@ -509,17 +509,17 @@ module.exports = {
                 $match: conditionQuery,
               },
             ],
-            as: "events",
+            as: "event",
           },
         },
         {
-          $unwind: "$events"
+          $unwind: "$event"
         },
         {
           $match: conditionMath,
         },
         {
-          $project: { events: 1 },
+          $project: { event: 1 },
         },
         { $skip: +numberRecord * (+pageNumber - 1) },
         { $limit: +numberRecord },

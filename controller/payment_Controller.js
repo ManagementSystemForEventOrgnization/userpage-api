@@ -288,7 +288,7 @@ module.exports = {
 					await newPayment.save();
 					await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
 
-					res.status(200).json({ result: result.data });
+					res.status(200).json({ result: true, resultOrder: result.data });
 				} else {
 					newPayment.status = "UNPAID";
 					await newPayment.save();
