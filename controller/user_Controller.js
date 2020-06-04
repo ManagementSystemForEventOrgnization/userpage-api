@@ -555,7 +555,6 @@ module.exports = {
       }).catch(err=>{
         next({error: {message: 'Error', code: 700}});
       })
-
     } catch (err) {
       next({error: {message: err, code: 700}});
     }
