@@ -186,15 +186,23 @@ module.exports = {
             numberRecord = +numberRecord || 10;
             txtSearch = txtSearch || '';
             categoryEventId = categoryEventId || '';
-
+            categoryEventId = categoryEventId.split(',');
             let idUserLogin = req.user;
             let query = { 'status': { $nin: ["CANCEL", "DRAFT"] } };
             if (txtSearch != "") {
                 query.$text = { $search: txtSearch };
             }
 
-            if (categoryEventId != "") {
-                query.category = categoryEventId
+            // if (categoryEventId != "") {
+            //     query.category = categoryEventId
+            // }
+
+            if (categoryEventId[0]) {
+                let category = { $or: [] };
+                categoryEventId.forEach(e => {
+                    category.$or.push({ "category": ObjectId(e) });
+                });
+                query.$or = category.$or;
             }
 
             let e = await Event.aggregate([
@@ -220,7 +228,6 @@ module.exports = {
                         as: "eventCategories"
                     }
                 },
-                // {$project: { 'users.fullName': 1 }},
                 {
                     $unwind: "$eventCategories"
                 },
@@ -248,7 +255,7 @@ module.exports = {
             numberRecord = +numberRecord || 10;
             txtSearch = txtSearch || '';
             categoryEventId = categoryEventId || '';
-
+            categoryEventId = categoryEventId.split(',');
             let idUserLogin = req.user;
             let query = {
                 'status': { $nin: ["CANCEL", "DRAFT"] },
@@ -261,9 +268,18 @@ module.exports = {
 
 
 
-            if (categoryEventId != "") {
-                query.category = categoryEventId
+            // if (categoryEventId != "") {
+            //     query.category = categoryEventId
+            // }
+            if (categoryEventId[0]) {
+
+                let category = { $or: [] };
+                categoryEventId.forEach(e => {
+                    category.$or.push({ "category": ObjectId(e) });
+                });
+                query.$or = category.$or;
             }
+
 
             let e = await Event.aggregate([
                 { $match: query },
@@ -304,55 +320,116 @@ module.exports = {
     getEventInf: async (req, res, next) => {
         try {
             let {
-                eventId
+                eventId,
+                urlWeb,
             } = req.query;
-
-            eventId = eventId || '';
+            if (urlWeb) {
+                let e = await Event.findOne({ urlWeb });
+                if (!e) {
+                    return next({ error: { message: 'Event is not Exists!' } });
+                }
+                eventId = e._id;
+            }
             if (!eventId) {
                 return next({ error: { message: 'Event is not Exists!', code: 601 } });
             }
             let idU = req.user;
             Promise.all([
-                Event.findById(eventId),
+                Event.aggregate(
+                    [
+                        { $match: { _id: ObjectId(eventId) } },
+                        {
+                            $lookup:
+                            {
+                                from: "eventcategories",
+                                localField: "category",
+                                foreignField: "_id",
+                                as: "eventCategory"
+                            }
+                        },
+                        {
+                            $unwind: "$eventCategory"
+                        },
+                    ]
+                )
+                ,
                 Comment.countDocuments({ eventId: ObjectId(eventId) }),
                 ApplyEvent.findOne({ userId: ObjectId(idU), eventId: ObjectId(eventId) }, { session: 1, _id: 0 })
             ])
                 .then(([event, countComment, sessionApply]) => {
-                    if (!event) {
+
+                    if (!event[0]) {
                         return next({ error: { message: 'Event is not Exists!', code: 700 } });
                     }
                     if (!sessionApply) {
-                        return next({ error: { message: 'you haven\'t joined event!', code: 700 } })
-                    }
-                    let eventSession = event.session;
-                    for (let j = 0; j < sessionApply.session.length; j++) {
-                        let e = sessionApply.session[j];
 
-                        for (let i = 0; i < eventSession.length; i++) {
-                            let element = eventSession[i];
-                            if (element.id == e.id) {
-                                eventSession[i].status = e.status;
-                                eventSession[i].isConfirm = e.isConfirm;
-                                eventSession[i].isReject = e.isReject;
-                                eventSession[i].paymentId = e.paymentId;
-                                eventSession[i].isCancel = e.isCancel;
-                                break;
+                        //return next({ error: { message: 'you haven\'t joined event!', code: 700 } })
+                    } else {
+                        let eventSession = event[0].session;
+                        for (let j = 0; j < sessionApply.session.length; j++) {
+                            let e = sessionApply.session[j];
+
+                            for (let i = 0; i < eventSession.length; i++) {
+                                let element = eventSession[i];
+                                if (element.id == e.id) {
+                                    eventSession[i].status = e.status;
+                                    eventSession[i].isConfirm = e.isConfirm;
+                                    eventSession[i].isReject = e.isReject;
+                                    eventSession[i].paymentId = e.paymentId;
+                                    eventSession[i].isCancel = e.isCancel;
+                                    break;
+                                }
                             }
                         }
+                        event[0].session = eventSession;
                     }
-
-                    event.session = eventSession;
-                    res.status(200).json({ result: { event, countComment } });
+                    res.status(200).json({ result: { event: event[0], countComment } });
 
                 }).catch(e => {
                     return next({ error: { message: 'Event is not Exists!', code: 700 } });
                 })
-
 
         }
         catch (err) {
             next({ error: { message: 'Something is wrong!', code: 700 } });
         }
     },
+
+    getUserJoinEvent: async (req, res, next) => {
+        let {
+            eventId,
+            sessionId,
+            pageNumber,
+            numberRecord,
+        } = req.query;
+        pageNumber = +pageNumber || 1;
+        numberRecord = +numberRecord || 10;
+        if (!eventId || !sessionId) {
+            return next({ error: { message: 'Invalid data!', code: 700 } });
+        }
+
+        let u = await ApplyEvent.aggregate([
+            { $match: { 'session.id': sessionId, eventId: ObjectId(eventId) } },
+            {
+                $lookup:
+                {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    as: "user"
+                }
+            },
+            {
+                $unwind: "$user"
+            },
+            { $project: { user: 1, _id: 0 } },
+            { $skip: +numberRecord * (+pageNumber - 1) },
+            { $limit: +numberRecord },
+        ]);
+        if (!u) {
+            return next({ error: { message: 'Something is wrong!' } })
+        }
+        res.status(200).json({ result: u });
+    }
 
 }
