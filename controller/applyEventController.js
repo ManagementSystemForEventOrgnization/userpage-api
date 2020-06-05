@@ -367,11 +367,6 @@ module.exports = {
             var index = 0
             var isCancelled = false
 
-            if (applyEvents.length == 0) {
-                next({ error: { message: "Session not found!", code: 723 } });
-                return;
-            }
-            
             while (index < applyEvents.length) {
                 let itemChanges = applyEvents[index].session.filter(element => {
                     
