@@ -359,7 +359,7 @@ module.exports = {
 							amount: amount,
 							currency: 'vnd',
 							customer: cardFind.customerId,
-							description: description,
+							description: description || ("Payment for event " + eventId),
 						});
 
 					const newPayment = new Payment({
