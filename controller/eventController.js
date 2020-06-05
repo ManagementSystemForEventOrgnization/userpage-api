@@ -220,7 +220,6 @@ module.exports = {
                         as: "eventCategories"
                     }
                 },
-                // {$project: { 'users.fullName': 1 }},
                 {
                     $unwind: "$eventCategories"
                 },
@@ -313,18 +312,38 @@ module.exports = {
             }
             let idU = req.user;
             Promise.all([
-                Event.findById(eventId),
+                Event.aggregate(
+                [ 
+                    { $match: {_id: ObjectId(eventId)} },
+                    {
+                        $lookup:
+                        {
+                            from: "eventcategories",
+                            localField: "category",
+                            foreignField: "_id",
+                            as: "eventCategory"
+                        }
+                    },
+                    {
+                        $unwind: "$eventCategory"
+                    },
+                ]
+                )
+                ,
                 Comment.countDocuments({ eventId: ObjectId(eventId) }),
                 ApplyEvent.findOne({ userId: ObjectId(idU), eventId: ObjectId(eventId) }, { session: 1, _id: 0 })
             ])
                 .then(([event, countComment, sessionApply]) => {
-                    if (!event) {
+                    //event = event[0];
+                    console.log(event)
+
+                    if (!event[0]) {
                         return next({ error: { message: 'Event is not Exists!', code: 700 } });
                     }
                     if (!sessionApply) {
                         return next({ error: { message: 'you haven\'t joined event!', code: 700 } })
                     }
-                    let eventSession = event.session;
+                    let eventSession = event[0].session;
                     for (let j = 0; j < sessionApply.session.length; j++) {
                         let e = sessionApply.session[j];
 
@@ -347,7 +366,6 @@ module.exports = {
                 }).catch(e => {
                     return next({ error: { message: 'Event is not Exists!', code: 700 } });
                 })
-
 
         }
         catch (err) {
