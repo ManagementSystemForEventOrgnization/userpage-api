@@ -425,7 +425,7 @@ module.exports = {
 
     pageNumber = +pageNumber || 1;
     numberRecord = +numberRecord || 10;
-    categoryEventId = categoryEventId || [];
+    categoryEventId = categoryEventId || '';
     startDate = startDate || '';
     let idUserLogin = req.user;
     try {
@@ -577,7 +577,7 @@ module.exports = {
     status = status || '';
     txtSearch = txtSearch || "";
     startDate = startDate || "";
-    categoryEventId = categoryEventId || [];
+    categoryEventId = categoryEventId || '';
     pageNumber = +pageNumber || 1;
     numberRecord = +numberRecord || 10;
     categoryEventId =categoryEventId.split(',');
