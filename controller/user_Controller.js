@@ -425,7 +425,7 @@ module.exports = {
 
     pageNumber = +pageNumber || 1;
     numberRecord = +numberRecord || 10;
-    categoryEventId = categoryEventId || '';
+    categoryEventId = categoryEventId || [];
     startDate = startDate || '';
     let idUserLogin = req.user;
     try {
@@ -441,14 +441,18 @@ module.exports = {
       type = type || 'ALL';
 
 
-      if (categoryEventId != "") {
-        conditionQuery["$expr"]["$and"].push({ $eq: ["$category", categoryEventId] });
+      if (categoryEventId[0]) {
+        let category={$or: []};
+        categoryEventId.forEach(e => {
+          category.$or.push({"$category" : ObjectId(e)});
+        });
+        //conditionQuery["$expr"]["$and"].push({ $eq: ["$category", categoryEventId] });
+        conditionQuery["$expr"]["$and"].push(category);
       }
 
       if (txtSearch) {
         conditionQuery.$text = { $search: txtSearch };
       }
-
 
       let conditionMath = {
         $and: [
@@ -573,10 +577,11 @@ module.exports = {
     status = status || '';
     txtSearch = txtSearch || "";
     startDate = startDate || "";
-
+    categoryEventId = categoryEventId || [];
     pageNumber = +pageNumber || 1;
     numberRecord = +numberRecord || 10;
-
+    categoryEventId =categoryEventId.split(',');
+    console.log(categoryEventId);
     let idUserLogin = req.user;
     try {
       let arrEvent = null;
@@ -592,18 +597,23 @@ module.exports = {
 
       if (startDate !== "") {
         conditionQuery.$and.push({
-          startTime: {
-            $gt: new Date(startDate),
-            $lt: new Date(endDate || new Date().toString()),
+          'session.day': {
+            $gt: startDate,
+            $lt: (endDate || new Date().toString()),
           }
         })
+      }
+      if (categoryEventId[0]) {
+        let category={$or: []};
+        categoryEventId.forEach(e => {
+          category.$or.push({"category" : ObjectId(e)});
+        });
+        conditionQuery["$and"].push(category);
       }
 
       if (txtSearch != "") {
         conditionQuery.$text = { $search: txtSearch };
       }
-
-      //arrEvent = await Event.find(conditionQuery).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord).sort({ createAt: 1 });
 
       let e = await Event.aggregate([
         { $match: conditionQuery },

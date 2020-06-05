@@ -186,15 +186,23 @@ module.exports = {
             numberRecord = +numberRecord || 10;
             txtSearch = txtSearch || '';
             categoryEventId = categoryEventId || '';
-
+            categoryEventId = categoryEventId.split(',');
             let idUserLogin = req.user;
             let query = { 'status': { $nin: ["CANCEL", "DRAFT"] } };
             if (txtSearch != "") {
                 query.$text = { $search: txtSearch };
             }
 
-            if (categoryEventId != "") {
-                query.category = categoryEventId
+            // if (categoryEventId != "") {
+            //     query.category = categoryEventId
+            // }
+
+            if (categoryEventId[0]) {
+                let category = { $or: [] };
+                categoryEventId.forEach(e => {
+                    category.$or.push({ "category": ObjectId(e) });
+                });
+                query.$or = category.$or;
             }
 
             let e = await Event.aggregate([
@@ -246,8 +254,8 @@ module.exports = {
             pageNumber = +pageNumber || 1;
             numberRecord = +numberRecord || 10;
             txtSearch = txtSearch || '';
-            categoryEventId = categoryEventId || '';
-
+            categoryEventId = categoryEventId || [];
+            categoryEventId = categoryEventId.split(',');
             let idUserLogin = req.user;
             let query = {
                 'status': { $nin: ["CANCEL", "DRAFT"] },
@@ -260,9 +268,18 @@ module.exports = {
 
 
 
-            if (categoryEventId != "") {
-                query.category = categoryEventId
+            // if (categoryEventId != "") {
+            //     query.category = categoryEventId
+            // }
+            if (categoryEventId[0]) {
+
+                let category = { $or: [] };
+                categoryEventId.forEach(e => {
+                    category.$or.push({ "category": ObjectId(e) });
+                });
+                query.$or = category.$or;
             }
+
 
             let e = await Event.aggregate([
                 { $match: query },
@@ -306,10 +323,10 @@ module.exports = {
                 eventId,
                 urlWeb,
             } = req.query;
-            if(urlWeb){
-                let e = await Event.findOne({urlWeb});
-                if(!e){
-                    return next({error: {message: 'Event is not Exists!'}});
+            if (urlWeb) {
+                let e = await Event.findOne({ urlWeb });
+                if (!e) {
+                    return next({ error: { message: 'Event is not Exists!' } });
                 }
                 eventId = e._id;
             }
