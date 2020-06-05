@@ -303,10 +303,16 @@ module.exports = {
     getEventInf: async (req, res, next) => {
         try {
             let {
-                eventId
+                eventId,
+                urlWeb,
             } = req.query;
-
-            eventId = eventId || '';
+            if(urlWeb){
+                let e = await Event.findOne({urlWeb});
+                if(!e){
+                    return next({error: {message: 'Event is not Exists!'}});
+                }
+                eventId = e._id;
+            }
             if (!eventId) {
                 return next({ error: { message: 'Event is not Exists!', code: 601 } });
             }
@@ -403,8 +409,8 @@ module.exports = {
             { $skip: +numberRecord * (+pageNumber - 1) },
             { $limit: +numberRecord },
         ]);
-        if(!u){
-            return next({error: {message: 'Something is wrong!'}})
+        if (!u) {
+            return next({ error: { message: 'Something is wrong!' } })
         }
         res.status(200).json({ result: u });
     }
