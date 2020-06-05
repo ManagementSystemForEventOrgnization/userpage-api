@@ -305,7 +305,7 @@ module.exports = {
             let {
                 eventId
             } = req.query;
-            
+
             eventId = eventId || '';
             if (!eventId) {
                 return next({ error: { message: 'Event is not Exists!', code: 601 } });
@@ -372,11 +372,41 @@ module.exports = {
         }
     },
 
-
     getUserJoinEvent: async (req, res, next) => {
         let {
-            eventId
+            eventId,
+            sessionId,
+            pageNumber,
+            numberRecord,
         } = req.query;
+        pageNumber = +pageNumber || 1;
+        numberRecord = +numberRecord || 10;
+        if (!eventId || !sessionId) {
+            return next({ error: { message: 'Invalid data!', code: 700 } });
+        }
+
+        let u = await ApplyEvent.aggregate([
+            { $match: { 'session.id': sessionId, eventId: ObjectId(eventId) } },
+            {
+                $lookup:
+                {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    as: "user"
+                }
+            },
+            {
+                $unwind: "$user"
+            },
+            { $project: { user: 1, _id: 0 } },
+            { $skip: +numberRecord * (+pageNumber - 1) },
+            { $limit: +numberRecord },
+        ]);
+        if(!u){
+            return next({error: {message: 'Something is wrong!'}})
+        }
+        res.status(200).json({ result: u });
     }
 
 }
