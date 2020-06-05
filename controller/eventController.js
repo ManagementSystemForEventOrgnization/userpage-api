@@ -305,7 +305,7 @@ module.exports = {
             let {
                 eventId
             } = req.query;
-
+            
             eventId = eventId || '';
             if (!eventId) {
                 return next({ error: { message: 'Event is not Exists!', code: 601 } });
@@ -313,55 +313,54 @@ module.exports = {
             let idU = req.user;
             Promise.all([
                 Event.aggregate(
-                [ 
-                    { $match: {_id: ObjectId(eventId)} },
-                    {
-                        $lookup:
+                    [
+                        { $match: { _id: ObjectId(eventId) } },
                         {
-                            from: "eventcategories",
-                            localField: "category",
-                            foreignField: "_id",
-                            as: "eventCategory"
-                        }
-                    },
-                    {
-                        $unwind: "$eventCategory"
-                    },
-                ]
+                            $lookup:
+                            {
+                                from: "eventcategories",
+                                localField: "category",
+                                foreignField: "_id",
+                                as: "eventCategory"
+                            }
+                        },
+                        {
+                            $unwind: "$eventCategory"
+                        },
+                    ]
                 )
                 ,
                 Comment.countDocuments({ eventId: ObjectId(eventId) }),
                 ApplyEvent.findOne({ userId: ObjectId(idU), eventId: ObjectId(eventId) }, { session: 1, _id: 0 })
             ])
                 .then(([event, countComment, sessionApply]) => {
-                    //event = event[0];
-                    console.log(event)
 
                     if (!event[0]) {
                         return next({ error: { message: 'Event is not Exists!', code: 700 } });
                     }
                     if (!sessionApply) {
-                        return next({ error: { message: 'you haven\'t joined event!', code: 700 } })
-                    }
-                    let eventSession = event[0].session;
-                    for (let j = 0; j < sessionApply.session.length; j++) {
-                        let e = sessionApply.session[j];
 
-                        for (let i = 0; i < eventSession.length; i++) {
-                            let element = eventSession[i];
-                            if (element.id == e.id) {
-                                eventSession[i].status = e.status;
-                                eventSession[i].isConfirm = e.isConfirm;
-                                eventSession[i].isReject = e.isReject;
-                                eventSession[i].paymentId = e.paymentId;
-                                eventSession[i].isCancel = e.isCancel;
-                                break;
+                        //return next({ error: { message: 'you haven\'t joined event!', code: 700 } })
+                    } else {
+                        let eventSession = event[0].session;
+                        for (let j = 0; j < sessionApply.session.length; j++) {
+                            let e = sessionApply.session[j];
+
+                            for (let i = 0; i < eventSession.length; i++) {
+                                let element = eventSession[i];
+                                if (element.id == e.id) {
+                                    eventSession[i].status = e.status;
+                                    eventSession[i].isConfirm = e.isConfirm;
+                                    eventSession[i].isReject = e.isReject;
+                                    eventSession[i].paymentId = e.paymentId;
+                                    eventSession[i].isCancel = e.isCancel;
+                                    break;
+                                }
                             }
                         }
+                        event[0].session = eventSession;
                     }
-
-                    event.session = eventSession;
-                    res.status(200).json({ result: { event, countComment } });
+                    res.status(200).json({ result: { event: event[0], countComment } });
 
                 }).catch(e => {
                     return next({ error: { message: 'Event is not Exists!', code: 700 } });
@@ -372,5 +371,12 @@ module.exports = {
             next({ error: { message: 'Something is wrong!', code: 700 } });
         }
     },
+
+
+    getUserJoinEvent: async (req, res, next) => {
+        let {
+            eventId
+        } = req.query;
+    }
 
 }
