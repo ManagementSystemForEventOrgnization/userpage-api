@@ -459,7 +459,7 @@ module.exports = {
         }
 
         let users = await ApplyEvent.aggregate([
-            { $match: { 'session.id': sessionId, eventId: ObjectId(eventId) } },
+            { $match: { 'session.id': ObjectId(sessionId), eventId: ObjectId(eventId) } },
             {
                 $lookup:
                 {
