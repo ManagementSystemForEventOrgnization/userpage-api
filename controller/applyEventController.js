@@ -37,8 +37,7 @@ module.exports = {
 
     joinEvent: async (req, res, next) => {
         if (typeof req.body.eventId === 'undefined' ||
-            typeof req.body.sessionIds === 'undefined') 
-        {
+            typeof req.body.sessionIds === 'undefined') {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
@@ -63,11 +62,11 @@ module.exports = {
 
                 currentEvent.session.forEach(element => {
                     if (sessionIds.includes(element.id)) {
-                    	if (element.isCancel == true) {
-                        	next({ error: { message: 'Some session cancelled, can you reload and choose again', code: 718 } });
-                        	return;
-                    	}
-                        
+                        if (element.isCancel == true) {
+                            next({ error: { message: 'Some session cancelled, can you reload and choose again', code: 718 } });
+                            return;
+                        }
+
                         var joinNumber = element.joinNumber || 0;
                         joinNumber += 1;
 
@@ -81,7 +80,7 @@ module.exports = {
                     }
                 })
 
-                let currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId});
+                let currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId });
 
                 if (sessions.length == 0 || sessions.length != sessionIds.length) {
                     next({ error: { message: 'Not found session!', code: 725 } });
@@ -90,8 +89,8 @@ module.exports = {
 
                 var updateSession = async function () {
                     await Event.findByIdAndUpdate({ _id: currentEvent._id }, { session: currentEvent.session })
-                    
-                    sessions.forEach(element => { 
+
+                    sessions.forEach(element => {
                         element.status = "JOINED"
                         element.isConfirm = false
                         element.isReject = false
@@ -108,7 +107,7 @@ module.exports = {
                             next({ error: { message: 'You have already joined in one of these session', code: 701 } });
                         }
                     })
-                    
+
                     await updateSession()
                     let changeSession = currentApplyEvent.session.concat(sessions)
 
@@ -130,7 +129,7 @@ module.exports = {
                 if (currentEvent.isSellTicket) {
                     req.body.amount = (currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price) * sessions.length;
                     req.body.receiver = currentEvent.userId;
-                    
+
                     if (payType === "CREDIT_CARD") {
                         await payment_Controller.create_charges(req, res, next);
                     } else {
@@ -247,8 +246,7 @@ module.exports = {
     rejectEventMenber: async (req, res, next) => {
         if (typeof req.body.eventId === 'undefined' ||
             typeof req.body.joinUserId === 'undefined' ||
-            typeof req.body.sessionId === 'undefined') 
-        {
+            typeof req.body.sessionId === 'undefined') {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
@@ -266,10 +264,10 @@ module.exports = {
             })
 
             if (session) {
-                if (session.isReject != true ) {
+                if (session.isReject != true) {
                     session.isReject = true
                     session.status = "REJECT"
-                    
+
                     const newNotification = new Notification({
                         sender: userId,
                         receiver: [joinUserId],
@@ -291,19 +289,19 @@ module.exports = {
                             ele.joinNumber = ele.joinNumber == 0 ? 0 : (ele.joinNumber - 1)
                         }
                     })
-        
+
                     if (session.paymentId !== undefined && session.paymentId !== null && session.paymentId !== FreePaymentId) {
                         req.body.paymentId = session.paymentId
-                        
-                        await payment_Controller.refund(req, res, next);
+
+                        await payment_Controller.refund(req, res, next)
                     }
                     // Promise.all([
-                        await newNotification.save();
-                        await ApplyEvent.findByIdAndUpdate({ _id: applyEvent._id }, { session: applyEvent.session });
-                        await Event.findByIdAndUpdate({ _id: currentEvent._id }, { session: currentEvent.session });
-                        // rejectEventMenberNoti(req, res, next)
+                    await newNotification.save();
+                    await ApplyEvent.findByIdAndUpdate({ _id: applyEvent._id }, { session: applyEvent.session });
+                    await Event.findByIdAndUpdate({ _id: currentEvent._id }, { session: currentEvent.session });
+                    // rejectEventMenberNoti(req, res, next)
                     // ]).then(([apply, current, event]) => {
-                        return res.status(200).json({ result: true });
+                    return res.status(200).json({ result: true });
                     // }).catch(([err1, err2, err3]) => {
                     //     next({ error: { message: 'Save error from server!', code: 800 } });
                     // })
@@ -345,13 +343,13 @@ module.exports = {
                         if (userId == event.userId) {
                             ele.isCancel = true
                         } else {
-                        	cancelJoin = true;
+                            cancelJoin = true;
                             ele.joinNumber = ele.joinNumber == 0 ? 0 : (ele.joinNumber - 1)
                         }
                     }
                 })
 
-                applyEvents = await ApplyEvent.find({ eventId: eventId, session: {$elemMatch: {id: {$in: sessionIds}}} });
+                applyEvents = await ApplyEvent.find({ eventId: eventId, session: { $elemMatch: { id: { $in: sessionIds } } } });
             } else {
                 event.session.forEach(ele => {
                     ele.isCancel = true
@@ -369,8 +367,7 @@ module.exports = {
 
             while (index < applyEvents.length) {
                 let itemChanges = applyEvents[index].session.filter(element => {
-                    
-                    console.log(element)
+
                     if (sessionIds) {
                         if (sessionIds.includes(element.id)) {
                             if (element.isCancel == true && userId != event.userId) {
@@ -397,17 +394,16 @@ module.exports = {
                 })
 
                 var i = 0;
-                
+
                 while (i < itemChanges.length) {
                     if (sessionNoti.indexOf(itemChanges[i].id) === -1) {
                         sessionNoti.push(itemChanges[i].id);
                     }
-                    
+
                     if (itemChanges[i].paymentId !== FreePaymentId) {
                         req.body.paymentId = itemChanges[i].paymentId;
                         req.body.joinUserId = applyEvents[index].userId;
                         req.body.sessionId = itemChanges[i].id;
-                        console.log(req.body)
 
 
                         await payment_Controller.refund(req, res, next);
@@ -419,26 +415,26 @@ module.exports = {
                 if (joinUserIds.indexOf(applyEvents[index].userId) === -1) {
                     joinUserIds.push(applyEvents[index].userId);
                 }
-                
+
                 var subSessions = applyEvents[index].session
-                
+
                 if (cancelJoin) {
-                	subSessions = applyEvents[index].session.filter(element => {
-                		if (!sessionIds.includes(element.id)) {
-                			return element
-                		}
-                	})
+                    subSessions = applyEvents[index].session.filter(element => {
+                        if (!sessionIds.includes(element.id)) {
+                            return element
+                        }
+                    })
                 }
-                
+
                 await ApplyEvent.findByIdAndUpdate({ _id: applyEvents[index]._id }, { session: subSessions });
-                        
+
                 index++;
-            }   
+            }
 
             if (sessionIds) {
                 typeNoti = "SESSION_CANCEL"
             }
-            
+
             if (!isCancelled) {
                 const newNotification = new Notification({
                     sender: userId,
@@ -484,5 +480,5 @@ module.exports = {
 
     },
 
-    
+
 }
