@@ -201,13 +201,16 @@ module.exports = {
   },
 
   profile_user: async (req, res, next) => {
-    let id = req.user;
+    let { id } = req.query;
 
     try {
       let u = await User.findById(id, { bank: 0 });
+      if (!u) {
+        return next({ error: { message: 'User is not exists!', code: 700 } });
+      }
       res.status(200).json({ result: u });
     } catch (err) {
-      next(err);
+      next({ error: { message: err, code: 500 } });
     }
   },
 
@@ -427,7 +430,7 @@ module.exports = {
     numberRecord = +numberRecord || 10;
     categoryEventId = categoryEventId || '';
     categoryEventId = categoryEventId.split(",");
-    
+
     startDate = startDate || '';
     endDate = endDate || new Date().toISOString();
     let idUserLogin = req.user;
@@ -445,9 +448,9 @@ module.exports = {
 
 
       if (categoryEventId[0]) {
-        let category={$or: []};
+        let category = { $or: [] };
         categoryEventId.forEach(e => {
-          category.$or.push({ $eq : ["$category" , ObjectId(e)]});
+          category.$or.push({ $eq: ["$category", ObjectId(e)] });
         });
         //conditionQuery["$expr"]["$and"].push({ $eq: ["$category", categoryEventId] });
         conditionQuery["$expr"]["$and"].push(category);
@@ -503,67 +506,67 @@ module.exports = {
 
       Promise.all([
         ApplyEvent.aggregate([
-            {
-              $match: {
-                userId: ObjectId(idUserLogin),
-              },
+          {
+            $match: {
+              userId: ObjectId(idUserLogin),
             },
-            {
-              $lookup: {
-                from: "events",
-                let: { event_id: "$eventId" },
-                pipeline: [
-                  {
-                    $match: conditionQuery,
-                  },
-                ],
-                as: "events",
-              },
+          },
+          {
+            $lookup: {
+              from: "events",
+              let: { event_id: "$eventId" },
+              pipeline: [
+                {
+                  $match: conditionQuery,
+                },
+              ],
+              as: "events",
             },
+          },
+          {
+            $unwind: "$events"
+          },
+          {
+            $lookup:
             {
-              $unwind: "$events"
-            },
-            {
-              $lookup:
-              {
-                from: "eventcategories",
-                localField: "events.category",
-                foreignField: "_id",
-                as: "eventCategories"
-              }
-            },
-            {
-              $unwind: "$eventCategories"
-            },
-            {
-              $match: conditionMath,
-            },
-            {
-              $project: { events: 1, eventCategories: 1, _id:0 },
-            },
-            { $skip: +numberRecord * (+pageNumber - 1) },
-            { $limit: +numberRecord },
-          ]),
-          User.findById(req.user)
-      ]).then(([arrEvent,user])=>{
-        if(!user){
-            next({error: {message: 'You have to login', code: 700}});
+              from: "eventcategories",
+              localField: "events.category",
+              foreignField: "_id",
+              as: "eventCategories"
+            }
+          },
+          {
+            $unwind: "$eventCategories"
+          },
+          {
+            $match: conditionMath,
+          },
+          {
+            $project: { events: 1, eventCategories: 1, _id: 0 },
+          },
+          { $skip: +numberRecord * (+pageNumber - 1) },
+          { $limit: +numberRecord },
+        ]),
+        User.findById(req.user)
+      ]).then(([arrEvent, user]) => {
+        if (!user) {
+          next({ error: { message: 'You have to login', code: 700 } });
         }
         let result = [];
-        arrEvent.forEach((e,i) => {
-            let temp = e.events;
-            temp.eventCategory = e.eventCategories;
-            temp.user = user;
-            result.push(temp);
+        arrEvent.forEach((e, i) => {
+          let temp = e.events;
+          temp.eventCategory = e.eventCategories;
+          temp.user = user;
+          result.push(temp);
         });
 
-      res.status(200).json({ result: result });
+        res.status(200).json({ result: result });
 
-      }).catch(err=>{
-        next({error: {message: 'Error', code: 700}});
+      }).catch(err => {
+        next({ error: { message: 'Error', code: 700 } });
       })
     } catch (err) {
-      next({error: {message: err, code: 700}});
+      next({ error: { message: err, code: 700 } });
     }
   },
 
@@ -584,7 +587,7 @@ module.exports = {
     categoryEventId = categoryEventId || '';
     pageNumber = +pageNumber || 1;
     numberRecord = +numberRecord || 10;
-    categoryEventId =categoryEventId.split(',');
+    categoryEventId = categoryEventId.split(',');
     let idUserLogin = req.user;
     try {
       let arrEvent = null;
@@ -594,8 +597,8 @@ module.exports = {
           userId: ObjectId(idUserLogin)
         }]
       };
-      if(status){
-        conditionQuery.$and.push({status});
+      if (status) {
+        conditionQuery.$and.push({ status });
       }
 
       if (startDate !== "") {
@@ -607,9 +610,9 @@ module.exports = {
         })
       }
       if (categoryEventId[0]) {
-        let category={$or: []};
+        let category = { $or: [] };
         categoryEventId.forEach(e => {
-          category.$or.push({"category" : ObjectId(e)});
+          category.$or.push({ "category": ObjectId(e) });
         });
         conditionQuery["$and"].push(category);
       }
@@ -621,33 +624,33 @@ module.exports = {
       let e = await Event.aggregate([
         { $match: conditionQuery },
         {
-            $lookup:
-            {
-                from: "users",
-                localField: "userId",
-                foreignField: "_id",
-                as: "user"
-            }
+          $lookup:
+          {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "user"
+          }
         },
         {
-            $unwind: "$user"
+          $unwind: "$user"
         },
         {
-            $lookup:
-            {
-                from: "eventcategories",
-                localField: "category",
-                foreignField: "_id",
-                as: "eventCategory"
-            }
+          $lookup:
+          {
+            from: "eventcategories",
+            localField: "category",
+            foreignField: "_id",
+            as: "eventCategory"
+          }
         },
         {
-            $unwind: "$eventCategory"
+          $unwind: "$eventCategory"
         },
         { $skip: +numberRecord * (+pageNumber - 1) },
         { $limit: +numberRecord },
         { $sort: { 'session.day': 1 } }
-    ])
+      ])
 
       res.status(200).json({ result: e });
     } catch (err) {

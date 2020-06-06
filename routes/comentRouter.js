@@ -6,6 +6,6 @@ const Authorization = require('../middlewares/authorization');
 
 router.post('/comment/save', Unauthorized, Authorization ,commentController.saveComment);
 
-router.get('/chat/get_list',commentController.getList);
+router.get('/comment/get_list',commentController.getList);
 
 module.exports = router;

@@ -14,7 +14,7 @@ module.exports = {
         numberRecord = numberRecord || 5;
 
         let comment = await Comment.aggregate([
-            { $match: { eventId: eventId } },
+            { $match: { eventId:  ObjectId(eventId) } },
             {
                 $lookup:
                 {
@@ -28,7 +28,7 @@ module.exports = {
                 $unwind: "$usersComment"
             },
             { $skip: +numberRecord * (+pageNumber - 1) },
-            { $limit: numberRecord },
+            { $limit: +numberRecord },
             { $sort: { createdAt: -1 } }
         ]);
         // c.reverse();
