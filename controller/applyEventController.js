@@ -295,17 +295,13 @@ module.exports = {
 
                         await payment_Controller.refund(req, res, next)
                     }
-                    // Promise.all([
-                    await newNotification.save();
+                    
                     await ApplyEvent.findByIdAndUpdate({ _id: applyEvent._id }, { session: applyEvent.session });
                     await Event.findByIdAndUpdate({ _id: currentEvent._id }, { session: currentEvent.session });
-                    // rejectEventMenberNoti(req, res, next)
-                    // ]).then(([apply, current, event]) => {
+                    
+                    newNotification.save();
+                    
                     return res.status(200).json({ result: true });
-                    // }).catch(([err1, err2, err3]) => {
-                    //     next({ error: { message: 'Save error from server!', code: 800 } });
-                    // })
-
                 } else {
                     next({ error: { message: 'you have rejected', code: 710 } });
                 }
@@ -452,7 +448,7 @@ module.exports = {
                     session: sessionNoti
                 });
 
-                await newNotification.save();
+                newNotification.save();
                 await Event.findByIdAndUpdate({ _id: event._id }, { session: event.session, status: event.status });
             }
             return res.status(200).json({ result: true });
