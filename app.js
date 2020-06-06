@@ -46,7 +46,7 @@ app.use('/', require('./routes/googleRouter'));
 
 //Xử lý error 404
 app.use((req, res, next) => {
-    res.status(404).json({ error: { message: 'API này hiện tại chưa hổ trợ' } });
+    res.status(404).json({ error: { message: 'API Not Found' } });
 })
 
 app.use((error, req, res, next) => {

@@ -158,7 +158,7 @@ module.exports = {
                 txtSearch,
                 pageNumber,
                 numberRecord, } = req.query;
-
+            console.log("mo", categoryEventId);
             pageNumber = pageNumber || 1;
             numberRecord = numberRecord || 10;
             txtSearch = txtSearch || '';
@@ -202,7 +202,7 @@ module.exports = {
                     $unwind: "$eventCategories"
                 },
                 { $skip: +numberRecord * (+pageNumber - 1) },
-                { $limit: numberRecord },
+                { $limit: +numberRecord },
                 { $sort: { createdAt: 1 } }
             ]);
             res.status(200).json({ result: e });

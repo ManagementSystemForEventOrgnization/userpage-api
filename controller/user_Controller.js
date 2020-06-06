@@ -236,6 +236,7 @@ module.exports = {
     mailer.sentMailer("admin@gmail.com", { email }, "confirm", token)
       .then(async (json) => {
         currentUser.TOKEN = token;
+        console.log(json)
 
         try {
           await currentUser.save();
@@ -445,12 +446,12 @@ module.exports = {
         switch (type) {
           case 'RECENT':
 
-          
+
             break;
           case 'PAST':
             break;
 
-            case 'ALL':
+          case 'ALL':
         }
       }
 
