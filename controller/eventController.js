@@ -206,7 +206,7 @@ module.exports = {
                 numberRecord,
                 type
             } = req.query;
-
+            type= type||'';
             pageNumber = +pageNumber || 1;
             numberRecord = +numberRecord || 10;
             txtSearch = txtSearch || '';
@@ -217,9 +217,12 @@ module.exports = {
             if (txtSearch != "") {
                 query.$text = { $search: txtSearch };
             }
-
-            
-
+            if (fee) {
+                query.isSellTicket = {$exists: true};
+                query.ticket = {$exists: true};
+                query["ticket.price"] = { $ne: 0 }
+                
+            }
             if (categoryEventId[0]) {
                 let category = { $or: [] };
                 categoryEventId.forEach(e => {
@@ -227,7 +230,7 @@ module.exports = {
                 });
                 query.$or = category.$or;
             }
-            let projectQuery =  {
+            let projectQuery = {
                 'eventCategories': 1,
                 'users': 1,
                 name: 1,
@@ -236,17 +239,18 @@ module.exports = {
                 typeOfEvent: 1,
                 status: 1,
                 session: 1,
+                isSellTicket : 1,
+                ticket : 1
             };
+            let mathQuery={};
             let sortQuery = {};
-            if (type.toString()=="HEIGHT_LIGHT") {
-                projectQuery.total = {$sum: "$session.joinNumber"};
+            if (type.toString() == "HEIGHT_LIGHT") {
+                projectQuery.total = { $sum: "$session.joinNumber" };
                 sortQuery.total = -1;
-                // "total": { $sum: "$session.limitNumber" },
-            }else{
+                mathQuery.total = { $ne: 0 } ;
+            } else {
                 sortQuery.createAt = -1;
             }
-
-
             let e = await Event.aggregate([
                 { $match: query },
                 {
@@ -276,7 +280,7 @@ module.exports = {
                 {
                     $project: projectQuery
                 },
-                {$match : {total : {$ne: 0}}},
+                { $match: mathQuery },
                 { $skip: +numberRecord * (+pageNumber - 1) },
                 { $limit: +numberRecord },
                 { $sort: { 'total': -1 } }
@@ -446,10 +450,10 @@ module.exports = {
             pageNumber,
             numberRecord,
         } = req.query;
-        
+
         pageNumber = +pageNumber || 1;
         numberRecord = +numberRecord || 10;
-        
+
         if (!eventId || !sessionId) {
             return next({ error: { message: 'Invalid data!', code: 700 } });
         }
@@ -472,11 +476,11 @@ module.exports = {
             { $skip: +numberRecord * (+pageNumber - 1) },
             { $limit: +numberRecord },
         ]);
-        
+
         if (!users) {
             return next({ error: { message: 'Something is wrong!' } })
         }
-        
+
         let result = [];
         users.forEach(element => {
             result.push(element.user);
