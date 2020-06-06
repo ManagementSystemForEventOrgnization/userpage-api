@@ -309,7 +309,7 @@ module.exports = {
             let idUserLogin = req.user;
             let query = {
                 'status': { $nin: ["CANCEL", "DRAFT"] },
-                'session.day': { $gt: `${new Date().toISOString()}` }
+                'session.day': { $gt: new Date() }
             };
 
             if (txtSearch != "") {

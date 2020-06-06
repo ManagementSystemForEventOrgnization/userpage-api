@@ -470,8 +470,8 @@ module.exports = {
         conditionMath["$and"].push(
           {
             "events.session.day": {
-              $gt: startDate,
-              $lt: endDate,
+              $gt: new Date(startDate),
+              $lt: new Date(endDate),
             },
           })
       }
@@ -481,7 +481,7 @@ module.exports = {
             conditionMath["$and"].push(
               {
                 'events.session.day': {
-                  $gt: new Date().toISOString(),
+                  $gt: new Date(),
                 }
               }
             );
@@ -492,7 +492,7 @@ module.exports = {
             conditionMath["$and"].push(
               {
                 'events.session.day': {
-                  $lt: `${new Date().toISOString()}`,
+                  $lt: new Date(),
                 }
               }
             );
@@ -604,8 +604,8 @@ module.exports = {
       if (startDate !== "") {
         conditionQuery.$and.push({
           'session.day': {
-            $gt: startDate,
-            $lt: (endDate || new Date().toString()),
+            $gt: new Date(startDate),
+            $lt: new Date(endDate || new Date().toString()),
           }
         })
       }
