@@ -426,7 +426,10 @@ module.exports = {
     pageNumber = +pageNumber || 1;
     numberRecord = +numberRecord || 10;
     categoryEventId = categoryEventId || '';
+    categoryEventId = categoryEventId.split(",");
+    
     startDate = startDate || '';
+    endDate = endDate || new Date().toISOString();
     let idUserLogin = req.user;
     try {
       let arrEvent = null;
@@ -444,7 +447,7 @@ module.exports = {
       if (categoryEventId[0]) {
         let category={$or: []};
         categoryEventId.forEach(e => {
-          category.$or.push({"$category" : ObjectId(e)});
+          category.$or.push({ $eq : ["$category" , ObjectId(e)]});
         });
         //conditionQuery["$expr"]["$and"].push({ $eq: ["$category", categoryEventId] });
         conditionQuery["$expr"]["$and"].push(category);
@@ -574,6 +577,7 @@ module.exports = {
       numberRecord,
       status,
     } = req.query;
+    console.log(categoryEventId[0]);
     status = status || '';
     txtSearch = txtSearch || "";
     startDate = startDate || "";
@@ -581,7 +585,6 @@ module.exports = {
     pageNumber = +pageNumber || 1;
     numberRecord = +numberRecord || 10;
     categoryEventId =categoryEventId.split(',');
-    console.log(categoryEventId);
     let idUserLogin = req.user;
     try {
       let arrEvent = null;
