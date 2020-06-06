@@ -164,7 +164,6 @@ module.exports = {
                         }
                     }
                     e.session = eS;
-
                 }
                 result.event = e;
                 result.header = p.header;
@@ -201,6 +200,7 @@ module.exports = {
                 categoryEventId,
                 startDate,
                 endDate,
+                fee,
                 txtSearch,
                 pageNumber,
                 numberRecord,
@@ -217,6 +217,8 @@ module.exports = {
             if (txtSearch != "") {
                 query.$text = { $search: txtSearch };
             }
+
+            
 
             if (categoryEventId[0]) {
                 let category = { $or: [] };
