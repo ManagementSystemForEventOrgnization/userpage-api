@@ -62,12 +62,12 @@ module.exports = {
                 var sessions = []
 
                 currentEvent.session.forEach(element => {
-                    if (element.isCancel == true) {
-                        next({ error: { message: 'Some session cancelled, can you reload and choose again', code: 718 } });
-                        return;
-                    }
-
                     if (sessionIds.includes(element.id)) {
+                    	if (element.isCancel == true) {
+                        	next({ error: { message: 'Some session cancelled, can you reload and choose again', code: 718 } });
+                        	return;
+                    	}
+                        
                         var joinNumber = element.joinNumber || 0;
                         joinNumber += 1;
 
@@ -325,8 +325,8 @@ module.exports = {
             return;
         }
 
-        let { eventId, sessionId } = req.body;
-        let userId = "5ec8e500bc1ae931e85dfa3c";// req.user;
+        let { eventId, sessionIds } = req.body;
+        let userId = req.user;
 
         try {
             var event = await Event.findById(eventId);
@@ -337,19 +337,21 @@ module.exports = {
             }
 
             var applyEvents = null;
+            var cancelJoin = false;
 
-            if (sessionId) {
+            if (sessionIds) {
                 event.session.forEach(ele => {
-                    if (sessionId === ele.id) {
+                    if (sessionIds.includes(ele.id)) {
                         if (userId == event.userId) {
                             ele.isCancel = true
                         } else {
+                        	cancelJoin = true;
                             ele.joinNumber = ele.joinNumber == 0 ? 0 : (ele.joinNumber - 1)
                         }
                     }
                 })
 
-                applyEvents = await ApplyEvent.find({ eventId: eventId, session: {$elemMatch: {id: sessionId}} });
+                applyEvents = await ApplyEvent.find({ eventId: eventId, session: {$elemMatch: {id: {$in: sessionIds}}} });
             } else {
                 event.session.forEach(ele => {
                     ele.isCancel = true
@@ -365,17 +367,12 @@ module.exports = {
             var index = 0
             var isCancelled = false
 
-            if (applyEvents.length == 0) {
-                next({ error: { message: "Session not found!", code: 723 } });
-                return;
-            }
-            
             while (index < applyEvents.length) {
                 let itemChanges = applyEvents[index].session.filter(element => {
                     
                     console.log(element)
-                    if (sessionId) {
-                        if (sessionId === element.id) {
+                    if (sessionIds) {
+                        if (sessionIds.includes(element.id)) {
                             if (element.isCancel == true && userId != event.userId) {
                                 next({ error: { message: "Some session cancelled!", code: 722 } });
                                 isCancelled = true;
@@ -400,6 +397,7 @@ module.exports = {
                 })
 
                 var i = 0;
+                
                 while (i < itemChanges.length) {
                     if (sessionNoti.indexOf(itemChanges[i].id) === -1) {
                         sessionNoti.push(itemChanges[i].id);
@@ -422,12 +420,22 @@ module.exports = {
                     joinUserIds.push(applyEvents[index].userId);
                 }
                 
-                await ApplyEvent.findByIdAndUpdate({ _id: applyEvents[index]._id }, { session: applyEvents[index].session });
+                var subSessions = applyEvents[index].session
+                
+                if (cancelJoin) {
+                	subSessions = applyEvents[index].session.filter(element => {
+                		if (!sessionIds.includes(element.id)) {
+                			return element
+                		}
+                	})
+                }
+                
+                await ApplyEvent.findByIdAndUpdate({ _id: applyEvents[index]._id }, { session: subSessions });
                         
                 index++;
             }   
 
-            if (sessionId) {
+            if (sessionIds) {
                 typeNoti = "SESSION_CANCEL"
             }
             
