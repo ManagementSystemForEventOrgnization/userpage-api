@@ -402,13 +402,15 @@ module.exports = {
             pageNumber,
             numberRecord,
         } = req.query;
+        
         pageNumber = +pageNumber || 1;
         numberRecord = +numberRecord || 10;
+        
         if (!eventId || !sessionId) {
             return next({ error: { message: 'Invalid data!', code: 700 } });
         }
 
-        let u = await ApplyEvent.aggregate([
+        let users = await ApplyEvent.aggregate([
             { $match: { 'session.id': sessionId, eventId: ObjectId(eventId) } },
             {
                 $lookup:
@@ -426,10 +428,16 @@ module.exports = {
             { $skip: +numberRecord * (+pageNumber - 1) },
             { $limit: +numberRecord },
         ]);
-        if (!u) {
+        
+        if (!users) {
             return next({ error: { message: 'Something is wrong!' } })
         }
-        res.status(200).json({ result: u });
+        
+        let result = [];
+        users.forEach(element => {
+            result.push(element.user);
+        });
+        res.status(200).json({ result: result });
     }
 
 }
