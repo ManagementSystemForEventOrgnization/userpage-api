@@ -580,7 +580,7 @@ module.exports = {
       numberRecord,
       status,
     } = req.query;
-    console.log(categoryEventId[0]);
+    
     status = status || '';
     txtSearch = txtSearch || "";
     startDate = startDate || "";
