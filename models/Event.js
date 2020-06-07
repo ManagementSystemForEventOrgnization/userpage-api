@@ -25,7 +25,7 @@ const eventSchema = new Schema({
             isConfirm: Boolean,
             isReject: Boolean,
             paymentId: String,
-            isCancel: String,
+            isCancel: Boolean,
         }
     ],//{type : Array}, // limitNumber, joinNumber, endTime, startTime, detail, imageMap, address, linkfile, status 
     category: Schema.Types.ObjectId,

@@ -130,7 +130,7 @@ module.exports = {
 				let userId = event.userId;
 
 				if (!currentPayment.sessionRefunded.includes(sessionId)) {
-					var refundNoti = async function (type) {
+					var refundNoti = async function (type, success) {
 						const newNotification = new Notification({
 							sender: userId,
 							receiver: joinUserId,
@@ -147,14 +147,13 @@ module.exports = {
 							session: [sessionId]
 						});
 
-						// Promise.all([
+						if (success == true) {
 							currentPayment.sessionRefunded.push(sessionId)
 							await Payment.findByIdAndUpdate({ _id: currentPayment._id }, { sessionRefunded: currentPayment.sessionRefunded });
-							await newNotification.save();
-						// ]).then(([payment, noti]) => {
-						// }).catch(([err1, err2]) => {
-						// 	next({ error: { message: 'Save error from server!', code: 800 } });
-						// })
+							
+						}
+							
+						newNotification.save();
 					}
 
 					console.log(currentPayment.payType)
@@ -167,10 +166,10 @@ module.exports = {
 							function (err, refund) {
 								if (err) {
 									console.log("FAILED")
-									refundNoti("CREDIT_REFUND_FAILED")
+									refundNoti("CREDIT_REFUND_FAILED", false)
 								} else {
 									console.log("SUCCESS")
-									refundNoti("CREDIT_REFUND_SUCCESS")
+									refundNoti("CREDIT_REFUND_SUCCESS", true)
 								}
 							}
 						);
@@ -194,11 +193,11 @@ module.exports = {
 						axios.post(config.endpoint, null, { params })
 							.then(res => {
 								console.log(res.data);
-								refundNoti("ZALOPAY_REFUND_SUCCESS");
+								refundNoti("ZALOPAY_REFUND_SUCCESS", true);
 							})
 							.catch(err => {
 								console.log(err);
-								refundNoti("ZALOPAY_REFUND_FAILED");
+								refundNoti("ZALOPAY_REFUND_FAILED", false);
 							});
 					}
 				} else {
