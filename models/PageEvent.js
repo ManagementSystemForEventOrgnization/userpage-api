@@ -4,7 +4,7 @@ const { Schema } = mongoose;
 const pageEventSchema = new Schema({
     title: { type:String, "index": "text" },
     discription: { type:String, "index": "text" },
-    eventId: Schema.Types.ObjectId,
+    eventId: { type : Schema.Types.ObjectId , ref: 'event'},
     // index: {
     //     row: Number,
     //     section: Number

@@ -3,7 +3,7 @@ const { Schema } = mongoose;
 
 const eventSchema = new Schema({
     name: { type: String, "index": "text" },
-    userId: Schema.Types.ObjectId,
+    userId: { type : Schema.Types.ObjectId , ref: 'users'},
     typeOfEvent: String,
     urlWeb: String,
     isSellTicket: Boolean,
@@ -28,7 +28,7 @@ const eventSchema = new Schema({
             isCancel: Boolean,
         }
     ],//{type : Array}, // limitNumber, joinNumber, endTime, startTime, detail, imageMap, address, linkfile, status 
-    category: Schema.Types.ObjectId,
+    category: { type : Schema.Types.ObjectId , ref: 'eventCategory'},
     status: { type: String, "index": "text", default: "PENDING" }, //PENDING, START, FINISH, DRAFT, CANCEL
     bannerUrl: String,
     createdAt: { type: Date, default: new Date() },
