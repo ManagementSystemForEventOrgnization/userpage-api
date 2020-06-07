@@ -120,8 +120,6 @@ module.exports = {
 		res.status(200).json({result: e});
 	},
 
-
-
 	refund: async (req, res, next) => {
 		let { paymentId, joinUserId, eventId, sessionId } = req.body;
 
@@ -214,7 +212,6 @@ module.exports = {
 	},
 
 	//refund zalopay
-
 	payouts: async (req, res, next) => {
 		stripe.balance.retrieve(function (err, balance) {
 			stripe.payouts.create(
