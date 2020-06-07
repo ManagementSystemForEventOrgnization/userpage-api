@@ -183,17 +183,6 @@ module.exports = {
         }
     },
 
-    test: async (req, res, next) => {
-        myFunction.funcPromiseAll([Event.find({}), Event.find({}), (() => { return Promise.reject('err') }).call()])
-            .then(val => {
-                console.log(val);
-                res.json(val);
-            }).catch(e => {
-                res.json(e);
-            })
-
-    },
-
     getListEvent: async (req, res, next) => {
         try {
             let {
@@ -206,7 +195,7 @@ module.exports = {
                 numberRecord,
                 type
             } = req.query;
-            type= type||'';
+            type = type || '';
             pageNumber = +pageNumber || 1;
             numberRecord = +numberRecord || 10;
             txtSearch = txtSearch || '';
@@ -218,10 +207,10 @@ module.exports = {
                 query.$text = { $search: txtSearch };
             }
             if (fee) {
-                query.isSellTicket = {$exists: true};
-                query.ticket = {$exists: true};
+                query.isSellTicket = { $exists: true };
+                query.ticket = { $exists: true };
                 query["ticket.price"] = { $ne: 0 }
-                
+
             }
             if (categoryEventId[0]) {
                 let category = { $or: [] };
@@ -239,15 +228,15 @@ module.exports = {
                 typeOfEvent: 1,
                 status: 1,
                 session: 1,
-                isSellTicket : 1,
-                ticket : 1
+                isSellTicket: 1,
+                ticket: 1
             };
-            let mathQuery={};
+            let mathQuery = {};
             let sortQuery = {};
             if (type.toString() == "HEIGHT_LIGHT") {
                 projectQuery.total = { $sum: "$session.joinNumber" };
                 sortQuery.total = -1;
-                mathQuery.total = { $ne: 0 } ;
+                mathQuery.total = { $ne: 0 };
             } else {
                 sortQuery.createAt = -1;
             }
@@ -486,6 +475,10 @@ module.exports = {
             result.push(element.user);
         });
         res.status(200).json({ result: result });
-    }
+    },
 
+    test: async (req, res, next) => {
+        let a = await Event.find()        
+        res.status(200).json(a);
+    },
 }
