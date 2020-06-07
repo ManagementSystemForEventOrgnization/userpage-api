@@ -18,7 +18,7 @@ exports.sentMailer = function (from1, { email }, subject, content) {
         });
 
         let mail = {
-            from: from1,
+            from: 'Event. <datn.qlsk@gmail.com>',
             to: email,
             subject: subject,
             html: content

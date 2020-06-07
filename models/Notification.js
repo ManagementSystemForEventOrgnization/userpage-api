@@ -2,8 +2,8 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const notificationSchema = new Schema({
-    sender: Schema.Types.ObjectId,
-    receiver: [Schema.Types.ObjectId],
+    sender: { type : Schema.Types.ObjectId , ref: 'users'},
+    receiver: [{ type : Schema.Types.ObjectId , ref: 'users'},],
     type: String, // (event: (apply, start event), payment))
     message: String,
     title: String,

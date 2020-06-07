@@ -3,7 +3,7 @@ const { Schema } = mongoose;
 
 const cardSchema = new Schema({
     customerId: String,
-    userId: Schema.Types.ObjectId,
+    userId: { type : Schema.Types.ObjectId , ref: 'users'},
     cardNumber: String,
     cardExpire: String,
     createAt: { type: Date, default: new Date() },
