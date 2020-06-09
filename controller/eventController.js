@@ -9,6 +9,8 @@ const PageEvent = mongoose.model('pageEvent');
 const Comment = mongoose.model('comment');
 const ApplyEvent = mongoose.model('applyEvent');
 
+const aa = {sang: 1, sang1: 2};
+
 module.exports = {
 
     saveEvent: async (req, res, next) => {
@@ -477,8 +479,5 @@ module.exports = {
         res.status(200).json({ result: result });
     },
 
-    test: async (req, res, next) => {
-        let a = await Event.find()        
-        res.status(200).json(a);
-    },
+
 }
