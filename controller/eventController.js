@@ -164,6 +164,7 @@ module.exports = {
                         }
                     }
                     e.session = eS;
+
                 }
                 result.event = e;
                 result.header = p.header;
@@ -200,7 +201,6 @@ module.exports = {
                 categoryEventId,
                 startDate,
                 endDate,
-                fee,
                 txtSearch,
                 pageNumber,
                 numberRecord,
