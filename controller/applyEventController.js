@@ -126,6 +126,24 @@ module.exports = {
                     await newApplyEvent.save();
                 }
 
+				const newNotification = new Notification({
+                    sender: userId,
+                    receiver: [currentEvent.userId],
+                   	type: "JOINED_EVENT",
+                    message: "",
+                    title: "{sender} joined your event " + currentEvent.name,
+                    linkTo: {
+                        key: "EventDetail",
+                        _id: eventId,
+                    },
+                    isRead: false,
+                    isDelete: false,
+                    createdAt: Date(),
+                    session: sessionIds
+                });
+                
+                newNotification.save();
+
                 if (currentEvent.isSellTicket) {
                     req.body.amount = (currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price) * sessions.length;
                     req.body.receiver = currentEvent.userId;
@@ -273,7 +291,7 @@ module.exports = {
                         receiver: [joinUserId],
                         type: "EVENT_REJECT",
                         message: "",
-                        title: "{sender} rejected you form event {event}",
+                        title: "{sender} rejected you form event " + currentEvent.name,
                         linkTo: {
                             key: "EventDetail",
                             _id: eventId,
@@ -358,6 +376,7 @@ module.exports = {
             var joinUserIds = [];
             var sessionNoti = [];
             var typeNoti = "EVENT_CANCEL";
+            var titleMess = "{sender} cancelled event " + event.name;
             var index = 0
             var isCancelled = false
 
@@ -429,6 +448,11 @@ module.exports = {
 
             if (sessionIds) {
                 typeNoti = "SESSION_CANCEL"
+                titleMess = "{sender} cancelled some session in event " + event.name;
+                
+                if (userId == event.userId) {
+                	titleMess = "{sender} canceled participation in event " + event.name;
+                }
             }
 
             if (!isCancelled) {
@@ -437,7 +461,7 @@ module.exports = {
                     receiver: userId == event.userId ? joinUserIds : [event.userId],
                     type: typeNoti,
                     message: "",
-                    title: "{sender} cancelled event {event}",
+                    title: titleMess,
                     linkTo: {
                         key: "EventDetail",
                         _id: eventId,
