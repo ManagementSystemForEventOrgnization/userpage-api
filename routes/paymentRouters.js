@@ -14,7 +14,8 @@ router.post('/add_card', Unauthorized, payment_Controller.create_customer);
 // router.post('/zalopay_create_order', payment_Controller.create_order);
 router.post('/create_order_callback', Unauthorized, payment_Controller.create_order_callback);
 
-router.get('/paymentHistorySend', Unauthorized, payment_Controller.paymentHistorySend);
-router.get('/paymentHistoryReceive', Unauthorized, payment_Controller.paymentHistoryReceive);
+router.get('/payment_history', Unauthorized, payment_Controller.paymentHis);
+
+
 
 module.exports = router;
