@@ -201,13 +201,16 @@ module.exports = {
   },
 
   profile_user: async (req, res, next) => {
-    let id = req.user;
+    let { id } = req.query;
 
     try {
       let u = await User.findById(id, { bank: 0 });
+      if (!u) {
+        return next({ error: { message: 'User is not exists!', code: 700 } });
+      }
       res.status(200).json({ result: u });
     } catch (err) {
-      next(err);
+      next({ error: { message: err, code: 500 } });
     }
   },
 

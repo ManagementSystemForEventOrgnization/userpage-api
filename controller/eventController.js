@@ -134,24 +134,46 @@ module.exports = {
                 return next({ error: { message: 'Url is not exists!', code: 404 } });
             }
             eventId = await checkEventUrl._id;
-
+            let idUser = req.user;
             Promise.all([
-                Event.findById(eventId),
+                ApplyEvent.findOne({ eventId: ObjectId(eventId), userId: ObjectId(idUser) }),
+                Event.findOne({ _id: ObjectId(eventId) }),
                 PageEvent.findOne({ eventId: new ObjectId(eventId) }, { _id: 0, __v: 0, createAt: 0, updateAt: 0 })
-            ]).then(([e, p]) => {
+            ]).then(([ap, e, p]) => {
 
                 if (!e) {
                     return next({ error: { message: 'Event is not exists', code: 422 } });
                 }
-
                 let result = {};
+
+                if (ap) {
+                    let eS = e.session;
+                    let apS = ap.session;
+                    for (let i = 0; i < apS.length; i++) {
+                        let e = apS[i];
+                        for (let j = 0; j < eS.length; j++) {
+                            let element = eS[j];
+                            if (element.id == e.id) {
+                                eS[j].status = e.status;
+                                eS[j].isConfirm = e.isConfirm;
+                                eS[j].isReject = e.isReject;
+                                eS[j].paymentId = e.paymentId;
+                                eS[j].isCancel = e.isCancel;
+                                break;
+                            }
+                        }
+                    }
+                    e.session = eS;
+                }
                 result.event = e;
                 result.header = p.header;
                 result.eventId = p.eventId;
                 result.rows = p.rows[index] || {};
+
                 if (!p) {
                     return next({ error: { message: 'Event is not exists!', code: 500 } });
                 }
+
                 res.status(200).json({ result: result });
             }).catch(err => {
                 return next({ error: { message: 'Event is not exists!', code: 700 } });
@@ -178,10 +200,13 @@ module.exports = {
                 categoryEventId,
                 startDate,
                 endDate,
+                fee,
                 txtSearch,
                 pageNumber,
-                numberRecord, } = req.query;
-
+                numberRecord,
+                type
+            } = req.query;
+            type= type||'';
             pageNumber = +pageNumber || 1;
             numberRecord = +numberRecord || 10;
             txtSearch = txtSearch || '';
@@ -192,11 +217,12 @@ module.exports = {
             if (txtSearch != "") {
                 query.$text = { $search: txtSearch };
             }
-
-            // if (categoryEventId != "") {
-            //     query.category = categoryEventId
-            // }
-
+            if (fee) {
+                query.isSellTicket = {$exists: true};
+                query.ticket = {$exists: true};
+                query["ticket.price"] = { $ne: 0 }
+                
+            }
             if (categoryEventId[0]) {
                 let category = { $or: [] };
                 categoryEventId.forEach(e => {
@@ -204,7 +230,27 @@ module.exports = {
                 });
                 query.$or = category.$or;
             }
-
+            let projectQuery = {
+                'eventCategories': 1,
+                'users': 1,
+                name: 1,
+                urlWeb: 1,
+                bannerUrl: 1,
+                typeOfEvent: 1,
+                status: 1,
+                session: 1,
+                isSellTicket : 1,
+                ticket : 1
+            };
+            let mathQuery={};
+            let sortQuery = {};
+            if (type.toString() == "HEIGHT_LIGHT") {
+                projectQuery.total = { $sum: "$session.joinNumber" };
+                sortQuery.total = -1;
+                mathQuery.total = { $ne: 0 } ;
+            } else {
+                sortQuery.createAt = -1;
+            }
             let e = await Event.aggregate([
                 { $match: query },
                 {
@@ -231,9 +277,13 @@ module.exports = {
                 {
                     $unwind: "$eventCategories"
                 },
+                {
+                    $project: projectQuery
+                },
+                { $match: mathQuery },
                 { $skip: +numberRecord * (+pageNumber - 1) },
                 { $limit: +numberRecord },
-                { $sort: { createdAt: 1 } }
+                { $sort: { 'total': -1 } }
             ]);
             res.status(200).json({ result: e });
         } catch (error) {
@@ -352,13 +402,11 @@ module.exports = {
                             $unwind: "$eventCategory"
                         },
                     ]
-                )
-                ,
+                ),
                 Comment.countDocuments({ eventId: ObjectId(eventId) }),
                 ApplyEvent.findOne({ userId: ObjectId(idU), eventId: ObjectId(eventId) }, { session: 1, _id: 0 })
             ])
                 .then(([event, countComment, sessionApply]) => {
-
                     if (!event[0]) {
                         return next({ error: { message: 'Event is not Exists!', code: 700 } });
                     }
@@ -403,13 +451,15 @@ module.exports = {
             pageNumber,
             numberRecord,
         } = req.query;
+
         pageNumber = +pageNumber || 1;
         numberRecord = +numberRecord || 10;
+
         if (!eventId || !sessionId) {
             return next({ error: { message: 'Invalid data!', code: 700 } });
         }
 
-        let u = await ApplyEvent.aggregate([
+        let users = await ApplyEvent.aggregate([
             { $match: { 'session.id': sessionId, eventId: ObjectId(eventId) } },
             {
                 $lookup:
@@ -427,10 +477,16 @@ module.exports = {
             { $skip: +numberRecord * (+pageNumber - 1) },
             { $limit: +numberRecord },
         ]);
-        if (!u) {
+
+        if (!users) {
             return next({ error: { message: 'Something is wrong!' } })
         }
-        res.status(200).json({ result: u });
+
+        let result = [];
+        users.forEach(element => {
+            result.push(element.user);
+        });
+        res.status(200).json({ result: result });
     }
 
 }

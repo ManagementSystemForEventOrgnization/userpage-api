@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Notification = mongoose.model('notification');
+const ObjectId = mongoose.Types.ObjectId;
 
 module.exports = {
     startEventNoti: async (req, res, next) => {
@@ -61,9 +62,9 @@ module.exports = {
     getListNotification: async (req, res, next) => {
         let { pageNumber, numberRecord } = req.query;
         let idUser = req.user;
-        pageNumber = pageNumber || 1;
-        numberRecord = numberRecord || 10;
-        let condition = {};
+        pageNumber = +pageNumber || 1;
+        numberRecord = +numberRecord || 10;
+        let condition = {receiver: {$eq: ObjectId(idUser) }};
 
         try {
             let notifications =  await Notification.aggregate([
@@ -93,7 +94,7 @@ module.exports = {
                     $unwind: "$users_sender"
                 },
                 { $skip: +numberRecord * (+pageNumber - 1) },
-                { $limit: numberRecord },
+                { $limit: +numberRecord },
                 { $sort: { createdAt: -1 } }
             ]);
             res.status(200).json({ result: notifications });

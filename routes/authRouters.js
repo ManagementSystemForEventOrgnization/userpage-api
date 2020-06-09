@@ -23,7 +23,7 @@ router.get('/current_user', Unauthorized, Authorization, controller_User.current
 router.get('/verifyToken', Unauthorized, controller_User.verifyToken);
 router.post('/updatePassword', Unauthorized, controller_User.updatePassword);
 router.post('/user/updateInfo', Unauthorized, controller_User.updateInfor);
-router.get('/user/profile', Unauthorized, controller_User.profile_user);
+router.get('/user/profile', controller_User.profile_user);
 router.get('/user/get_history_take_part_in', Unauthorized, controller_User.get_history_take_part_in);
 router.get('/user/historyCreate', Unauthorized, controller_User.get_HistoryCreate);
 
