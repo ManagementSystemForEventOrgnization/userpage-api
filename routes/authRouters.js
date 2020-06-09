@@ -29,7 +29,7 @@ router.get('/user/historyCreate', Unauthorized, controller_User.get_HistoryCreat
 
 // update bank inf
 
-router.get('/user/bank_inf',Unauthorized, controller_User.getBankInf);
+router.get('/user/bank_inf', Unauthorized, controller_User.getBankInf);
 router.post('/user/update_bank_inf', Unauthorized, controller_User.updateBankInf);
 
 module.exports = router;

@@ -239,6 +239,7 @@ module.exports = {
     mailer.sentMailer("admin@gmail.com", { email }, "confirm", token)
       .then(async (json) => {
         currentUser.TOKEN = token;
+        console.log(json)
 
         try {
           await currentUser.save();
@@ -580,7 +581,7 @@ module.exports = {
       numberRecord,
       status,
     } = req.query;
-    
+
     status = status || '';
     txtSearch = txtSearch || "";
     startDate = startDate || "";

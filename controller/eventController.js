@@ -9,7 +9,7 @@ const PageEvent = mongoose.model('pageEvent');
 const Comment = mongoose.model('comment');
 const ApplyEvent = mongoose.model('applyEvent');
 
-const aa = {sang: 1, sang1: 2};
+const aa = { sang: 1, sang1: 2 };
 
 module.exports = {
 
@@ -352,6 +352,7 @@ module.exports = {
                 { $limit: +numberRecord },
                 { $sort: { 'session.day': 1 } }
             ])
+            console.log("Tcl:", e);
             res.status(200).json({ result: e });
         } catch (error) {
             next({ error: { message: 'Something is wrong!', code: 700 } });
