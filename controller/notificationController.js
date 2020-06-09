@@ -48,7 +48,8 @@ module.exports = {
 
     getBadgeNumber: async (req, res, next) => {
         let userId = req.user;
-
+		console.log("mongoDB: ");
+		console.log(process.env.MONGOLAB_URI);
         try {
             let notifications = await Notification.find({receiver: userId, isRead: false, isDelete: false});
             return res.status(200).json({ result: notifications.length });

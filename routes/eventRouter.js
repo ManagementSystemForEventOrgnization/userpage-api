@@ -11,4 +11,7 @@ router.get('/event', eventController.getPageEvent);
 router.get('/get_list_event', eventController.getListEvent);
 router.get('/get_list_event_coming_up', eventController.getListEventComingUp);
 
+router.get('/get_event_inf', eventController.getEventInf);
+
+router.get('/get_user_join_event', eventController.getUserJoinEvent);
 module.exports = router;

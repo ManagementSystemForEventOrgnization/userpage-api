@@ -123,15 +123,15 @@ module.exports = {
 
 
 	refund: async (req, res, next) => {
-		let { paymentId, joinUserId, eventId, joinTime } = req.body;
-		let userId = "5ec8e500bc1ae931e85dfa3c"//req.user;
+		let { paymentId, joinUserId, eventId, sessionId } = req.body;
 
 		if (paymentId) {
 			try {
 				var currentPayment = await Payment.findById(paymentId)
 				var event = await Event.findById(eventId)
+				let userId = event.userId;
 
-				if (!currentPayment.sessionRefunded.includes(joinTime)) {
+				if (!currentPayment.sessionRefunded.includes(sessionId)) {
 					var refundNoti = async function (type) {
 						const newNotification = new Notification({
 							sender: userId,
@@ -146,10 +146,11 @@ module.exports = {
 							isRead: false,
 							isDelete: false,
 							createdAt: Date(),
-							session: [joinTime]
+							session: [sessionId]
 						});
 
 						// Promise.all([
+							currentPayment.sessionRefunded.push(sessionId)
 							await Payment.findByIdAndUpdate({ _id: currentPayment._id }, { sessionRefunded: currentPayment.sessionRefunded });
 							await newNotification.save();
 						// ]).then(([payment, noti]) => {
@@ -235,7 +236,7 @@ module.exports = {
 			return;
 		}
 
-		let { eventId, joinTimes, amount, description, receiver } = req.body;
+		let { eventId, sessionIds, amount, description, receiver } = req.body;
 		let userId = req.user;
 
 		try {
@@ -269,12 +270,12 @@ module.exports = {
 					description: description,
 					payType: "ZALOPAY",
 					status: "WAITING",
-					session: joinTimes
+					session: sessionIds
 				});
 
 				currentApplyEvent.updatedAt = Date();
 				currentApplyEvent.session.forEach(element => { 
-					if (joinTimes.includes(element.day)) {
+					if (sessionIds.includes(element.id)) {
 						element.paymentId = newPayment._id;
 					}
 				})
@@ -287,7 +288,7 @@ module.exports = {
 					await newPayment.save();
 					await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
 
-					res.status(200).json({ result: result.data });
+					res.status(200).json({ result: true, resultOrder: result.data });
 				} else {
 					newPayment.status = "UNPAID";
 					await newPayment.save();
@@ -343,7 +344,7 @@ module.exports = {
 			return;
 		}
 
-		let { eventId, joinTimes, amount, description, receiver } = req.body;
+		let { eventId, sessionIds, amount, description, receiver } = req.body;
 		let userId = req.user;
 		
 		try {
@@ -358,7 +359,7 @@ module.exports = {
 							amount: amount,
 							currency: 'vnd',
 							customer: cardFind.customerId,
-							description: description,
+							description: description || ("Payment for event " + eventId),
 						});
 
 					const newPayment = new Payment({
@@ -370,12 +371,12 @@ module.exports = {
 						description: description,
 						cardId: cardFind.id,
 						createdAt: Date(),
-						session: joinTimes
+						session: sessionIds
 					});
 
 					currentApplyEvent.updatedAt = Date();
 					currentApplyEvent.session.forEach(element => { 
-						if (joinTimes.includes(element.day)) {
+						if (sessionIds.includes(element.id)) {
 							element.paymentId = newPayment._id;
 						}
 					})

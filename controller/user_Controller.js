@@ -276,8 +276,6 @@ module.exports = {
       next({ error: { message: "Invalid data", code: 422 } });
       return;
     }
-
-    console.log("verifyForgotPassword", currentUser);
     if (currentUser.TOKEN != otp) {
       next({ error: { message: "OTP fail", code: 621 } });
       return;
@@ -414,7 +412,7 @@ module.exports = {
     }
   },
 
-  get_History: async (req, res, next) => {
+  get_history_take_part_in: async (req, res, next) => {
     let {
       categoryEventId,
       startDate,
@@ -426,10 +424,13 @@ module.exports = {
     } = req.query;
     txtSearch = txtSearch || "";
 
-    pageNumber = pageNumber || 1;
-    numberRecord = numberRecord || 10;
+    pageNumber = +pageNumber || 1;
+    numberRecord = +numberRecord || 10;
     categoryEventId = categoryEventId || '';
+    categoryEventId = categoryEventId.split(",");
+
     startDate = startDate || '';
+    endDate = endDate || new Date().toISOString();
     let idUserLogin = req.user;
     try {
       let arrEvent = null;
@@ -442,73 +443,128 @@ module.exports = {
         },
       };
       type = type || 'ALL';
-      if (type) {
-        switch (type) {
-          case 'RECENT':
 
 
-            break;
-          case 'PAST':
-            break;
-
-          case 'ALL':
-        }
+      if (categoryEventId[0]) {
+        let category = { $or: [] };
+        categoryEventId.forEach(e => {
+          category.$or.push({ $eq: ["$category", ObjectId(e)] });
+        });
+        //conditionQuery["$expr"]["$and"].push({ $eq: ["$category", categoryEventId] });
+        conditionQuery["$expr"]["$and"].push(category);
       }
 
-      if (categoryEventId != "") {
-        conditionQuery["$expr"]["$and"].push({ $eq: ["$category", categoryEventId] });
-      }
-
-      if (txtSearch != "") {
+      if (txtSearch) {
         conditionQuery.$text = { $search: txtSearch };
       }
+
       let conditionMath = {
         $and: [
-          { "events.status": { $nin: ["HUY"] } },
+          { "events.status": { $nin: ["CANCEL"] } },
         ],
       };
 
       if (startDate != "") {
         conditionMath["$and"].push(
           {
-            "events.startTime": {
-              $gt: new Date(startDate || "1940-01-01"),
-              $lt: new Date(endDate || new Date().toString()),
+            "events.session.day": {
+              $gt: startDate,
+              $lt: endDate,
             },
           })
       }
-
-      arrEvent = await ApplyEvent.aggregate([
-        {
-          $match: {
-            userId: ObjectId(idUserLogin),
-          },
-        },
-        {
-          $lookup: {
-            from: "events",
-            let: { event_id: "$eventId" },
-            pipeline: [
+      if (type) {
+        switch (type) {
+          case 'RECENT':
+            conditionMath["$and"].push(
               {
-                $match: conditionQuery,
-              },
-            ],
-            as: "events",
-          },
-        },
-        {
-          $match: conditionMath,
-        },
-        {
-          $project: { events: 1 },
-        },
-        { $skip: +numberRecord * (+pageNumber - 1) },
-        { $limit: numberRecord },
-      ]);
+                'events.session.day': {
+                  $gt: new Date().toISOString(),
+                }
+              }
+            );
 
-      res.status(200).json({ result: arrEvent });
+
+            break;
+          case 'PAST':
+            conditionMath["$and"].push(
+              {
+                'events.session.day': {
+                  $lt: `${new Date().toISOString()}`,
+                }
+              }
+            );
+            break;
+
+          case 'ALL':
+
+            break;
+        }
+      }
+
+      Promise.all([
+        ApplyEvent.aggregate([
+          {
+            $match: {
+              userId: ObjectId(idUserLogin),
+            },
+          },
+          {
+            $lookup: {
+              from: "events",
+              let: { event_id: "$eventId" },
+              pipeline: [
+                {
+                  $match: conditionQuery,
+                },
+              ],
+              as: "events",
+            },
+          },
+          {
+            $unwind: "$events"
+          },
+          {
+            $lookup:
+            {
+              from: "eventcategories",
+              localField: "events.category",
+              foreignField: "_id",
+              as: "eventCategories"
+            }
+          },
+          {
+            $unwind: "$eventCategories"
+          },
+          {
+            $match: conditionMath,
+          },
+          {
+            $project: { events: 1, eventCategories: 1, _id: 0 },
+          },
+          { $skip: +numberRecord * (+pageNumber - 1) },
+          { $limit: +numberRecord },
+        ]),
+        User.findById(req.user)
+      ]).then(([arrEvent, user]) => {
+        if (!user) {
+          next({ error: { message: 'You have to login', code: 700 } });
+        }
+        let result = [];
+        arrEvent.forEach((e, i) => {
+          let temp = e.events;
+          temp.eventCategory = e.eventCategories;
+          temp.user = user;
+          result.push(temp);
+        });
+
+        res.status(200).json({ result: result });
+
+      }).catch(err => {
+        next({ error: { message: 'Error', code: 700 } });
+      })
     } catch (err) {
-      next(err);
+      next({ error: { message: err, code: 700 } });
     }
   },
 
@@ -522,40 +578,79 @@ module.exports = {
       numberRecord,
       status,
     } = req.query;
-    status = status || 'DRAFT';
+
+    status = status || '';
     txtSearch = txtSearch || "";
     startDate = startDate || "";
-
-    pageNumber = pageNumber || 1;
-    numberRecord = numberRecord || 10;
-
+    categoryEventId = categoryEventId || '';
+    pageNumber = +pageNumber || 1;
+    numberRecord = +numberRecord || 10;
+    categoryEventId = categoryEventId.split(',');
     let idUserLogin = req.user;
     try {
       let arrEvent = null;
 
       let conditionQuery = {
         $and: [{
-          userId: ObjectId(idUserLogin),
-          status
+          userId: ObjectId(idUserLogin)
         }]
       };
+      if (status) {
+        conditionQuery.$and.push({ status });
+      }
 
       if (startDate !== "") {
         conditionQuery.$and.push({
-          startTime: {
-            $gt: new Date(startDate),
-            $lt: new Date(endDate || new Date().toString()),
+          'session.day': {
+            $gt: startDate,
+            $lt: (endDate || new Date().toString()),
           }
         })
+      }
+      if (categoryEventId[0]) {
+        let category = { $or: [] };
+        categoryEventId.forEach(e => {
+          category.$or.push({ "category": ObjectId(e) });
+        });
+        conditionQuery["$and"].push(category);
       }
 
       if (txtSearch != "") {
         conditionQuery.$text = { $search: txtSearch };
       }
 
-      arrEvent = await Event.find(conditionQuery).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord).sort({ createAt: 1 });
+      let e = await Event.aggregate([
+        { $match: conditionQuery },
+        {
+          $lookup:
+          {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "user"
+          }
+        },
+        {
+          $unwind: "$user"
+        },
+        {
+          $lookup:
+          {
+            from: "eventcategories",
+            localField: "category",
+            foreignField: "_id",
+            as: "eventCategory"
+          }
+        },
+        {
+          $unwind: "$eventCategory"
+        },
+        { $skip: +numberRecord * (+pageNumber - 1) },
+        { $limit: +numberRecord },
+        { $sort: { 'session.day': 1 } }
+      ])
 
-      res.status(200).json({ result: arrEvent });
+      res.status(200).json({ result: e });
     } catch (err) {
       next(err);
     }
@@ -566,7 +661,6 @@ module.exports = {
 
     let user = await User.findById(_id, { bank: 1 });
 
-    console.log(user);
 
     res.status(200).json({ result: user });
 
@@ -575,7 +669,8 @@ module.exports = {
   updateBankInf: async (req, res, next) => {
     let { bankName, bankNumber, accountOwner, bankBranch } = req.body;
     let _id = req.user;
-    let user = User.findByIdAndUpdate(_id, { bank: { bankName, bankNumber, accountOwner, bankBranch } });
+    let user = await User.findByIdAndUpdate(_id, { bank: { bankName, bankNumber, accountOwner, bankBranch } });
+
     if (!user) {
       return next({ error: { message: 'User is not exists!' } });
     }
