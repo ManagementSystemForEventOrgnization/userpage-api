@@ -2,8 +2,8 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const applyEventSchema = new Schema({
-    userId: Schema.Types.ObjectId,
-    eventId: Schema.Types.ObjectId,
+    userId: { type : Schema.Types.ObjectId , ref: 'users'},
+    eventId: { type : Schema.Types.ObjectId, ref: 'event' },
     session : { type : Array },
     qrcode: { type:String, "index": "text" },
     createdAt: { type: Date, default: new Date() },

@@ -25,10 +25,9 @@ module.exports = (app) => {
         passwordField: 'password',
     }, async (username, password, done) => {
         //1
-        if (typeof username === 'undefined' || typeof password === 'undefined') {
+        if (!username || !password) {
             return done(null, false, { message: 'Invalid data' });
         }
-        
         User.findOne({ 'email': username }).then( user => {
             if (!user) {
                 return done(null, false, { message: 'username incorrect' });

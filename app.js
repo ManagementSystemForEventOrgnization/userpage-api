@@ -8,7 +8,6 @@ const bodyParser = require('body-parser');
 const passport = require('passport');
 const mongoose = require('mongoose');
 
-
 mongoose.connect(keys.mongoURI, { useNewUrlParser: true, useUnifiedTopology: true, 'useCreateIndex': true, useFindAndModify: false });
 
 var app = express();
@@ -31,7 +30,7 @@ require('./middlewares/loadMongoose');
 
 require('./utils/passport-google');
 require('./utils/passportLogin')(app);
-
+app.use('/api', require('./routes/commentRouter'));
 app.use('/api', require('./routes/chatRouter'));
 app.use('/api', require('./routes/eventRouter'));
 app.use('/api', require('./routes/notificationRouters'));
