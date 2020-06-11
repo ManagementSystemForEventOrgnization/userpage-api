@@ -6,7 +6,7 @@ const applyEventSchema = new Schema({
     eventId: { type : Schema.Types.ObjectId, ref: 'event' },
     session : { type : Array },
     qrcode: { type:String, "index": "text" },
-    createdAt: { type: Date, default: new Date() },
+    createdAt: { type: Date, default: Date() },
     updatedAt: Date
 })
 

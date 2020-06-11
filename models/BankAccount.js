@@ -9,7 +9,7 @@ const bankAccountSchema = new Schema({
     branchCode: String,
     accountNumber: String,
     accountName: String,
-    createAt: { type: Date, default: new Date() },
+    createAt: { type: Date, default: Date() },
     updateAt: Date
 })
 

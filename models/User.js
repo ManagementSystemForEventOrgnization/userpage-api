@@ -31,7 +31,7 @@ const userSchema = new Schema({
         accountOwner: String
     },
     isActive:{type:Boolean,default: false},
-    createAt: { type: Date, default: new Date() },
+    createAt: { type: Date, default: Date() },
     updateAt: Date
 })
 
