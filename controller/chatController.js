@@ -34,7 +34,8 @@ module.exports = {
         let chat = new Chat({
             sender,
             receiver,
-            content
+            content,
+            createAt: Date.now()
         })
 
         await chat.save();

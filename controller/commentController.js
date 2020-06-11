@@ -31,7 +31,7 @@ module.exports = {
             { $skip: +numberRecord * (+pageNumber - 1) },
             { $limit: +numberRecord }
         ]);
-        // c.reverse();
+        comment.reverse();
         res.status(200).json({ result: comment });
     },
 
@@ -45,7 +45,8 @@ module.exports = {
         let userId = req.user;
 
         let comment = new Comment({
-            eventId,content,userId
+            eventId,content,userId,
+            createAt: Date.now()
         });
 
         await comment.save();
