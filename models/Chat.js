@@ -7,7 +7,7 @@ const chatSchema = new Schema({
     content: String,
     isSeen: Boolean,
     isDelete: Boolean,
-    createAt: { type: Date, default: new Date() },
+    createAt: { type: Date, default: Date() },
     updateAt: Date
 })
 
