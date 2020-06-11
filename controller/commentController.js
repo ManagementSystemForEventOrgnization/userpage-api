@@ -45,8 +45,7 @@ module.exports = {
         let userId = req.user;
 
         let comment = new Comment({
-            eventId,content,userId,
-            createAt: Date.now()
+            eventId,content,userId
         });
 
         await comment.save();

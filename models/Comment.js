@@ -6,8 +6,6 @@ const commentSchema = new Schema({
     eventId: { type : Schema.Types.ObjectId , ref: 'event'},
     content: String,
     isDelete: Boolean,
-    createAt: { type: Date, default: Date() },
-    updateAt: Date
-})
+}, { timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' }})
 
 mongoose.model('comment', commentSchema);
