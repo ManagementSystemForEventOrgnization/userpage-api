@@ -27,7 +27,7 @@ module.exports = {
             {
                 $unwind: "$usersComment"
             },
-            { $sort: { createdAt: -1 } },
+            { $sort: { createAt: -1 } },
             { $skip: +numberRecord * (+pageNumber - 1) },
             { $limit: +numberRecord }
         ]);
