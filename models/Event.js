@@ -31,9 +31,12 @@ const eventSchema = new Schema({
     category: { type : Schema.Types.ObjectId , ref: 'eventCategory'},
     status: { type: String, "index": "text", default: "PENDING" }, //PENDING, START, FINISH, DRAFT, CANCEL
     bannerUrl: String,
-    createdAt: { type: Date, default: Date() },
     isPreview: { type: Boolean },
-    updatedAt: Date
+}, { 
+	timestamps: { 
+		createdAt: 'createdAt', 
+		updatedAt: 'updatedAt' 
+	}
 })
 
 mongoose.model('event', eventSchema);

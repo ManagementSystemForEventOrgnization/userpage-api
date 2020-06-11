@@ -8,9 +8,12 @@ const bankAccountSchema = new Schema({
     branchName: String,
     branchCode: String,
     accountNumber: String,
-    accountName: String,
-    createAt: { type: Date, default: Date() },
-    updateAt: Date
+    accountName: String
+}, { 
+	timestamps: { 
+		createdAt: 'createdAt', 
+		updatedAt: 'updatedAt' 
+	}
 })
 
 mongoose.model('bankAccount', bankAccountSchema);

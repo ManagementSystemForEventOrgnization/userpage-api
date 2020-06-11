@@ -12,10 +12,13 @@ const paymentSchema = new Schema({
     chargeId: String,
     zptransId: String,
     payType: String,
-    createdAt: { type: Date, default: Date() },
     sessionRefunded: [String],
-    updatedAt: Date,
     session: [String],
+}, { 
+	timestamps: { 
+		createdAt: 'createdAt', 
+		updatedAt: 'updatedAt' 
+	}
 })
 
 mongoose.model('payment', paymentSchema);

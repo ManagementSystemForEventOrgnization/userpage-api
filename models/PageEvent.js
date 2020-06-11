@@ -10,9 +10,12 @@ const pageEventSchema = new Schema({
     //     section: Number
     // },
     rows: {type: Array},
-    header: {type: Array},
-    createAt: { type: Date, default: Date() },
-    updateAt: Date
+    header: {type: Array}
+}, { 
+	timestamps: { 
+		createdAt: 'createdAt', 
+		updatedAt: 'updatedAt' 
+	}
 })
 
 mongoose.model('pageEvent', pageEventSchema);

@@ -6,9 +6,12 @@ const chatSchema = new Schema({
     receiver: String,// Schema.Types.ObjectId,
     content: String,
     isSeen: Boolean,
-    isDelete: Boolean,
-    createAt: { type: Date, default: Date() },
-    updateAt: Date
+    isDelete: Boolean
+}, { 
+	timestamps: { 
+		createdAt: 'createdAt', 
+		updatedAt: 'updatedAt' 
+	}
 })
 
 mongoose.model('chat', chatSchema);

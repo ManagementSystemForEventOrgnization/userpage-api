@@ -16,7 +16,7 @@ module.exports = {
         numberRecord = numberRecord || 50;
 
         let c = await Chat.find({ $or: [{ sender: sender }, { receiver: sender }] })
-                        .sort({createAt: -1})
+                        .sort({createdAt: -1})
                         .skip((+pageNumber - 1) * numberRecord).limit(+numberRecord)
                         
                         // c.reverse();
@@ -34,8 +34,7 @@ module.exports = {
         let chat = new Chat({
             sender,
             receiver,
-            content,
-            createAt: Date.now()
+            content
         })
 
         await chat.save();

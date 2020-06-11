@@ -81,7 +81,7 @@ module.exports = {
 
                     Promise.all([
                         Event.findByIdAndUpdate({ _id: ObjectId(_idE) }, { isPreview: isPreview }),
-                        PageEvent.findByIdAndUpdate({ _id: ObjectId(_id) }, { rows: blocks, updateAt: new Date(), header })
+                        PageEvent.findByIdAndUpdate({ _id: ObjectId(_id) }, { rows: blocks, header })
                     ]).then(([e, pe]) => {
                         if (!pe) {
                             return next({ error: { message: 'Event is not exists', code: 422 } });
@@ -140,7 +140,7 @@ module.exports = {
                 ApplyEvent.findOne({ eventId: ObjectId(eventId), userId: ObjectId(idUser) }),
                 Event.findOne({ _id: ObjectId(eventId) }),
                 PageEvent.findOne({ eventId: new ObjectId(eventId) },
-                    { _id: 0, __v: 0, createAt: 0, updateAt: 0 })
+                    { _id: 0, __v: 0, createdAt: 0, updatedAt: 0 })
             ]).then(([ap, e, p]) => {
                 if (!e) {
                     return next({ error: { message: 'Event is not exists', code: 422 } });
@@ -239,7 +239,7 @@ module.exports = {
                 sortQuery.total = -1;
                 mathQuery.total = { $ne: 0 };
             } else {
-                sortQuery.createAt = -1;
+                sortQuery.createdAt = -1;
             }
             let e = await Event.aggregate([
                 { $match: query },
