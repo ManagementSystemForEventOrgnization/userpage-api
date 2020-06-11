@@ -7,6 +7,8 @@ const Payment = mongoose.model('payment');
 const Event = mongoose.model('event');
 const Notification = mongoose.model('notification');
 
+const ObjectId = mongoose.Types.ObjectId;
+
 const axios = require('axios');
 const CryptoJS = require('crypto-js');
 const uuidv1 = require('uuid/v1');
@@ -24,102 +26,31 @@ const embeddata = {
 };
 
 module.exports = {
-
-	paymentHistorySend: async (req, res, next) => {
+	paymentHis: async (req, res, next) => {
 		let {
 			startDate,
 			endDate,
 			pageNumber,
 			numberRecord, } = req.query;
 
-		pageNumber = pageNumber || 1;
-		numberRecord = numberRecord || 10;
+		pageNumber = +pageNumber || 1;
+		numberRecord = +numberRecord || 10;
 		let userId = req.user;
 
-		let query = { sender: userId };
+		let condition = { $or: [{ sender: ObjectId(userId) }, { receiver: ObjectId(userId) }] };
 
-		let e = await Payment.aggregate([
-			{ $match: query },
-			{
-				$lookup:
-				{
-					from: "users",
-					localField: "receiver",
-					foreignField: "_id",
-					as: "users_receiver"
-				}
-			},
-			{
-				$unwind: "$users_receiver"
-			},
-			{
-				$lookup:
-				{
-					from: "users",
-					localField: "sender",
-					foreignField: "_id",
-					as: "users_sender"
-				}
-			},
-			{
-				$unwind: "$users_sender"
-			},
-			{ $skip: +numberRecord * (+pageNumber - 1) },
-			{ $limit: numberRecord },
-			{ $sort: { createdAt: 1 } }
-		]);
+		let pay = await Payment.find(condition)
+		.populate("sender").populate("eventId").populate("receiver")
+		.sort({ createdAt: -1 }).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord);
 
-		res.status(200).json({result: e});
+		if (!pay) {
+			return next({ error: { message: 'Err', code: 700 } });
+		}
+
+		res.status(200).json({ result: pay });
 	},
 
-	paymentHistoryReceive: async (req, res, next) => {
-		let {
-			startDate,
-			endDate,
-			pageNumber,
-			numberRecord, } = req.query;
-
-		pageNumber = pageNumber || 1;
-		numberRecord = numberRecord || 10;
-		let userId = req.user;
-
-		let query = { receiver: userId };
-
-
-		let e = await Payment.aggregate([
-			{ $match: query },
-			{
-				$lookup:
-				{
-					from: "users",
-					localField: "receiver",
-					foreignField: "_id",
-					as: "users_receiver"
-				}
-			},
-			{
-				$unwind: "$users_receiver"
-			},
-			{
-				$lookup:
-				{
-					from: "users",
-					localField: "sender",
-					foreignField: "_id",
-					as: "users_sender"
-				}
-			},
-			{
-				$unwind: "$users_sender"
-			},
-			{ $skip: +numberRecord * (+pageNumber - 1) },
-			{ $limit: numberRecord },
-			{ $sort: { createdAt: 1 } }
-		])
-
-		res.status(200).json({result: e});
-	},
-
+	
 	refund: async (req, res, next) => {
 		let { paymentId, joinUserId, eventId, sessionId } = req.body;
 
@@ -150,9 +81,9 @@ module.exports = {
 						if (success == true) {
 							currentPayment.sessionRefunded.push(sessionId)
 							await Payment.findByIdAndUpdate({ _id: currentPayment._id }, { sessionRefunded: currentPayment.sessionRefunded });
-							
+
 						}
-							
+
 						newNotification.save();
 					}
 
@@ -160,7 +91,8 @@ module.exports = {
 
 					if (currentPayment.payType === "CREDIT_CARD") {
 						stripe.refunds.create(
-							{ charge: currentPayment.chargeId, 
+							{
+								charge: currentPayment.chargeId,
 								amount: (currentPayment.amount / currentPayment.session.length)
 							},
 							function (err, refund) {
@@ -236,8 +168,8 @@ module.exports = {
 		let userId = req.user;
 
 		try {
-			var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId});
-			
+			var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId });
+
 			if (currentApplyEvent) {
 				const items = [];
 
@@ -257,7 +189,7 @@ module.exports = {
 				order.mac = CryptoJS.HmacSHA256(data, config.key1).toString();
 
 				var result = await axios.post(config.endpoint, null, { params: order })
-				
+
 				const newPayment = new Payment({
 					sender: userId,
 					eventId: eventId,
@@ -270,7 +202,7 @@ module.exports = {
 				});
 
 				currentApplyEvent.updatedAt = Date();
-				currentApplyEvent.session.forEach(element => { 
+				currentApplyEvent.session.forEach(element => {
 					if (sessionIds.includes(element.id)) {
 						element.paymentId = newPayment._id;
 					}
@@ -289,7 +221,7 @@ module.exports = {
 					newPayment.status = "UNPAID";
 					await newPayment.save();
 					await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
-                    
+
 					next({ error: { message: 'Create payment failed', code: 901 } });
 				}
 			} else {
@@ -342,9 +274,9 @@ module.exports = {
 
 		let { eventId, sessionIds, amount, description, receiver } = req.body;
 		let userId = req.user;
-		
+
 		try {
-			var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId});
+			var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId });
 
 			if (currentApplyEvent) {
 				let cardFind = await Cards.findOne({ userId: req.user });
@@ -371,22 +303,22 @@ module.exports = {
 					});
 
 					currentApplyEvent.updatedAt = Date();
-					currentApplyEvent.session.forEach(element => { 
+					currentApplyEvent.session.forEach(element => {
 						if (sessionIds.includes(element.id)) {
 							element.paymentId = newPayment._id;
 						}
 					})
 
 					if (charge) {
-							console.log(currentApplyEvent)
-							console.log(newPayment)
+						console.log(currentApplyEvent)
+						console.log(newPayment)
 						newPayment.cardId = cardFind.id;
 						newPayment.chargeId = charge.id;
 						newPayment.status = "PAID";
 
 						await newPayment.save();
 						await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
-                    
+
 						res.status(200).json({ result: true });
 					} else {
 						newPayment.status = "FAILED";

@@ -18,7 +18,6 @@ module.exports = {
         if (!name || !session) {
             return next({ error: { message: 'Invalid value', code: 602 } });
         }
-        console.log(banner);
         let userId = req.user;
         if (myFunction.validateUrlWeb(urlWeb)) {
             return next({ error: { message: 'Formation URL is wrong.', code: 422 } });
@@ -140,9 +139,9 @@ module.exports = {
             Promise.all([
                 ApplyEvent.findOne({ eventId: ObjectId(eventId), userId: ObjectId(idUser) }),
                 Event.findOne({ _id: ObjectId(eventId) }),
-                PageEvent.findOne({ eventId: new ObjectId(eventId) }, { _id: 0, __v: 0, createAt: 0, updateAt: 0 })
+                PageEvent.findOne({ eventId: new ObjectId(eventId) },
+                    { _id: 0, __v: 0, createAt: 0, updateAt: 0 })
             ]).then(([ap, e, p]) => {
-
                 if (!e) {
                     return next({ error: { message: 'Event is not exists', code: 422 } });
                 }
@@ -306,12 +305,6 @@ module.exports = {
             if (txtSearch != "") {
                 query.$text = { $search: txtSearch };
             }
-
-
-
-            // if (categoryEventId != "") {
-            //     query.category = categoryEventId
-            // }
             if (categoryEventId[0]) {
 
                 let category = { $or: [] };
@@ -465,6 +458,7 @@ module.exports = {
                 $unwind: "$user"
             },
             { $project: { user: 1, _id: 0 } },
+            {$sort : {createdAt: -1}},
             { $skip: +numberRecord * (+pageNumber - 1) },
             { $limit: +numberRecord },
         ]);
