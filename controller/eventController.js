@@ -224,7 +224,8 @@ module.exports = {
                 txtSearch,
                 pageNumber,
                 numberRecord,
-                type
+                type,
+                fee
             } = req.query;
             type = type || '';
             pageNumber = +pageNumber || 1;
