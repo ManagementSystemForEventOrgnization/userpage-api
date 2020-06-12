@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const ObjectId = mongoose.Types.ObjectId;
 const Comment = mongoose.model('comment');
+const Axios = require('axios');
 
 module.exports = {
     getList: async (req, res, next) => {
@@ -14,7 +15,7 @@ module.exports = {
         numberRecord = numberRecord || 5;
 
         let comment = await Comment.aggregate([
-            { $match: { eventId:  ObjectId(eventId) } },
+            { $match: { eventId: ObjectId(eventId) } },
             {
                 $lookup:
                 {
@@ -39,21 +40,27 @@ module.exports = {
             eventId,
             content,
         } = req.body;
-        
+
 
         let userId = req.user;
 
         let comment = new Comment({
-            eventId,content,userId
+            eventId, content, userId
+        });
+        let cmt = await comment.save();
+        let c = await Comment.findById(cmt._id).populate({ path: "userId", select: 'fullName' });
+
+        Axios.post('http://localhost:4000/api/post/comment',
+        {
+                eventId: eventId,
+                cmt: c            
         });
 
-        await comment.save();
-
-        res.status(200).json({ result: comment });
+        res.status(200).json({ result: c });
 
     },
 
-   
+
 
 
 }

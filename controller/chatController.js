@@ -33,7 +33,7 @@ module.exports = {
         sender = sender || req.users;
 
         let chat = new Chat({
-            sender,
+            sender, 
             receiver,
             fullName,
             content
@@ -44,7 +44,4 @@ module.exports = {
         res.status(200).json({ result: chat });
 
     },
-
-
-
 }
