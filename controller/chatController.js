@@ -10,6 +10,7 @@ module.exports = {
             pageNumber,
             numberRecord,
         } = req.query;
+        
         sender = sender || req.user;
         pageNumber = pageNumber || 1;
         numberRecord = numberRecord || 50;

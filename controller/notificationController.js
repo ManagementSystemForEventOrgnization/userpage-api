@@ -61,9 +61,9 @@ module.exports = {
     getListNotification: async (req, res, next) => {
         let { pageNumber, numberRecord } = req.query;
         let idUser = req.user;
-        pageNumber = pageNumber || 1;
-        numberRecord = numberRecord || 10;
-        let condition = {};
+        pageNumber = +pageNumber || 1;
+        numberRecord = +numberRecord || 10;
+        let condition = {receiver: ObjectId(idUser) };
 
         try {
             let notifications =  await Notification.aggregate([
