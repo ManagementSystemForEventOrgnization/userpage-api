@@ -11,7 +11,7 @@ module.exports = {
             numberRecord,
         } = req.query;
 
-        sender = sender || req.users;
+        sender = sender || req.user;
         pageNumber = pageNumber || 1;
         numberRecord = numberRecord || 50;
 

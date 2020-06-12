@@ -64,7 +64,7 @@ module.exports = {
         let idUser = req.user;
         pageNumber = +pageNumber || 1;
         numberRecord = +numberRecord || 10;
-        let condition = {receiver: {$eq: ObjectId(idUser) }};
+        let condition = {receiver: ObjectId(idUser) };
 
         try {
             let notifications =  await Notification.aggregate([
