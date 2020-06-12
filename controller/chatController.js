@@ -10,15 +10,14 @@ module.exports = {
             pageNumber,
             numberRecord,
         } = req.query;
-
-        sender = sender || req.users;
+        sender = sender || req.user;
         pageNumber = pageNumber || 1;
         numberRecord = numberRecord || 50;
 
         let c = await Chat.find({ $or: [{ sender: sender }, { receiver: sender }] })
                         .sort({createdAt: -1})
-                        .skip((+pageNumber - 1) * numberRecord).limit(+numberRecord)
-                        
+                        .skip((+pageNumber - 1) * numberRecord)
+                        .limit(+numberRecord)
                         // c.reverse();
         res.status(200).json({ result: c });
     },
@@ -30,7 +29,7 @@ module.exports = {
             fullName,
             content,
         } = req.body;
-        sender = sender || req.users;
+        sender = sender || req.user;
 
         let chat = new Chat({
             sender, 

@@ -48,7 +48,7 @@ module.exports = {
             eventId, content, userId
         });
         let cmt = await comment.save();
-        let c = await Comment.findById(cmt._id).populate({ path: "userId", select: 'fullName' });
+        let c = await Comment.findById(cmt._id).populate({ path: "userId", select: ['fullName', 'avatar'] });
 
         Axios.post('http://localhost:4000/api/post/comment',
         {
