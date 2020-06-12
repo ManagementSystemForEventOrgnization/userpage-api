@@ -196,6 +196,7 @@ module.exports = {
                         }
                     }
                     e.session = eS;
+
                 }
                 result.event = e;
                 result.header = p.header;
@@ -220,7 +221,6 @@ module.exports = {
                 categoryEventId,
                 startDate,
                 endDate,
-                fee,
                 txtSearch,
                 pageNumber,
                 numberRecord,
@@ -414,6 +414,7 @@ module.exports = {
                 { $limit: +numberRecord },
                 { $sort: { 'session.day': 1 } }
             ])
+            console.log("Tcl:", e);
             res.status(200).json({ result: e });
         } catch (error) {
             next({ error: { message: 'Something is wrong!', code: 700 } });
