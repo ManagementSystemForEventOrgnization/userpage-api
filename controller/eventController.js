@@ -303,7 +303,6 @@ module.exports = {
                         $project: projectQuery,
 
                     },
-
                     { $match: mathQuery },
                     { $skip: +numberRecord * (+pageNumber - 1) },
                     { $limit: +numberRecord },
