@@ -30,9 +30,12 @@ const userSchema = new Schema({
         bankBranch: String,
         accountOwner: String
     },
-    isActive: { type: Boolean, default: false },
-    createAt: { type: Date, default: new Date() },
-    updateAt: Date
+    isActive:{type:Boolean,default: false}
+}, { 
+	timestamps: { 
+		createdAt: 'createdAt', 
+		updatedAt: 'updatedAt' 
+	}
 })
 
 mongoose.model('users', userSchema);

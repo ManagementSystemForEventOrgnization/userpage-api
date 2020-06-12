@@ -5,9 +5,12 @@ const cardSchema = new Schema({
     customerId: String,
     userId: { type : Schema.Types.ObjectId , ref: 'users'},
     cardNumber: String,
-    cardExpire: String,
-    createAt: { type: Date, default: new Date() },
-    updateAt: Date
+    cardExpire: String
+}, { 
+	timestamps: { 
+		createdAt: 'createdAt', 
+		updatedAt: 'updatedAt' 
+	}
 })
 
 mongoose.model('cards', cardSchema);

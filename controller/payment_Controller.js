@@ -74,7 +74,6 @@ module.exports = {
 							},
 							isRead: false,
 							isDelete: false,
-							createdAt: Date(),
 							session: [sessionId]
 						});
 
@@ -201,7 +200,6 @@ module.exports = {
 					session: sessionIds
 				});
 
-				currentApplyEvent.updatedAt = Date();
 				currentApplyEvent.session.forEach(element => {
 					if (sessionIds.includes(element.id)) {
 						element.paymentId = newPayment._id;
@@ -298,11 +296,9 @@ module.exports = {
 						payType: "CREDIT_CARD",
 						description: description,
 						cardId: cardFind.id,
-						createdAt: Date(),
 						session: sessionIds
 					});
 
-					currentApplyEvent.updatedAt = Date();
 					currentApplyEvent.session.forEach(element => {
 						if (sessionIds.includes(element.id)) {
 							element.paymentId = newPayment._id;

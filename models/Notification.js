@@ -13,9 +13,12 @@ const notificationSchema = new Schema({
     },
     isRead: Boolean,
     isDelete: Boolean,
-    createAt: { type: Date, default: new Date() },
-    updateAt: Date,
     session: [String],
+}, { 
+	timestamps: { 
+		createdAt: 'createdAt', 
+		updatedAt: 'updatedAt' 
+	}
 })
 
 mongoose.model('notification', notificationSchema);

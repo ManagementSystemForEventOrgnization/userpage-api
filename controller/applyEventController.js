@@ -119,8 +119,7 @@ module.exports = {
                         userId: userId,
                         eventId: eventId,
                         session: sessions,
-                        qrcode: userId,
-                        createdAt: Date()
+                        qrcode: userId
                     });
 
                     await newApplyEvent.save();
@@ -138,7 +137,6 @@ module.exports = {
                     },
                     isRead: false,
                     isDelete: false,
-                    createdAt: Date(),
                     session: sessionIds
                 });
                 
@@ -298,8 +296,7 @@ module.exports = {
                         },
                         session: [sessionId],
                         isRead: false,
-                        isDelete: false,
-                        createdAt: Date()
+                        isDelete: false
                     });
 
                     currentEvent.session.forEach(ele => {
@@ -468,7 +465,6 @@ module.exports = {
                     },
                     isRead: false,
                     isDelete: false,
-                    createdAt: Date(),
                     session: sessionNoti
                 });
 
