@@ -600,14 +600,19 @@ module.exports = {
       if (status) {
         conditionQuery.$and.push({ status });
       }
-
       if (startDate !== "") {
         conditionQuery.$and.push({
           'session.day': {
-            $gt: new Date(startDate),
-            $lt: new Date(endDate || new Date().toString()),
+            $gt: new Date(startDate)
           }
         })
+        if(endDate){
+          conditionQuery.$and.push({
+            'session.day': {
+              $lte: new Date(endDate),
+            }
+          })
+        }
       }
       if (categoryEventId[0]) {
         let category = { $or: [] };
@@ -616,7 +621,6 @@ module.exports = {
         });
         conditionQuery["$and"].push(category);
       }
-
       if (txtSearch != "") {
         conditionQuery.$text = { $search: txtSearch };
       }
