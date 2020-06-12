@@ -27,6 +27,7 @@ module.exports = {
         let {
             sender,
             receiver,
+            fullName,
             content,
         } = req.body;
         sender = sender || req.users;
@@ -34,6 +35,7 @@ module.exports = {
         let chat = new Chat({
             sender,
             receiver,
+            fullName,
             content
         })
 

@@ -580,7 +580,7 @@ module.exports = {
       numberRecord,
       status,
     } = req.query;
-    
+
     status = status || '';
     txtSearch = txtSearch || "";
     startDate = startDate || "";
@@ -620,7 +620,6 @@ module.exports = {
       if (txtSearch != "") {
         conditionQuery.$text = { $search: txtSearch };
       }
-
       let e = await Event.aggregate([
         { $match: conditionQuery },
         {

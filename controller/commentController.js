@@ -31,7 +31,6 @@ module.exports = {
             { $skip: +numberRecord * (+pageNumber - 1) },
             { $limit: +numberRecord }
         ]);
-        comment.reverse();
         res.status(200).json({ result: comment });
     },
 
