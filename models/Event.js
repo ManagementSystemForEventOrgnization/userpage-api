@@ -29,7 +29,7 @@ const eventSchema = new Schema({
         }
     ],//{type : Array}, // limitNumber, joinNumber, endTime, startTime, detail, imageMap, address, linkfile, status 
     category: { type : Schema.Types.ObjectId , ref: 'eventCategory'},
-    status: { type: String, "index": "text", default: "PENDING" }, //PENDING, START, FINISH, DRAFT, CANCEL
+    status: { type: String, "index": "text", default: "DRAFT" }, //PENDING, START, FINISH, DRAFT, CANCEL
     bannerUrl: String,
     isPreview: { type: Boolean },
 }, { 

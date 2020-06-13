@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const Notification = mongoose.model('notification');
-
+const ObjectId = mongoose.Types.ObjectId;
 module.exports = {
     startEventNoti: async (req, res, next) => {
        
