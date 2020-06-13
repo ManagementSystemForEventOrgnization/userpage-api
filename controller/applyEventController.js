@@ -7,7 +7,6 @@ const Notification = mongoose.model('notification');
 const ObjectId = mongoose.Types.ObjectId;
 
 const payment_Controller = require('../controller/payment_Controller');
-const FreePaymentId = "FreeTicket"
 
 module.exports = {
     updatePaymentStatus: async (req, res, next) => {
@@ -94,10 +93,6 @@ module.exports = {
                         element.status = "JOINED"
                         element.isConfirm = false
                         element.isReject = false
-
-                        if (currentEvent.isSellTicket != true) {
-                            element.paymentId = FreePaymentId
-                        }
                     })
                 }
 
@@ -268,7 +263,7 @@ module.exports = {
         }
 
         let { joinUserId, eventId, sessionId } = req.body;
-        let userId = "5ec8e500bc1ae931e85dfa3c";// req.user;
+        let userId = req.user;
 
         try {
             var currentEvent = await Event.findById(eventId);
@@ -281,7 +276,12 @@ module.exports = {
 
             if (session) {
                 if (session.isReject != true) {
-                    session.isReject = true
+                    if (session.isConfirm == true) {
+                        next({ error: { message: "Session starting, Can not reject user", code: 710 } });
+                        return;
+                    }
+
+                    session.isReject = true,
                     session.status = "REJECT"
 
                     const newNotification = new Notification({
@@ -305,7 +305,7 @@ module.exports = {
                         }
                     })
 
-                    if (session.paymentId !== undefined && session.paymentId !== null && session.paymentId !== FreePaymentId) {
+                    if (session.paymentId !== undefined && session.paymentId !== null) {
                         req.body.paymentId = session.paymentId
 
                         await payment_Controller.refund(req, res, next)
@@ -412,7 +412,7 @@ module.exports = {
                         sessionNoti.push(itemChanges[i].id);
                     }
 
-                    if (itemChanges[i].paymentId !== FreePaymentId) {
+                    if (itemChanges[i].paymentId !== undefined && itemChanges[i].paymentId !== null) {
                         req.body.paymentId = itemChanges[i].paymentId;
                         req.body.joinUserId = applyEvents[index].userId;
                         req.body.sessionId = itemChanges[i].id;
