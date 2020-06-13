@@ -224,7 +224,8 @@ module.exports = {
                 txtSearch,
                 pageNumber,
                 numberRecord,
-                type
+                type,
+                fee
             } = req.query;
             type = type || '';
             pageNumber = +pageNumber || 1;
@@ -303,7 +304,6 @@ module.exports = {
                         $project: projectQuery,
 
                     },
-
                     { $match: mathQuery },
                     { $skip: +numberRecord * (+pageNumber - 1) },
                     { $limit: +numberRecord },
