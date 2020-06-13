@@ -15,18 +15,4 @@ router.get('/get_list_event_coming_up', eventController.getListEventComingUp);
 router.get('/get_event_inf', eventController.getEventInf);
 router.get('/get_user_join_event', eventController.getUserJoinEvent);
 
-router.get('/test', async (req, res) => {
-    console.log('vao');
-
-    let t = await axios.post('http://localhost:4000/api/post/comment',
-        {
-                eventId: '5ed32c1bcb90f92950a13216',
-                cmt: 'sang'
-            
-        });
-    console.log(t.data);
-    res.send(t.data);
-})
-
-
 module.exports = router;
