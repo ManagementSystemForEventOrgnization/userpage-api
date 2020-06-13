@@ -108,7 +108,7 @@ module.exports = {
                     //let p = await PageEvent.findByIdAndUpdate({ _id: ObjectId(_id) }, { rows: blocks, updateAt: new Date(), header });
                     let objectUpdate = { isPreview };
                     if (!isPreview) {
-                        objectUpdate.status = 'DRAFT';
+                        objectUpdate.status = 'PENDING';
                     }
                     Promise.all([
                         Event.findByIdAndUpdate({ _id: ObjectId(_idE) }, objectUpdate),
@@ -457,7 +457,7 @@ module.exports = {
                     ]
                 ),
                 Comment.countDocuments({ eventId: ObjectId(eventId) }),
-                ApplyEvent.findOne({ userId: ObjectId(idU), eventId: ObjectId(eventId) }, { session: 1, _id: 0 })
+                ApplyEvent.findOne({ userId: ObjectId(idU), eventId: ObjectId(eventId) }, { session: 1, _id: 0 }).populate({path: 'session.paymentId'})
             ])
                 .then(([event, countComment, sessionApply]) => {
                     if (!event[0]) {
