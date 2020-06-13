@@ -50,7 +50,7 @@ module.exports = {
         let cmt = await comment.save();
         let c = await Comment.findById(cmt._id).populate({ path: "userId", select: ['fullName', 'avatar'] });
 
-        Axios.post('http://localhost:4000/api/post/comment',
+        Axios.post('https://event-chat.herokuapp.com/api/post/comment',
         {
                 eventId: eventId,
                 cmt: c            
