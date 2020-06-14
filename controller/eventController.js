@@ -512,15 +512,11 @@ module.exports = {
         if (!eventId || !sessionId) {
             return next({ error: { message: 'Invalid data!', code: 700 } });
         }
-
         let users = await ApplyEvent.aggregate([
             {
                 $match: {
-                    $and: [
-                        { 'session.id': sessionId },
-                        { eventId: ObjectId(eventId) },
-                        { 'session': { 'isReject': false } }
-                    ]
+                    eventId: ObjectId(eventId),
+                    session: { $elemMatch: { id: sessionId, isReject: false } }
                 }
             },
             {
@@ -535,17 +531,19 @@ module.exports = {
             {
                 $unwind: "$user"
             },
-            // { $project: { user: 1, _id: 0 } },
+            { $project: { user: 1, _id: 0 } },
             { $sort: { createdAt: -1 } },
             { $skip: +numberRecord * (+pageNumber - 1) },
             { $limit: +numberRecord },
         ]);
 
+        res.send(users);
+        return;
 
         if (!users) {
             return next({ error: { message: 'Something is wrong!' } })
         }
-        
+
         let result = [];
         users.forEach(element => {
             result.push(element.user);
