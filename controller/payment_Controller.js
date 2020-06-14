@@ -80,10 +80,11 @@ module.exports = {
 						if (success == true) {
 							currentPayment.sessionRefunded.push(sessionId)
 							await Payment.findByIdAndUpdate({ _id: currentPayment._id }, { sessionRefunded: currentPayment.sessionRefunded });
-
 						}
 
 						newNotification.save();
+						console.log("2222222222 did refund")
+						return success;
 					}
 
 					console.log(currentPayment.payType)
