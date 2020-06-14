@@ -18,7 +18,7 @@ module.exports = {
         delete objectUpdate["eventId"];
         try {
             let e = await Event.findOneAndUpdate({ _id: ObjectId(id), userId: ObjectId(req.user) }, objectUpdate);
-            
+
             if (!e) {
                 return next({ error: { message: 'Event not exists!' } });
             }
@@ -34,9 +34,9 @@ module.exports = {
         try {
             let e = await Event.findOneAndUpdate({ _id: ObjectId(id), userId: ObjectId(req.user) }, { status: 'DELETE' });
             if (!e) {
-                return next({ error: { message: 'Event not exists' , code: 601} });
+                return next({ error: { message: 'Event not exists', code: 601 } });
             }
-            res.status(200).json({result: e});
+            res.status(200).json({ result: e });
         } catch (error) {
 
         }
@@ -457,9 +457,10 @@ module.exports = {
                     ]
                 ),
                 Comment.countDocuments({ eventId: ObjectId(eventId) }),
-                ApplyEvent.findOne({ userId: ObjectId(idU), eventId: ObjectId(eventId) }, { session: 1, _id: 0 }).populate({path: 'session.paymentId'})
+                ApplyEvent.findOne({ userId: ObjectId(idU), eventId: ObjectId(eventId) }, { session: 1, _id: 0 }).populate({ path: 'session.paymentId' })
             ])
                 .then(([event, countComment, sessionApply]) => {
+                    console.log(event)
                     if (!event[0]) {
                         return next({ error: { message: 'Event is not Exists!', code: 700 } });
                     }
@@ -513,7 +514,15 @@ module.exports = {
         }
 
         let users = await ApplyEvent.aggregate([
-            { $match: { 'session.id': sessionId, eventId: ObjectId(eventId) } },
+            {
+                $match: {
+                    $and: [
+                        { 'session.id': sessionId },
+                        { eventId: ObjectId(eventId) },
+                        { 'session': { 'isReject': false } }
+                    ]
+                }
+            },
             {
                 $lookup:
                 {
@@ -526,20 +535,22 @@ module.exports = {
             {
                 $unwind: "$user"
             },
-            { $project: { user: 1, _id: 0 } },
+            // { $project: { user: 1, _id: 0 } },
             { $sort: { createdAt: -1 } },
             { $skip: +numberRecord * (+pageNumber - 1) },
             { $limit: +numberRecord },
         ]);
 
+
         if (!users) {
             return next({ error: { message: 'Something is wrong!' } })
         }
-
+        
         let result = [];
         users.forEach(element => {
             result.push(element.user);
         });
+
         res.status(200).json({ result: result });
     },
 
