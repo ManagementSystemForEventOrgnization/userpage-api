@@ -536,7 +536,7 @@ module.exports = {
             { $skip: +numberRecord * (+pageNumber - 1) },
             { $limit: +numberRecord },
         ]);
-
+        
         if (!users) {
             return next({ error: { message: 'Something is wrong!' } })
         }

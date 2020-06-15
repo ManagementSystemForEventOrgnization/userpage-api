@@ -40,8 +40,8 @@ module.exports = {
 		let condition = { $or: [{ sender: ObjectId(userId) }, { receiver: ObjectId(userId) }] };
 
 		let pay = await Payment.find(condition)
-		.populate("sender").populate("eventId").populate("receiver")
-		.sort({ createdAt: -1 }).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord);
+			.populate("sender").populate("eventId").populate("receiver")
+			.sort({ createdAt: -1 }).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord);
 
 		if (!pay) {
 			return next({ error: { message: 'Err', code: 700 } });
@@ -50,90 +50,102 @@ module.exports = {
 		res.status(200).json({ result: pay });
 	},
 
-	
 	refund: async (req, res, next) => {
 		let { paymentId, joinUserId, eventId, sessionId } = req.body;
 
 		if (paymentId) {
 			try {
-				var currentPayment = await Payment.findById(paymentId)
-				var event = await Event.findById(eventId)
-				let userId = event.userId;
+				Promise.all([
+					Payment.findById(paymentId),
+					Event.findById(eventId)
+				]).then(async ([currentPayment, event]) => {
+					let userId = event.userId;
 
-				if (!currentPayment.sessionRefunded.includes(sessionId)) {
-					var refundNoti = async function (type, success) {
-						const newNotification = new Notification({
-							sender: userId,
-							receiver: joinUserId,
-							type: type,
-							message: "",
-							title: "{sender} refunded for event " + event.name,
-							linkTo: {
-								key: "PaymentInfo",
-								_id: paymentId
-							},
-							isRead: false,
-							isDelete: false,
-							session: [sessionId]
-						});
+					if (!currentPayment.sessionRefunded.includes(sessionId)) {
+						var refundNoti = async function (type, success) {
+							const newNotification = new Notification({
+								sender: userId,
+								receiver: joinUserId,
+								type: type,
+								message: "",
+								title: "{sender} refunded for event " + event.name,
+								linkTo: {
+									key: "PaymentInfo",
+									_id: paymentId
+								},
+								isRead: false,
+								isDelete: false,
+								session: [sessionId]
+							});
 
-						if (success == true) {
-							currentPayment.sessionRefunded.push(sessionId)
-							await Payment.findByIdAndUpdate({ _id: currentPayment._id }, { sessionRefunded: currentPayment.sessionRefunded });
+							if (success == true) {
+								currentPayment.sessionRefunded.push(sessionId)
 
+								Promise.all([
+									Payment.findByIdAndUpdate({ _id: currentPayment._id }, { sessionRefunded: currentPayment.sessionRefunded }),
+									newNotification.save()
+								]).then(async ([p, n]) => {
+									return true;
+								}).catch((err) => {
+									return false;
+								})
+							} else {
+								newNotification.save();
+								return false;
+							}
 						}
 
-						newNotification.save();
-					}
+						console.log(currentPayment.payType)
 
-					console.log(currentPayment.payType)
-
-					if (currentPayment.payType === "CREDIT_CARD") {
-						stripe.refunds.create(
-							{
-								charge: currentPayment.chargeId,
-								amount: (currentPayment.amount / currentPayment.session.length)
-							},
-							function (err, refund) {
-								if (err) {
-									console.log("FAILED")
-									refundNoti("CREDIT_REFUND_FAILED", false)
-								} else {
-									console.log("SUCCESS")
-									refundNoti("CREDIT_REFUND_SUCCESS", true)
+						if (currentPayment.payType === "CREDIT_CARD") {
+							stripe.refunds.create(
+								{
+									charge: currentPayment.chargeId,
+									amount: (currentPayment.amount / currentPayment.session.length)
+								},
+								function (err, refund) {
+									if (err) {
+										console.log("FAILED")
+										refundNoti("CREDIT_REFUND_FAILED", false)
+									} else {
+										console.log("SUCCESS")
+										refundNoti("CREDIT_REFUND_SUCCESS", true)
+									}
 								}
-							}
-						);
+							);
+						} else {
+							const timestamp = Date.now();
+							const uid = `${timestamp}${Math.floor(111 + Math.random() * 999)}`; // unique id
+
+							let params = {
+								appid: config.appid,
+								mrefundid: `${moment().format('YYMMDD')}_${config.appid}_${uid}`,
+								timestamp, // miliseconds
+								zptransid: currentPayment.zptransId,
+								amount: (currentPayment.amount / currentPayment.session.length),
+								description: currentPayment.receiver + ' Refund for event',
+							};
+
+							// appid|zptransid|amount|description|timestamp
+							let data = params.appid + "|" + params.zptransid + "|" + params.amount + "|" + params.description + "|" + params.timestamp;
+							params.mac = CryptoJS.HmacSHA256(data, config.key1).toString();
+
+							axios.post(config.endpoint, null, { params })
+								.then(res => {
+									console.log(res.data);
+									refundNoti("ZALOPAY_REFUND_SUCCESS", true);
+								})
+								.catch(err => {
+									console.log(err);
+									refundNoti("ZALOPAY_REFUND_FAILED", false);
+								});
+						}
 					} else {
-						const timestamp = Date.now();
-						const uid = `${timestamp}${Math.floor(111 + Math.random() * 999)}`; // unique id
-
-						let params = {
-							appid: config.appid,
-							mrefundid: `${moment().format('YYMMDD')}_${config.appid}_${uid}`,
-							timestamp, // miliseconds
-							zptransid: currentPayment.zptransId,
-							amount: (currentPayment.amount / currentPayment.session.length),
-							description: currentPayment.receiver + ' Refund for event',
-						};
-
-						// appid|zptransid|amount|description|timestamp
-						let data = params.appid + "|" + params.zptransid + "|" + params.amount + "|" + params.description + "|" + params.timestamp;
-						params.mac = CryptoJS.HmacSHA256(data, config.key1).toString();
-
-						axios.post(config.endpoint, null, { params })
-							.then(res => {
-								console.log(res.data);
-								refundNoti("ZALOPAY_REFUND_SUCCESS", true);
-							})
-							.catch(err => {
-								console.log(err);
-								refundNoti("ZALOPAY_REFUND_FAILED", false);
-							});
+						next({ error: { message: 'Not found session for refund', code: 850 } });
 					}
-				} else {
-					next({ error: { message: 'Not found session for refund', code: 850 } });
-				}
+				}).catch((err) => {
+					return false;
+				})
 			} catch (err) {
 				next(err);
 				return;
