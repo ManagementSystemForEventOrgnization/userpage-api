@@ -537,9 +537,6 @@ module.exports = {
             { $limit: +numberRecord },
         ]);
 
-        res.send(users);
-        return;
-
         if (!users) {
             return next({ error: { message: 'Something is wrong!' } })
         }
