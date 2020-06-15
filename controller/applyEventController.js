@@ -448,16 +448,17 @@ module.exports = {
                             req.body.sessionId = itemCancel.id;
     
                             Promise.all([
-                                payment_Controller.refund(req, res, next)
-                            ]).then(async ([result]) => {
-                                Promise.all([
-                                    nextHandle(result, applyEvents[index])
-                                ])
+                                payment_Controller.refund(req, res, next),
+                                applyEvents[index]
+                            ]).then(async ([result, applyEvent]) => {
+                                // Promise.all([
+                                    nextHandle(result, applyEvent)
+                                // ])
                             })
                         } else {
-                            Promise.all([
+                            // Promise.all([
                                 nextHandle(true, applyEvents[index])
-                            ])
+                            // ])
                         }
                     } else {
                         next({ error: { message: "Session not found!", code: 722 } });
@@ -474,9 +475,9 @@ module.exports = {
                         i++;
                     }
 
-                    Promise.all([
+                    // Promise.all([
                         nextHandle(null, applyEvents[index])
-                    ])
+                    // ])
                 }
 
                 index++;
