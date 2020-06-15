@@ -12,17 +12,19 @@ const payment_Controller = require('../controller/payment_Controller');
 module.exports = {
     updatePaymentStatus: async (req, res, next) => {
         if (typeof req.body.paymentId === 'undefined' ||
+            typeof req.body.transactionId === 'undefined' ||
             typeof req.body.status === 'undefined') {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
-        let { paymentId, status } = req.body;
-
+        let { paymentId, status, transactionId } = req.body;
+        
         try {
             var currentPayment = await Payment.findById(paymentId);
 
             if (currentPayment) {
+                currentPayment.zptransId = transactionId
                 currentPayment.status = status == true ? "PAID" : "FAILED";
                 await currentPayment.save();
 
