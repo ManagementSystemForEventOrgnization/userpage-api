@@ -124,7 +124,7 @@ module.exports = {
 							const timestamp = Date.now();
 							const uid = `${timestamp}${Math.floor(111 + Math.random() * 999)}`; // unique id
 
-							console.log(currentPayment.zptransId);
+							console.log(currentPayment.zptransId, timestamp);
 
 							let params = {
 								appid: config.appid,
@@ -231,7 +231,7 @@ module.exports = {
 					}
 				})
 
-				console.log(newPayment, currentApplyEvent)
+				console.log(newPayment, "result zalopay", result)
 
 				if (result.data) {
 					result.data.paymentId = newPayment._id;
