@@ -322,7 +322,7 @@ module.exports = {
                     next({ error: { message: 'you have rejected', code: 710 } });
                 }
             } else {
-                next({ error: { message: 'Session not found', code: 723 } });
+                next({ error: { message: 'User not found', code: 723 } });
             }
         } catch (err) {
             next(err);
@@ -381,7 +381,7 @@ module.exports = {
                 let itemChanges = applyEvents[index].session.filter(element => {
                     if (sessionIds) {
                         if (sessionIds.includes(element.id)) {
-                            if (element.isCancel == true && !isUserEvent) {
+                            if ((element.isCancel == true || element.isReject == true) && !isUserEvent) {
                                 next({ error: { message: "Some session cancelled!", code: 722 } });
                                 isCancelled = true;
                                 return;
@@ -432,12 +432,13 @@ module.exports = {
 
                 if (sessionIds && !isUserEvent) { 
                     let itemCancel = null
-
+                    
                     if (itemChanges && itemChanges.length > 0) {
                         itemCancel = itemChanges[0]
                     }
-
+                    
                     if (itemCancel) {
+                        console.log("33333333")
                         if (sessionNoti.indexOf(itemCancel.id) === -1) {
                             sessionNoti.push(itemCancel.id);
                         }
@@ -451,14 +452,10 @@ module.exports = {
                                 payment_Controller.refund(req, res, next),
                                 applyEvents[index]
                             ]).then(async ([result, applyEvent]) => {
-                                // Promise.all([
-                                    nextHandle(result, applyEvent)
-                                // ])
+                                nextHandle(result, applyEvent)
                             })
                         } else {
-                            // Promise.all([
-                                nextHandle(true, applyEvents[index])
-                            // ])
+                            nextHandle(true, applyEvents[index])
                         }
                     } else {
                         next({ error: { message: "Session not found!", code: 722 } });
@@ -466,7 +463,7 @@ module.exports = {
                     }
                 } else {
                     var i = 0;
-
+                    console.log("444444444")
                     while (i < itemChanges.length) {
                         if (sessionNoti.indexOf(itemChanges[i].id) === -1) {
                             sessionNoti.push(itemChanges[i].id);
@@ -475,9 +472,7 @@ module.exports = {
                         i++;
                     }
 
-                    // Promise.all([
-                        nextHandle(null, applyEvents[index])
-                    // ])
+                    nextHandle(null, applyEvents[index])
                 }
 
                 index++;
@@ -493,21 +488,6 @@ module.exports = {
             }
 
             if (!isCancelled) {
-                const newNotification = new Notification({
-                    sender: userId,
-                    receiver: isUserEvent ? joinUserIds : [event.userId],
-                    type: typeNoti,
-                    message: "",
-                    title: titleMess,
-                    linkTo: {
-                        key: "EventDetail",
-                        _id: eventId,
-                    },
-                    isRead: false,
-                    isDelete: false,
-                    session: sessionNoti
-                });
-
                 if (event.isSellTicket == true && isUserEvent) {
                     const adminNotification = new Notification({
                         sender: userId,
@@ -525,7 +505,24 @@ module.exports = {
                     });
 
                     adminNotification.save();
+
+                    titleMess = titleMess + " and waiting for us refund your money."
                 }
+
+                const newNotification = new Notification({
+                    sender: userId,
+                    receiver: isUserEvent ? joinUserIds : [event.userId],
+                    type: typeNoti,
+                    message: "",
+                    title: titleMess,
+                    linkTo: {
+                        key: "EventDetail",
+                        _id: eventId,
+                    },
+                    isRead: false,
+                    isDelete: false,
+                    session: sessionNoti
+                });
 
                 newNotification.save();
                 await Event.findByIdAndUpdate({ _id: event._id }, { session: event.session, status: event.status });

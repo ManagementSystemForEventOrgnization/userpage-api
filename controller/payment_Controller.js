@@ -85,14 +85,12 @@ module.exports = {
 									Payment.findByIdAndUpdate({ _id: currentPayment._id }, { sessionRefunded: currentPayment.sessionRefunded }),
 									newNotification.save()
 								]).then(async ([p, n]) => {
-									console.log("2222222222 did refund");
 									return true;
 								}).catch((err) => {
 									return false;
 								})
 							} else {
 								newNotification.save();
-								console.log("2222222222 did refund1")
 								return false;
 							}
 						}
