@@ -18,7 +18,14 @@ const config = {
 	appid: "553",
 	key1: "9phuAOYhan4urywHTh0ndEXiV3pKHr5Q",
 	key2: "Iyz2habzyr7AG8SgvoBCbKwKi3UzlLi3",
-	endpoint: "https://sandbox.zalopay.com.vn/v001/tpe/createorder"
+
+	urlCreate: "https://sandbox.zalopay.com.vn/v001/tpe/createorder",
+	urlCreateStaging: "https://stg.zalopay.com.vn/v001/tpe/createorder",
+	urlCreateReal: "https://zalopay.com.vn/v001/tpe/createorder",
+
+	urlRefund: "https://sandbox.zalopay.com.vn/v001/tpe/partialrefund",
+	urlRefundStaging: "https://stgmerchant.zalopay.vn/v001/partialrefund",
+	urlRefundReal: "https://merchant.zalopay.vn/v001/partialrefund"
 };
 
 const embeddata = {
@@ -117,6 +124,8 @@ module.exports = {
 							const timestamp = Date.now();
 							const uid = `${timestamp}${Math.floor(111 + Math.random() * 999)}`; // unique id
 
+							console.log(currentPayment.zptransId);
+
 							let params = {
 								appid: config.appid,
 								mrefundid: `${moment().format('YYMMDD')}_${config.appid}_${uid}`,
@@ -130,10 +139,14 @@ module.exports = {
 							let data = params.appid + "|" + params.zptransid + "|" + params.amount + "|" + params.description + "|" + params.timestamp;
 							params.mac = CryptoJS.HmacSHA256(data, config.key1).toString();
 
-							axios.post(config.endpoint, null, { params })
+							axios.post(config.urlRefund, null, { params })
 								.then(res => {
 									console.log(res.data);
-									refundNoti("ZALOPAY_REFUND_SUCCESS", true);
+									if (res.data.returncode == 1) {
+										refundNoti("ZALOPAY_REFUND_SUCCESS", true);
+									} else {
+										refundNoti("ZALOPAY_REFUND_FAILED", false);
+									}
 								})
 								.catch(err => {
 									console.log(err);
@@ -199,7 +212,7 @@ module.exports = {
 				const data = config.appid + "|" + order.apptransid + "|" + order.appuser + "|" + order.amount + "|" + order.apptime + "|" + order.embeddata + "|" + order.item;
 				order.mac = CryptoJS.HmacSHA256(data, config.key1).toString();
 
-				var result = await axios.post(config.endpoint, null, { params: order })
+				var result = await axios.post(config.urlCreate, null, { params: order })
 
 				const newPayment = new Payment({
 					sender: userId,
