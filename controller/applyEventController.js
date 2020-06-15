@@ -452,6 +452,7 @@ module.exports = {
                                 payment_Controller.refund(req, res, next),
                                 applyEvents[index]
                             ]).then(async ([result, applyEvent]) => {
+                                console.log("6666666",result)
                                 nextHandle(result, applyEvent)
                             })
                         } else {
@@ -531,6 +532,39 @@ module.exports = {
             return res.status(200).json({ result: true });
         } catch (err) {
             next(err);
+        }
+    },
+
+    refundForCancelledUser: async (req, res, next) => {
+        if (typeof req.body.eventId === 'undefined' ||
+            typeof req.body.sessionId === 'undefined' ||
+            typeof req.body.joinUserId === 'undefined' ||
+            typeof req.body.paymentId === 'undefined'
+        ) {
+            next({ error: { message: "Invalid data", code: 402 } });
+            return;
+        }
+
+        let { paymentId, joinUserId, eventId } = req.body;
+        req.body.eventId = ObjectId(eventId)
+        req.body.joinUserId = ObjectId(joinUserId)
+        req.body.paymentId = ObjectId(paymentId)
+
+        try {
+            Promise.all([
+                payment_Controller.refund(req, res, next)
+            ]).then(async ([result]) => {
+                console.log("555555555",result)
+                if (result === false) {
+                    return res.status(200).json({ result: false });
+                } else {
+                    return res.status(200).json({ result: true });
+                }
+            }).catch( (err) => {
+                next({ error: { message: "Execute failed!" , code: 776 } });
+            })
+        } catch (err) {
+            next({ error: { message: "Object not found" , code: 777 } });
         }
     },
 
