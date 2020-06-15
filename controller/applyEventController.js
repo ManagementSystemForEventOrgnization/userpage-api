@@ -376,7 +376,6 @@ module.exports = {
             var titleMess = "{sender} cancelled event " + event.name;
             var index = 0
             var isCancelled = false
-            var countSessionCancelled = 0 //number session cancel have payment refund success
 
             while (index < applyEvents.length) {
                 let itemChanges = applyEvents[index].session.filter(element => {
@@ -407,103 +406,78 @@ module.exports = {
                     }
                 })
 
-                let func = () => {
-                    return new Promise((res, rej) => { })
-                }
-
-                // var i = 0;
-                // var iNext = -1;
-                // var isStop = false
-                // var success = null
-
-                // while (!isStop) {
-                //     if (i < itemChanges.length && iNext != i) {
-                //         iNext = i;
-
-                //         if (sessionNoti.indexOf(itemChanges[i].id) === -1) {
-                //             sessionNoti.push(itemChanges[i].id);
-                //         }
-
-                //         if (!isUserEvent && itemChanges[i].isReject != true && itemChanges[i].paymentId !== undefined && itemChanges[i].paymentId !== null) {
-                //             req.body.paymentId = itemChanges[i].paymentId;
-                //             req.body.joinUserId = applyEvents[index].userId;
-                //             req.body.sessionId = itemChanges[i].id;
-
-                //             success = await payment_Controller.refund(req, res, next);
-                //         } else {
-                //             success = true
-                //         }
-
-                //         console.log(i)
-                //     }
-
-                //     if (success != null) {
-                //         i++;
-                //         success = null
-                //     }
-
-                //     if (i == itemChanges.length) {
-                //         isStop = true
-                //     }
-                // }
-
-                const delay = ms => {
-                    return new Promise(resolve => setTimeout(resolve, ms));
-                };
-
-                var i = 0;
-                while (i < itemChanges.length) {
-                    if (sessionNoti.indexOf(itemChanges[i].id) === -1) {
-                        sessionNoti.push(itemChanges[i].id);
-                    }
-
-                    if (!isUserEvent && itemChanges[i].isReject != true && itemChanges[i].paymentId !== undefined && itemChanges[i].paymentId !== null) {
-                        req.body.paymentId = itemChanges[i].paymentId;
-                        req.body.joinUserId = applyEvents[index].userId;
-                        req.body.sessionId = itemChanges[i].id;
-
-                        await payment_Controller.refund(req, res, next);
-                    }
-                    
-                    i++;
-                }
-
                 if (joinUserIds.indexOf(applyEvents[index].userId) === -1) {
                     joinUserIds.push(applyEvents[index].userId);
                 }
 
-                var subSessions = applyEvents[index].session
+                const nextHandle = function (result, applyEvent) {
+                    var subSessions = applyEvent.session
 
-                if (!isUserEvent) {
-                    if (event.isSellTicket == true) {
-                        delay(5000)
-                    }
+                    if (!isUserEvent) {
+                        console.log("111111111111")
 
-                    var subSessionFilter = []
-                    var indexSub = 0
-                    console.log("111111111111")
-                    while (indexSub < subSessions.length) {
-                        if (!sessionIds.includes(subSessions[indexSub].id)) {
-                            subSessionFilter.push(subSessions[indexSub])
-                        } else if (subSessions[indexSub].paymentId !== undefined && subSessions[indexSub].paymentId !== null) {
-                            let payment = await Payment.findById(subSessions[indexSub].paymentId);
-
-                            if (!payment.sessionRefunded.includes(subSessions[indexSub].id)) {
-                                console.log(subSessions[indexSub].id, payment, payment.sessionRefunded.includes(subSessions[indexSub].id))
-                                subSessionFilter.push(subSessions[indexSub])
-                            } else if (sessionIds.includes(subSessions[indexSub].id)) {
-                                countSessionCancelled += 1
+                        subSessions = subSessions.filter(ele => {
+                            if (!sessionIds.includes(ele.id)) {
+                                return ele;
+                            } else if (result === false && applyEvent.id == ele.id) {
+                                return ele;
                             }
-                        }
-
-                        indexSub++;
+                        })
                     }
-                    subSessions = subSessionFilter
-
-                    console.log(subSessions)
+    
+                    Promise.all([
+                        ApplyEvent.findByIdAndUpdate({ _id: applyEvent._id }, { session: subSessions })
+                    ]) 
                 }
 
-                await ApplyEvent.findByIdAndUpdate({ _id: applyEvents[index]._id }, { session: subSessions });
+                if (sessionIds && !isUserEvent) { 
+                    let itemCancel = null
+
+                    if (itemChanges && itemChanges.length > 0) {
+                        itemCancel = itemChanges[0]
+                    }
+
+                    if (itemCancel) {
+                        if (sessionNoti.indexOf(itemCancel.id) === -1) {
+                            sessionNoti.push(itemCancel.id);
+                        }
+    
+                        if (itemCancel.isReject != true && itemCancel.paymentId !== undefined && itemCancel.paymentId !== null) {
+                            req.body.paymentId = itemCancel.paymentId;
+                            req.body.joinUserId = applyEvents[index].userId;
+                            req.body.sessionId = itemCancel.id;
+    
+                            Promise.all([
+                                payment_Controller.refund(req, res, next)
+                            ]).then(async ([result]) => {
+                                Promise.all([
+                                    nextHandle(result, applyEvents[index])
+                                ])
+                            })
+                        } else {
+                            Promise.all([
+                                nextHandle(true, applyEvents[index])
+                            ])
+                        }
+                    } else {
+                        next({ error: { message: "Session not found!", code: 722 } });
+                        return;
+                    }
+                } else {
+                    var i = 0;
+
+                    while (i < itemChanges.length) {
+                        if (sessionNoti.indexOf(itemChanges[i].id) === -1) {
+                            sessionNoti.push(itemChanges[i].id);
+                        }
+
+                        i++;
+                    }
+
+                    Promise.all([
+                        nextHandle(null, applyEvents[index])
+                    ])
+                }
 
                 index++;
             }
@@ -555,6 +529,7 @@ module.exports = {
                 newNotification.save();
                 await Event.findByIdAndUpdate({ _id: event._id }, { session: event.session, status: event.status });
             }
+
             return res.status(200).json({ result: true });
         } catch (err) {
             next(err);
