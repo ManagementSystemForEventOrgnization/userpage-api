@@ -124,8 +124,6 @@ module.exports = {
 							const timestamp = Date.now();
 							const uid = `${timestamp}${Math.floor(111 + Math.random() * 999)}`; // unique id
 
-							console.log(currentPayment.zptransId, timestamp);
-
 							let params = {
 								appid: config.appid,
 								mrefundid: `${moment().format('YYMMDD')}_${config.appid}_${uid}`,
