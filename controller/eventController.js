@@ -520,7 +520,7 @@ module.exports = {
         }
         
         let users = await ApplyEvent.aggregate([
-            {
+        {
                 $match: query
             },
             {
