@@ -509,15 +509,20 @@ module.exports = {
         pageNumber = +pageNumber || 1;
         numberRecord = +numberRecord || 10;
 
-        if (!eventId || !sessionId) {
+        if (!eventId) {
             return next({ error: { message: 'Invalid data!', code: 700 } });
         }
+        let query = { eventId: new ObjectId(eventId) }
+
+        if (sessionId) {
+            query.session = { $elemMatch: { id: sessionId, isReject: false } };
+        } else {
+            query.session = { $elemMatch: { isReject: false } };
+        }
+        
         let users = await ApplyEvent.aggregate([
             {
-                $match: {
-                    eventId: ObjectId(eventId),
-                    session: { $elemMatch: { id: sessionId, isReject: false } }
-                }
+                $match: query
             },
             {
                 $lookup:
@@ -531,19 +536,31 @@ module.exports = {
             {
                 $unwind: "$user"
             },
-            { $project: { user: 1, _id: 0 } },
+            {
+                $project: {
+                    user: 1,
+                    _id: 0,
+                    'sessions': {
+                        $filter: {
+                            input: "$session",
+                            as: "item",
+                            cond: { $eq: ["$$item.isReject", false] }
+                        }
+                    }
+                },
+
+            },
             { $sort: { createdAt: -1 } },
             { $skip: +numberRecord * (+pageNumber - 1) },
             { $limit: +numberRecord },
         ]);
-        
         if (!users) {
             return next({ error: { message: 'Something is wrong!' } })
         }
 
         let result = [];
         users.forEach(element => {
-            result.push(element.user);
+            result.push({...element.user, session: element.sessions});
         });
 
         res.status(200).json({ result: result });

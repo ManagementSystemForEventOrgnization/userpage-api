@@ -11,7 +11,6 @@ const otp = require("../utils/otp");
 var passport = require("passport");
 
 module.exports = {
-
   login: (req, res, next) => {
     passport.authenticate("local", function (err, user, info) {
       if (err) {
