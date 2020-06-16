@@ -10,5 +10,6 @@ router.post('/cancelEvent', Unauthorized, applyEvent_Controller.cancelEvent);
 router.post('/updatePaymentStatus', Unauthorized, applyEvent_Controller.updatePaymentStatus);
 router.get('/getListApplyEvent', Unauthorized, applyEvent_Controller.getListApplyEvent);
 router.post('/prepayEvent', Unauthorized, applyEvent_Controller.prepayEvent);
+router.post('/refundForCancelledUser', applyEvent_Controller.refundForCancelledUser);
 
 module.exports = router;

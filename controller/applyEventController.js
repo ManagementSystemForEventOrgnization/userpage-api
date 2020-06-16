@@ -12,17 +12,19 @@ const payment_Controller = require('../controller/payment_Controller');
 module.exports = {
     updatePaymentStatus: async (req, res, next) => {
         if (typeof req.body.paymentId === 'undefined' ||
+            typeof req.body.transactionId === 'undefined' ||
             typeof req.body.status === 'undefined') {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
-        let { paymentId, status } = req.body;
+        let { paymentId, status, transactionId } = req.body;
 
         try {
             var currentPayment = await Payment.findById(paymentId);
 
             if (currentPayment) {
+                currentPayment.zptransId = transactionId
                 currentPayment.status = status == true ? "PAID" : "FAILED";
                 await currentPayment.save();
 
@@ -266,9 +268,10 @@ module.exports = {
         let { joinUserId, eventId, sessionId } = req.body;
         let userId = req.user;
 
-        try {
-            var currentEvent = await Event.findById(eventId);
-            var applyEvent = await ApplyEvent.findOne({ userId: joinUserId, eventId: eventId });
+        Promise.all([
+            Event.findById(eventId),
+            ApplyEvent.findOne({ userId: joinUserId, eventId: eventId })
+        ]).then(async ([currentEvent, applyEvent]) => {
             let session = applyEvent.session.find(element => {
                 if (sessionId === element.id) {
                     return element
@@ -300,6 +303,22 @@ module.exports = {
                         isDelete: false
                     });
 
+                    const nextHandle = async function (response, isUserEvent, applyEvent, event, noti) {
+                        if (response == true) {
+                            Promise.all([
+                                ApplyEvent.findByIdAndUpdate({ _id: applyEvent._id }, { session: applyEvent.session }),
+                                Event.findByIdAndUpdate({ _id: event._id }, { session: event.session }),
+                                noti.save()
+                            ]).then(() => {
+                                return res.status(200).json({ result: true });
+                            }).catch((err) => {
+                                return next({ error: { message: 'Save data failed', code: 775 } });
+                            })
+                        } else {
+                            return next({ error: { message: 'Can not reject because refund failed', code: 774 } });
+                        }
+                    }
+
                     currentEvent.session.forEach(ele => {
                         if (ele.id === sessionId) {
                             ele.joinNumber = ele.joinNumber == 0 ? 0 : (ele.joinNumber - 1)
@@ -308,25 +327,27 @@ module.exports = {
 
                     if (session.paymentId !== undefined && session.paymentId !== null) {
                         req.body.paymentId = session.paymentId
+                        req.body.applyEvent = applyEvent
+                        req.body.sendNoti = newNotification
+                        req.body.eventChange = currentEvent
 
-                        await payment_Controller.refund(req, res, next)
+                        Promise.all([
+                            payment_Controller.refund(req, res, next, nextHandle)
+                        ]).then().catch((err) => {
+                            next({ error: { message: 'Save data failed', code: 775 } });
+                        })
+                    } else {
+                        nextHandle(true, false, applyEvent, currentEvent, newNotification);
                     }
-
-                    await ApplyEvent.findByIdAndUpdate({ _id: applyEvent._id }, { session: applyEvent.session });
-                    await Event.findByIdAndUpdate({ _id: currentEvent._id }, { session: currentEvent.session });
-
-                    newNotification.save();
-
-                    return res.status(200).json({ result: true });
                 } else {
                     next({ error: { message: 'you have rejected', code: 710 } });
                 }
             } else {
                 next({ error: { message: 'User not found', code: 723 } });
             }
-        } catch (err) {
-            next(err);
-        }
+        }).catch((err) => {
+            next({ error: { message: "Object not found!", code: 777 } });
+        })
     },
 
     cancelEvent: async (req, res, next) => {
@@ -377,6 +398,32 @@ module.exports = {
             var index = 0
             var isCancelled = false
 
+            const nextHandle = async function (result, isUserEvent, applyEvent, event, noti) {
+                var subSessions = applyEvent.session
+
+                if (!isUserEvent) {
+                    subSessions = subSessions.filter(ele => {
+                        if (!sessionIds.includes(ele.id)) {
+                            return ele;
+                        } else if (result === false && applyEvent.id == ele.id) {
+                            return ele;
+                        }
+                    })
+
+                    Promise.all([
+                        Event.findByIdAndUpdate({ _id: event._id }, { session: event.session, status: event.status })
+                    ])
+                }
+
+                Promise.all([
+                    ApplyEvent.findByIdAndUpdate({ _id: applyEvent._id }, { session: subSessions })
+                ]).then (() => {
+                    if (!isUserEvent) {
+                        return res.status(200).json({ result: result });
+                    }
+                })
+            }
+
             while (index < applyEvents.length) {
                 let itemChanges = applyEvents[index].session.filter(element => {
                     if (sessionIds) {
@@ -410,52 +457,32 @@ module.exports = {
                     joinUserIds.push(applyEvents[index].userId);
                 }
 
-                const nextHandle = function (result, applyEvent) {
-                    var subSessions = applyEvent.session
-
-                    if (!isUserEvent) {
-                        console.log("111111111111")
-
-                        subSessions = subSessions.filter(ele => {
-                            if (!sessionIds.includes(ele.id)) {
-                                return ele;
-                            } else if (result === false && applyEvent.id == ele.id) {
-                                return ele;
-                            }
-                        })
-                    }
-    
-                    Promise.all([
-                        ApplyEvent.findByIdAndUpdate({ _id: applyEvent._id }, { session: subSessions })
-                    ]) 
-                }
-
-                if (sessionIds && !isUserEvent) { 
+                if (sessionIds && !isUserEvent) {
                     let itemCancel = null
-                    
+
                     if (itemChanges && itemChanges.length > 0) {
                         itemCancel = itemChanges[0]
                     }
-                    
+
                     if (itemCancel) {
-                        console.log("33333333")
                         if (sessionNoti.indexOf(itemCancel.id) === -1) {
                             sessionNoti.push(itemCancel.id);
                         }
-    
+
                         if (itemCancel.isReject != true && itemCancel.paymentId !== undefined && itemCancel.paymentId !== null) {
                             req.body.paymentId = itemCancel.paymentId;
                             req.body.joinUserId = applyEvents[index].userId;
                             req.body.sessionId = itemCancel.id;
-    
+                            req.body.applyEvent = applyEvents[index];
+                            req.body.eventChange = event
+                            req.body.isUserEvent = isUserEvent
+                            req.body.sendNoti = null;
+
                             Promise.all([
-                                payment_Controller.refund(req, res, next),
-                                applyEvents[index]
-                            ]).then(async ([result, applyEvent]) => {
-                                nextHandle(result, applyEvent)
-                            })
+                                payment_Controller.refund(req, res, next, nextHandle)
+                            ])
                         } else {
-                            nextHandle(true, applyEvents[index])
+                            nextHandle(true, isUserEvent, applyEvents[index], event, null)
                         }
                     } else {
                         next({ error: { message: "Session not found!", code: 722 } });
@@ -463,7 +490,7 @@ module.exports = {
                     }
                 } else {
                     var i = 0;
-                    console.log("444444444")
+                    
                     while (i < itemChanges.length) {
                         if (sessionNoti.indexOf(itemChanges[i].id) === -1) {
                             sessionNoti.push(itemChanges[i].id);
@@ -472,7 +499,7 @@ module.exports = {
                         i++;
                     }
 
-                    nextHandle(null, applyEvents[index])
+                    nextHandle(null, isUserEvent, applyEvents[index])
                 }
 
                 index++;
@@ -525,12 +552,53 @@ module.exports = {
                 });
 
                 newNotification.save();
-                await Event.findByIdAndUpdate({ _id: event._id }, { session: event.session, status: event.status });
+
+                if (isUserEvent) {
+                    await Event.findByIdAndUpdate({ _id: event._id }, { session: event.session, status: event.status });
+                }
             }
 
-            return res.status(200).json({ result: true });
+            if (isUserEvent) {
+                return res.status(200).json({ result: true });
+            }
         } catch (err) {
             next(err);
+        }
+    },
+
+    refundForCancelledUser: async (req, res, next) => {
+        if (typeof req.body.eventId === 'undefined' ||
+            typeof req.body.sessionId === 'undefined' ||
+            typeof req.body.joinUserId === 'undefined' ||
+            typeof req.body.paymentId === 'undefined'
+        ) {
+            next({ error: { message: "Invalid data", code: 402 } });
+            return;
+        }
+
+        let { paymentId, joinUserId, eventId } = req.body;
+        req.body.eventId = ObjectId(eventId)
+        req.body.joinUserId = ObjectId(joinUserId)
+        req.body.paymentId = ObjectId(paymentId)
+        req.body.applyEvent = null;
+        req.body.sendNoti = null;
+
+        try {
+            const nextHandle = async function (result, isUserEvent, applyEvent, event, noti) {
+                if (result === false) {
+                    return res.status(200).json({ result: false });
+                } else {
+                    return res.status(200).json({ result: true });
+                }
+            }
+
+            Promise.all([
+                payment_Controller.refund(req, res, next, nextHandle)
+            ]).then().catch((err) => {
+                next({ error: { message: "Execute failed!", code: 776 } });
+            })
+        } catch (err) {
+            next({ error: { message: "Object not found", code: 777 } });
         }
     },
 

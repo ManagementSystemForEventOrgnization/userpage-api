@@ -143,7 +143,6 @@ module.exports = {
                 }
                 res.status(200).json({ result: 'success' })
             }).catch((err) => {
-                console.log(err);
                 return next({ error: { message: 'Something is wrong', code: 300 } });
             })
         } catch (err) {

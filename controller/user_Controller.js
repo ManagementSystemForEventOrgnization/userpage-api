@@ -238,8 +238,7 @@ module.exports = {
     mailer.sentMailer("admin@gmail.com", { email }, "confirm", token)
       .then(async (json) => {
         currentUser.TOKEN = token;
-        console.log(json)
-
+        
         try {
           await currentUser.save();
         } catch (err) {
