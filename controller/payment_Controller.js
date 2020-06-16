@@ -8,6 +8,7 @@ const Event = mongoose.model('event');
 const Notification = mongoose.model('notification');
 
 const ObjectId = mongoose.Types.ObjectId;
+const adminId = "5ee5d9aff7a5a623d08718d5"
 
 const axios = require('axios');
 const CryptoJS = require('crypto-js');
@@ -57,8 +58,8 @@ module.exports = {
 		res.status(200).json({ result: pay });
 	},
 
-	refund: async (req, res, next) => {
-		let { paymentId, joinUserId, eventId, sessionId } = req.body;
+	refund: async (req, res, next, nextHandle) => {
+		let { paymentId, joinUserId, eventId, sessionId, applyEvent, sendNoti, eventChange, isUserEvent} = req.body;
 
 		if (paymentId) {
 			try {
@@ -72,7 +73,7 @@ module.exports = {
 						var refundNoti = async function (type, success) {
 							const newNotification = new Notification({
 								sender: userId,
-								receiver: joinUserId,
+								receiver: success == true ? joinUserId : adminId,
 								type: type,
 								message: "",
 								title: "{sender} refunded for event " + event.name,
@@ -85,19 +86,25 @@ module.exports = {
 								session: [sessionId]
 							});
 
+							let sendEvent = eventChange || event
+							let needNotification = sendNoti || newNotification
+
 							if (success == true) {
 								currentPayment.sessionRefunded.push(sessionId)
 
 								Promise.all([
 									Payment.findByIdAndUpdate({ _id: currentPayment._id }, { sessionRefunded: currentPayment.sessionRefunded }),
-									newNotification.save()
+									needNotification.save()
 								]).then(async ([p, n]) => {
+									nextHandle(true, isUserEvent, applyEvent, sendEvent, newNotification);
 									return true;
 								}).catch((err) => {
+									nextHandle(false, isUserEvent, applyEvent, sendEvent, null)
 									return false;
 								})
 							} else {
 								newNotification.save();
+								nextHandle(false, isUserEvent, applyEvent, sendEvent, null)
 								return false;
 							}
 						}
