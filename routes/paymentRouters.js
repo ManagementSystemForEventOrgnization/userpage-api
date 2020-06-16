@@ -4,7 +4,7 @@ const Unauthorized = require('../middlewares/loginAuth');
 const payment_Controller = require('../controller/payment_Controller');
 
 // router.post('/create_charges', payment_Controller.create_charges);
-router.post('/get_listcard', Unauthorized, payment_Controller.get_listcard);
+router.get('/get_listcard', Unauthorized, payment_Controller.get_listcard);
 router.post('/set_card_default', Unauthorized, payment_Controller.set_card_default);
 router.post('/del_card', Unauthorized, payment_Controller.del_card);
 // router.post('/del_customer', Unauthorized, payment_Controller.del_customer);
