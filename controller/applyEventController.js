@@ -304,8 +304,6 @@ module.exports = {
                     });
 
                     const nextHandle = async function (response, isUserEvent, applyEvent, event, noti) {
-                        console.log(response);
-
                         if (response == true) {
                             Promise.all([
                                 ApplyEvent.findByIdAndUpdate({ _id: applyEvent._id }, { session: applyEvent.session }),
@@ -404,8 +402,6 @@ module.exports = {
                 var subSessions = applyEvent.session
 
                 if (!isUserEvent) {
-                    console.log("111111111111")
-
                     subSessions = subSessions.filter(ele => {
                         if (!sessionIds.includes(ele.id)) {
                             return ele;
@@ -494,7 +490,7 @@ module.exports = {
                     }
                 } else {
                     var i = 0;
-                    console.log("444444444")
+                    
                     while (i < itemChanges.length) {
                         if (sessionNoti.indexOf(itemChanges[i].id) === -1) {
                             sessionNoti.push(itemChanges[i].id);

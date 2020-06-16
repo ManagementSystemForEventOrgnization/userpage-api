@@ -109,8 +109,6 @@ module.exports = {
 							}
 						}
 
-						console.log(currentPayment.payType)
-
 						if (currentPayment.payType === "CREDIT_CARD") {
 							stripe.refunds.create(
 								{
@@ -119,10 +117,8 @@ module.exports = {
 								},
 								function (err, refund) {
 									if (err) {
-										console.log("FAILED")
 										refundNoti("CREDIT_REFUND_FAILED", false)
 									} else {
-										console.log("SUCCESS")
 										refundNoti("CREDIT_REFUND_SUCCESS", true)
 									}
 								}
@@ -146,7 +142,6 @@ module.exports = {
 
 							axios.post(config.urlRefund, null, { params })
 								.then(res => {
-									console.log(res.data);
 									if (res.data.returncode == 1) {
 										refundNoti("ZALOPAY_REFUND_SUCCESS", true);
 									} else {
@@ -154,7 +149,6 @@ module.exports = {
 									}
 								})
 								.catch(err => {
-									console.log(err);
 									refundNoti("ZALOPAY_REFUND_FAILED", false);
 								});
 						}
@@ -235,8 +229,6 @@ module.exports = {
 						element.paymentId = newPayment._id;
 					}
 				})
-
-				console.log(newPayment, "result zalopay", result)
 
 				if (result.data) {
 					result.data.paymentId = newPayment._id;
@@ -336,8 +328,6 @@ module.exports = {
 					})
 
 					if (charge) {
-						console.log(currentApplyEvent)
-						console.log(newPayment)
 						newPayment.cardId = cardFind.id;
 						newPayment.chargeId = charge.id;
 						newPayment.status = "PAID";
@@ -377,7 +367,6 @@ module.exports = {
 		if (cardFind == null || cardFind.customerId == null) {
 			res.status(200).json({ result: [] });
 		} else {
-			console.log("customerId: ", cardFind.customerId)
 			stripe.customers.listSources(
 				cardFind.customerId,
 				{
@@ -413,8 +402,6 @@ module.exports = {
 		if (cardFind == null || cardFind.customerId == null) {
 			res.status(600).json({ error: { message: "card customer not found", code: 900 } });
 		} else {
-			console.log("customerId: ", cardFind.customerId)
-
 			stripe.customers.update(
 				cardFind.customerId,
 				{
@@ -424,7 +411,6 @@ module.exports = {
 					if (err != null) {
 						next(err);
 					} else {
-						console.log("customer: ", customer, "\n")
 						res.status(200).json({ result: true });
 					}
 				}
@@ -450,7 +436,6 @@ module.exports = {
 		if (cardFind == null || cardFind.customerId == null) {
 			res.status(600).json({ error: { message: "card customer not found", code: 900 } });
 		} else {
-			console.log("customerId: ", cardFind.customerId)
 			stripe.customers.deleteSource(
 				cardFind.customerId,
 				req.body.cardId,
@@ -478,8 +463,6 @@ module.exports = {
 		if (cardFind == null || cardFind.customerId == null) {
 			res.status(600).json({ error: { message: "card customer not found", code: 900 } });
 		} else {
-			console.log("customerId: ", cardFind.customerId)
-
 			let confirmation = null
 
 			try {
@@ -488,8 +471,6 @@ module.exports = {
 				next(err);
 				return;
 			}
-
-			console.log("confirmation: ", confirmation, "\n")
 
 			try {
 				if (confirmation.deleted) {
@@ -534,8 +515,6 @@ module.exports = {
 		}
 
 		if (cardFind == null || cardFind.customerId == null) {
-			console.log("create customer \n")
-
 			var customer = null
 
 			try {
@@ -547,19 +526,15 @@ module.exports = {
 				return;
 			}
 
-			console.log("customer: ", customer, "\n")
-
 			try {
 				if (customer) {
 					const newCard = new Cards({
 						customerId: customer.id,
 						userId: req.user
 					});
-
-					console.log("save customer: ", newCard, "\n")
+					
 					await newCard.save();
-
-					console.log("create token: ", req.body.cardToken, "\n")
+					
 					createCard(customer.id, req.body.cardToken, res)
 				} else {
 					res.status(600).json({ message: "can't create card customer" });
@@ -569,7 +544,6 @@ module.exports = {
 				return;
 			}
 		} else {
-			console.log("create token: ", req.body.cardToken, "\n")
 			createCard(cardFind.customerId, req.body.cardToken, res)
 		}
 	}
