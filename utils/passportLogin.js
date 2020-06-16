@@ -45,7 +45,7 @@ module.exports = (app) => {
             if (!user.isActive) {
                 // false
                 let too = otp.generateOTP();
-                console.log(too);
+                
                 try {
                     mailer.sentMailer('admin@gmail.com', { email: user.email }, 'confirm', `${too}`).then(json=>{
                         if(json.code==400){
