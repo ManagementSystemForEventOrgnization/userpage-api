@@ -14,6 +14,14 @@ const userSchema = new Schema({
     job: String,
     phone: String,
     avatar: { type: String, default: '/avata.png' },
+    userReport: [
+        {
+            userId: { type :mongoose.Types.ObjectId, ref: 'users'},
+            eventId : { type :mongoose.Types.ObjectId, ref: 'event'},
+            cause: String,
+            createdAt: { type: Date, default: Date.now },
+        }
+    ],
     isReported: { type: Boolean, default: false },
     dateDelete: Date,
     discription: { type: String, "index": "text" },
@@ -30,12 +38,12 @@ const userSchema = new Schema({
         bankBranch: String,
         accountOwner: String
     },
-    isActive:{type:Boolean,default: false}
-}, { 
-	timestamps: { 
-		createdAt: 'createdAt', 
-		updatedAt: 'updatedAt' 
-	}
+    isActive: { type: Boolean, default: false }
+}, {
+    timestamps: {
+        createdAt: 'createdAt',
+        updatedAt: 'updatedAt'
+    }
 })
 
 mongoose.model('users', userSchema);

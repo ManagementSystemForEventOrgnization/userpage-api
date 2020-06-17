@@ -32,4 +32,6 @@ router.get('/user/historyCreate', Unauthorized, controller_User.get_HistoryCreat
 router.get('/user/bank_inf', Unauthorized, controller_User.getBankInf);
 router.post('/user/update_bank_inf', Unauthorized, controller_User.updateBankInf);
 
+router.post('/user/reported', Unauthorized, controller_User.reportUser);
+
 module.exports = router;

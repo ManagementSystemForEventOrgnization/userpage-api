@@ -238,7 +238,7 @@ module.exports = {
     mailer.sentMailer("admin@gmail.com", { email }, "confirm", token)
       .then(async (json) => {
         currentUser.TOKEN = token;
-        
+
         try {
           await currentUser.save();
         } catch (err) {
@@ -605,7 +605,7 @@ module.exports = {
             $gt: new Date(startDate)
           }
         })
-        if(endDate){
+        if (endDate) {
           conditionQuery.$and.push({
             'session.day': {
               $lte: new Date(endDate),
@@ -681,6 +681,30 @@ module.exports = {
 
     res.status(200).json({ result: 'success' });
 
-  }
+  },
 
+  reportUser: async (req, res, next) => {
+    let { userId, cause, eventId } = req.body;
+    if (!userId) {
+      return next({ error: { message: 'Invalid data', code: 600 } });
+    }
+
+    let userReport = req.user;
+
+    let objData = { userId : userReport, cause: cause || '' };
+    if (eventId) {
+      objData.eventId = eventId;
+    }
+
+    try {
+      let u = await User.findByIdAndUpdate(userId, { $push: { "userReport": objData } });
+      if (!u) {
+        return next({ error: { message: 'User is not exists', code: 601 } });
+      }
+
+      res.status(200).json({ result: u });
+    } catch (error) {
+      next({ error: { message: error, code: 500 } });
+    }
+  }
 };
