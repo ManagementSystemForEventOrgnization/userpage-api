@@ -259,7 +259,7 @@ module.exports = {
 
     rejectEventMenber: async (req, res, next) => {
         if (typeof req.body.eventId === 'undefined' ||
-            typeof req.body.joinUserId === 'undefined' ||
+            typeof req.body.joinUserId === 'undefined' || +
             typeof req.body.sessionId === 'undefined') {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
@@ -417,7 +417,7 @@ module.exports = {
 
                 Promise.all([
                     ApplyEvent.findByIdAndUpdate({ _id: applyEvent._id }, { session: subSessions })
-                ]).then (() => {
+                ]).then(() => {
                     if (!isUserEvent) {
                         return res.status(200).json({ result: result });
                     }
@@ -490,7 +490,7 @@ module.exports = {
                     }
                 } else {
                     var i = 0;
-                    
+
                     while (i < itemChanges.length) {
                         if (sessionNoti.indexOf(itemChanges[i].id) === -1) {
                             sessionNoti.push(itemChanges[i].id);

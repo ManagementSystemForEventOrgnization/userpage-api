@@ -7,10 +7,13 @@ module.exports = async (req, res, next) => {
         res.status(602).json({error: {message: 'You have to login', code : 700}})
         return;
     }
-    if (!u.isActive) {
+    if (u.isReported) {
         res.status(602).json({ error: { message: 'Not active', code: 203 } });
         return;
-    } else {    
+    } else if(!u.isActive){
+        res.status(603).json({error: {message: 'You are baned by admin', code : 500}})
+        return;
+    }else {    
         return next();
     }
 }
