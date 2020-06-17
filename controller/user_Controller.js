@@ -690,6 +690,10 @@ module.exports = {
     }
 
     let userReport = req.user;
+    
+    if(userId == userReport){
+        return next({error: {message: 'You can\'t report yourself'}});
+    }
 
     let objData = { userId : userReport, cause: cause || '' };
     if (eventId) {
