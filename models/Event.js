@@ -6,6 +6,7 @@ const eventSchema = new Schema({
     userId: { type : Schema.Types.ObjectId , ref: 'users'},
     typeOfEvent: String,
     urlWeb: String,
+    domain: String ,
     isSellTicket: Boolean,
     ticket: {
         price: Number,

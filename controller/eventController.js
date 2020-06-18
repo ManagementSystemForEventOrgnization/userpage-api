@@ -43,7 +43,7 @@ module.exports = {
     },
 
     saveEvent: async (req, res, next) => {
-        let { name, typeOfEvent, category, urlWeb, session, isSellTicket, bannerUrl } = req.body;
+        let { name, typeOfEvent, domain, category, urlWeb, session, isSellTicket, bannerUrl } = req.body;
         if (!name || !session) {
             return next({ error: { message: 'Invalid value', code: 602 } });
         }
@@ -63,6 +63,7 @@ module.exports = {
             typeOfEvent,
             name,
             category,
+            domain,
             urlWeb,
             session,
             isSellTicket,
