@@ -508,7 +508,7 @@ module.exports = {
 					if (err != null) {
 						next(err);
 					} else {
-						res.status(200).json({ result: true });
+						res.status(200).json({ result: card });
 					}
 				}
 			);
