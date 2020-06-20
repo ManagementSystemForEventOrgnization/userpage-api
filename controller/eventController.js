@@ -32,6 +32,13 @@ module.exports = {
     deleteEvent: async (req, res, next) => {
         let { eventId: id } = req.body;
         try {
+
+            let checkApply = await ApplyEvent.findOne({eventId : ObjectId(id), 'session': {$elemMatch: {isCancel: false, isReject: false}}});
+
+            if(checkApply){
+                return next({error: {message: 'Event has user apply. Can\'t delete', code: 700}});
+            }
+
             let e = await Event.findOneAndUpdate({ _id: ObjectId(id), userId: ObjectId(req.user) }, { status: 'DELETE' });
             if (!e) {
                 return next({ error: { message: 'Event not exists', code: 601 } });
@@ -108,7 +115,9 @@ module.exports = {
                     let _id = pageEvent[0]._id;
                     //let p = await PageEvent.findByIdAndUpdate({ _id: ObjectId(_id) }, { rows: blocks, updateAt: new Date(), header });
                     let objectUpdate = { isPreview };
-                    if (!isPreview) {
+                    if((e.status || '') == 'PUBLIC'){
+                        objectUpdate.status = 'EDITED';
+                    }else if (!isPreview) {
                         objectUpdate.status = 'PENDING';
                     }
                     Promise.all([
@@ -519,9 +528,9 @@ module.exports = {
         } else {
             query.session = { $elemMatch: { isReject: false } };
         }
-        
+
         let users = await ApplyEvent.aggregate([
-        {
+            {
                 $match: query
             },
             {
@@ -560,11 +569,103 @@ module.exports = {
 
         let result = [];
         users.forEach(element => {
-            result.push({...element.user, session: element.sessions});
+            result.push({ ...element.user, session: element.sessions });
         });
 
         res.status(200).json({ result: result });
     },
 
+    test: async (req, res, next) => {
+
+        let e = await Event.aggregate([
+            {
+                $match: {
+                    $and: [{ 'session.isCancel': true },
+                    { isSellTicket: true },
+                    { ticket: { $exists: true } },
+                    { 'ticket.price': { $ne: 0 } }]
+                }
+            },
+            {
+                $lookup:
+                {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    as: "user"
+                }
+            },
+            {
+                $unwind: "$user"
+            },
+            {
+                $lookup:
+                {
+                    from: "eventcategories",
+                    localField: "category",
+                    foreignField: "_id",
+                    as: "cate"
+                }
+            },
+            {
+                $unwind: "$cate"
+            },
+            {
+                $lookup: {
+                    from: 'applyevents',
+                    localField: "_id",
+                    foreignField: "eventId",
+                    as: "arrApply"
+                }
+            },
+            // {$project: {
+            //     name: 1, cate: 1, user: 1, createdAt: 1, status: 1,
+            //         arrApply: {
+            //             $filter: {
+            //                 input: "$arrApply.session",
+            //                 as: "item1",
+            //                 cond: { $eq: ["$$item1.isCancel", true] }
+            //             }
+            //         },
+            //         'session': {
+            //             $filter: {
+            //                 input: "$session",
+            //                 as: "item",
+            //                 cond: { $eq: ["$$item.isCancel", true] }
+            //             }
+            //         }
+            // }},
+            // { $match: { 'arrApply.session.paymentId': { $exists: true } } },
+            {
+                $lookup: {
+                    from: 'payments',
+                    localField: 'arrApply.session.paymentId',
+                    foreignField: '_id',
+                    as: 'payment'
+                }
+            },
+            // {$match : {
+            //     $eq: [{$size: '$payment'}, {$size: ''}]
+            // }},
+            {
+                $project: {
+                    name: 1, cate: 1, user: 1, createdAt: 1, status: 1,
+                    arrApply: 1,
+                    payment: 1,
+                    'session': {
+                        $filter: {
+                            input: "$session",
+                            as: "item",
+                            cond: { $eq: ["$$item.isCancel", true] }
+                        }
+                    }
+                },
+
+            }
+        ]);
+
+
+        res.send(e);
+    }
 
 }

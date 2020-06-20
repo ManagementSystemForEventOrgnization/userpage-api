@@ -461,7 +461,7 @@ module.exports = {
 
       let conditionMath = {
         $and: [
-          { "events.status": { $nin: ["CANCEL"] } },
+          { "events.status": { $nin: ["CANCEL", "DELETE"] } },
         ],
       };
 
@@ -594,7 +594,9 @@ module.exports = {
       let conditionQuery = {
         $and: [{
           userId: ObjectId(idUserLogin)
-        }]
+        },
+        { status: { $nin: ["DELETE"] } }
+        ]
       };
       if (status) {
         conditionQuery.$and.push({ status });
@@ -690,12 +692,12 @@ module.exports = {
     }
 
     let userReport = req.user;
-    
-    if(userId == userReport){
-        return next({error: {message: 'You can\'t report yourself'}});
+
+    if (userId == userReport) {
+      return next({ error: { message: 'You can\'t report yourself' } });
     }
 
-    let objData = { userId : userReport, cause: cause || '' };
+    let objData = { userId: userReport, cause: cause || '' };
     if (eventId) {
       objData.eventId = eventId;
     }
