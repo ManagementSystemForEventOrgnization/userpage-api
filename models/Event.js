@@ -27,7 +27,6 @@ const eventSchema = new Schema({
             isReject: Boolean,
             paymentId: {type: Schema.Types.ObjectId, ref: 'payment'},
             isCancel: Boolean,
-            createdAt: {type: Date, default: Date.now}
         }
     ],//{type : Array}, // limitNumber, joinNumber, endTime, startTime, detail, imageMap, address, linkfile, status 
     category: { type : Schema.Types.ObjectId , ref: 'eventCategory'},
