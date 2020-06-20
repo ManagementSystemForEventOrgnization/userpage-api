@@ -142,7 +142,7 @@ module.exports = {
                         Event.findByIdAndUpdate({ _id: ObjectId(_idE) }, { isPreview: isPreview }),
                         page.save()
                     ]).then(([e, pe]) => {
-                        if (!p) {
+                        if (!pe) {
                             return next({ error: { message: 'Invalid data, can\'t save data', code: 422 } });
                         }
                     })
