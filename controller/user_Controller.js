@@ -422,6 +422,7 @@ module.exports = {
       pageNumber,
       numberRecord,
       type,
+      typeOfEvent,
     } = req.query;
     txtSearch = txtSearch || "";
 
@@ -461,7 +462,7 @@ module.exports = {
 
       let conditionMath = {
         $and: [
-          { "events.status": { $nin: ["CANCEL"] } },
+          { "events.status": { $nin: ["CANCEL", "DELETE"] } },
         ],
       };
 
@@ -502,6 +503,14 @@ module.exports = {
             break;
         }
       }
+
+      if (typeOfEvent) {
+        conditionMath["$and"].push({ 'events.typeOfEvent' : typeOfEvent });
+      }
+
+      conditionMath.$and.push({
+        'events.session': {$exists : true, $not : {$type : 'null', $size : 0}}
+      })
 
       Promise.all([
         ApplyEvent.aggregate([
@@ -578,6 +587,7 @@ module.exports = {
       pageNumber,
       numberRecord,
       status,
+      typeOfEvent
     } = req.query;
 
     status = status || '';
@@ -594,10 +604,16 @@ module.exports = {
       let conditionQuery = {
         $and: [{
           userId: ObjectId(idUserLogin)
-        }]
+        },
+        { status: { $nin: ["DELETE"] } }
+        ]
       };
       if (status) {
-        conditionQuery.$and.push({ status });
+        if (status != "WAITING") {
+          conditionQuery.$and.push({ status });
+        } else {
+          conditionQuery.$and.push({ status: { $in: ["WAITING", "EDITED"] } });
+        }
       }
       if (startDate !== "") {
         conditionQuery.$and.push({
@@ -623,6 +639,12 @@ module.exports = {
       if (txtSearch != "") {
         conditionQuery.$text = { $search: txtSearch };
       }
+      if (typeOfEvent) {
+        conditionQuery.$and.push({ typeOfEvent });
+      }
+
+      conditionQuery.$and.push({session: {$exists : true, $not : {$type : 'null', $size : 0}}});
+
       let e = await Event.aggregate([
         { $match: conditionQuery },
         {
@@ -690,12 +712,12 @@ module.exports = {
     }
 
     let userReport = req.user;
-    
-    if(userId == userReport){
-        return next({error: {message: 'You can\'t report yourself'}});
+
+    if (userId == userReport) {
+      return next({ error: { message: 'You can\'t report yourself' } });
     }
 
-    let objData = { userId : userReport, cause: cause || '' };
+    let objData = { userId: userReport, cause: cause || '' };
     if (eventId) {
       objData.eventId = eventId;
     }

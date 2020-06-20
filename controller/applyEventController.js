@@ -330,6 +330,7 @@ module.exports = {
                         req.body.applyEvent = applyEvent
                         req.body.sendNoti = newNotification
                         req.body.eventChange = currentEvent
+                        req.body.isUserEvent = false
 
                         Promise.all([
                             payment_Controller.refund(req, res, next, nextHandle)
@@ -582,13 +583,17 @@ module.exports = {
         req.body.paymentId = ObjectId(paymentId)
         req.body.applyEvent = null;
         req.body.sendNoti = null;
-
+        
         try {
             const nextHandle = async function (result, isUserEvent, applyEvent, event, noti) {
                 if (result === false) {
                     return res.status(200).json({ result: false });
                 } else {
-                    return res.status(200).json({ result: true });
+                    Promise.all([
+                        Event.findByIdAndUpdate({ _id: event._id }, { session: event.session })
+                    ]).then ( async() => {
+                        return res.status(200).json({ result: true });
+                    })
                 }
             }
 

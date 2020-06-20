@@ -19,6 +19,7 @@ const applyEventSchema = new Schema({
             isReject: Boolean,
             paymentId: {type: Schema.Types.ObjectId, ref: 'payment'},
             isCancel: Boolean,
+            createdAt: {type: Date, default: Date.now}
         }
     ],
     qrcode: { type:String, "index": "text" }

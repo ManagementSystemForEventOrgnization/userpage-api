@@ -6,6 +6,7 @@ const eventSchema = new Schema({
     userId: { type : Schema.Types.ObjectId , ref: 'users'},
     typeOfEvent: String,
     urlWeb: String,
+    domain: String ,
     isSellTicket: Boolean,
     ticket: {
         price: Number,
@@ -26,10 +27,11 @@ const eventSchema = new Schema({
             isReject: Boolean,
             paymentId: {type: Schema.Types.ObjectId, ref: 'payment'},
             isCancel: Boolean,
+            refundNumber: Number
         }
     ],//{type : Array}, // limitNumber, joinNumber, endTime, startTime, detail, imageMap, address, linkfile, status 
     category: { type : Schema.Types.ObjectId , ref: 'eventCategory'},
-    status: { type: String, "index": "text", default: "DRAFT" }, //PENDING, START, FINISH, DRAFT, CANCEL
+    status: { type: String, "index": "text", default: "DRAFT" }, // DRAFT, WAITING, PUBLIC, EDITED, CANCEL
     bannerUrl: String,
     isPreview: { type: Boolean },
 }, { 

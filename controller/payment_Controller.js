@@ -47,9 +47,49 @@ module.exports = {
 
 		let condition = { $or: [{ sender: ObjectId(userId) }, { receiver: ObjectId(userId) }] };
 
-		let pay = await Payment.find(condition)
-			.populate("sender").populate("eventId").populate("receiver")
-			.sort({ createdAt: -1 }).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord);
+		// let pay = await Payment.find(condition)
+		// 	.populate("sender").populate("eventId").populate("receiver")
+		// 	.sort({ createdAt: -1 }).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord);
+
+		let pay = await Payment.aggregate([
+			{ $match: condition },
+			{
+				$lookup: {
+					from: 'users',
+					localField: 'sender',
+					foreignField: '_id',
+					as: 'sender'
+				}
+			},
+			{
+				$unwind: "$sender"
+			},
+			{
+				$lookup: {
+					from: 'users',
+					localField: 'receiver',
+					foreignField: '_id',
+					as: 'receiver'
+				}
+			},
+			{
+				$unwind: "$receiver"
+			},
+			{
+				$lookup: {
+					from: 'events',
+					localField: 'eventId',
+					foreignField: '_id',
+					as: 'eventId'
+				}
+			},
+			{
+				$unwind: "$eventId"
+			},
+			{$sort: {createdAt: -1}},
+			{$skip : +numberRecord * (+pageNumber - 1)},
+			{$limit : +numberRecord}
+		])
 
 		if (!pay) {
 			return next({ error: { message: 'Err', code: 700 } });
@@ -59,7 +99,7 @@ module.exports = {
 	},
 
 	refund: async (req, res, next, nextHandle) => {
-		let { paymentId, joinUserId, eventId, sessionId, applyEvent, sendNoti, eventChange, isUserEvent} = req.body;
+		let { paymentId, joinUserId, eventId, sessionId, applyEvent, sendNoti, eventChange, isUserEvent } = req.body;
 
 		if (paymentId) {
 			try {
@@ -68,7 +108,7 @@ module.exports = {
 					Event.findById(eventId)
 				]).then(async ([currentPayment, event]) => {
 					let userId = event.userId;
-
+					console.log(event)
 					if (!currentPayment.sessionRefunded.includes(sessionId)) {
 						var refundNoti = async function (type, success) {
 							const newNotification = new Notification({
@@ -86,7 +126,7 @@ module.exports = {
 								session: [sessionId]
 							});
 
-							let sendEvent = eventChange || event
+							var sendEvent = eventChange || event
 							let needNotification = sendNoti || newNotification
 
 							if (success == true) {
@@ -96,6 +136,17 @@ module.exports = {
 									Payment.findByIdAndUpdate({ _id: currentPayment._id }, { sessionRefunded: currentPayment.sessionRefunded }),
 									needNotification.save()
 								]).then(async ([p, n]) => {
+									if (isUserEvent != false) {
+										sendEvent.session.forEach(ele => {
+											if (ele.id == sessionId) {
+												var refundNumber = ele.refundNumber || 0;
+												refundNumber += 1;
+												ele.refundNumber = refundNumber;
+												return;
+											}
+										})
+									}
+
 									nextHandle(true, isUserEvent, applyEvent, sendEvent, newNotification);
 									return true;
 								}).catch((err) => {
@@ -508,7 +559,7 @@ module.exports = {
 					if (err != null) {
 						next(err);
 					} else {
-						res.status(200).json({ result: true });
+						res.status(200).json({ result: card });
 					}
 				}
 			);
@@ -532,9 +583,9 @@ module.exports = {
 						customerId: customer.id,
 						userId: req.user
 					});
-					
+
 					await newCard.save();
-					
+
 					createCard(customer.id, req.body.cardToken, res)
 				} else {
 					res.status(600).json({ message: "can't create card customer" });
