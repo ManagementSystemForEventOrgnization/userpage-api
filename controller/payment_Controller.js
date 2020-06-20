@@ -60,7 +60,7 @@ module.exports = {
 
 	refund: async (req, res, next, nextHandle) => {
 		let { paymentId, joinUserId, eventId, sessionId, applyEvent, sendNoti, eventChange, isUserEvent} = req.body;
-
+		
 		if (paymentId) {
 			try {
 				Promise.all([
@@ -68,7 +68,7 @@ module.exports = {
 					Event.findById(eventId)
 				]).then(async ([currentPayment, event]) => {
 					let userId = event.userId;
-
+					console.log(event)
 					if (!currentPayment.sessionRefunded.includes(sessionId)) {
 						var refundNoti = async function (type, success) {
 							const newNotification = new Notification({
@@ -86,7 +86,7 @@ module.exports = {
 								session: [sessionId]
 							});
 
-							let sendEvent = eventChange || event
+							var sendEvent = eventChange || event
 							let needNotification = sendNoti || newNotification
 
 							if (success == true) {
@@ -96,6 +96,17 @@ module.exports = {
 									Payment.findByIdAndUpdate({ _id: currentPayment._id }, { sessionRefunded: currentPayment.sessionRefunded }),
 									needNotification.save()
 								]).then(async ([p, n]) => {
+									if (isUserEvent != false) {
+										sendEvent.session.forEach(ele => {
+											if (ele.id == sessionId) {
+												var refundNumber = ele.refundNumber || 0;
+												refundNumber += 1;
+												ele.refundNumber = refundNumber;
+												return;
+											}
+										})
+									}
+
 									nextHandle(true, isUserEvent, applyEvent, sendEvent, newNotification);
 									return true;
 								}).catch((err) => {
