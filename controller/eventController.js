@@ -618,23 +618,24 @@ module.exports = {
                     as: "arrApply"
                 }
             },
-            // {$project: {
-            //     name: 1, cate: 1, user: 1, createdAt: 1, status: 1,
-            //         arrApply: {
-            //             $filter: {
-            //                 input: "$arrApply.session",
-            //                 as: "item1",
-            //                 cond: { $eq: ["$$item1.isCancel", true] }
-            //             }
-            //         },
-            //         'session': {
-            //             $filter: {
-            //                 input: "$session",
-            //                 as: "item",
-            //                 cond: { $eq: ["$$item.isCancel", true] }
-            //             }
-            //         }
-            // }},
+            {$project: {
+                name: 1, cate: 1, user: 1, createdAt: 1, status: 1,
+                    arrApply: 1,
+                    arrayApply : {
+                        $filter: {
+                            input: "$arrApply.session",
+                            as: "item1",
+                            cond: { $eq: ["$$item1.isCancel", true] }
+                        }
+                    },
+                    'session': {
+                        $filter: {
+                            input: "$session",
+                            as: "item",
+                            cond: { $eq: ["$$item.isCancel", true] }
+                        }
+                    }
+            }},
             // { $match: { 'arrApply.session.paymentId': { $exists: true } } },
             {
                 $lookup: {
@@ -651,6 +652,7 @@ module.exports = {
                 $project: {
                     name: 1, cate: 1, user: 1, createdAt: 1, status: 1,
                     arrApply: 1,
+                    arrayApply:1,
                     payment: 1,
                     'session': {
                         $filter: {
