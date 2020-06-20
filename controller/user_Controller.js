@@ -504,9 +504,13 @@ module.exports = {
         }
       }
 
-      if(typeOfEvent){
-        conditionMath["$and"].push({typeOfEvent});
+      if (typeOfEvent) {
+        conditionMath["$and"].push({ 'events.typeOfEvent' : typeOfEvent });
       }
+
+      conditionMath.$and.push({
+        'events.session': {$exists : true, $not : {$type : 'null', $size : 0}}
+      })
 
       Promise.all([
         ApplyEvent.aggregate([
@@ -605,10 +609,10 @@ module.exports = {
         ]
       };
       if (status) {
-        if(status!="WAITING"){
+        if (status != "WAITING") {
           conditionQuery.$and.push({ status });
-        }else{
-          conditionQuery.$and.push({ status: {$in: ["WAITING", "EDITED"]} });
+        } else {
+          conditionQuery.$and.push({ status: { $in: ["WAITING", "EDITED"] } });
         }
       }
       if (startDate !== "") {
@@ -635,9 +639,12 @@ module.exports = {
       if (txtSearch != "") {
         conditionQuery.$text = { $search: txtSearch };
       }
-      if(typeOfEvent){
-        conditionQuery.$and.push({typeOfEvent});
+      if (typeOfEvent) {
+        conditionQuery.$and.push({ typeOfEvent });
       }
+
+      conditionQuery.$and.push({session: {$exists : true, $not : {$type : 'null', $size : 0}}});
+
       let e = await Event.aggregate([
         { $match: conditionQuery },
         {

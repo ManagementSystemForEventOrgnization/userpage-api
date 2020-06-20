@@ -47,9 +47,49 @@ module.exports = {
 
 		let condition = { $or: [{ sender: ObjectId(userId) }, { receiver: ObjectId(userId) }] };
 
-		let pay = await Payment.find(condition)
-			.populate("sender").populate("eventId").populate("receiver")
-			.sort({ createdAt: -1 }).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord);
+		// let pay = await Payment.find(condition)
+		// 	.populate("sender").populate("eventId").populate("receiver")
+		// 	.sort({ createdAt: -1 }).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord);
+
+		let pay = await Payment.aggregate([
+			{ $match: condition },
+			{
+				$lookup: {
+					from: 'users',
+					localField: 'sender',
+					foreignField: '_id',
+					as: 'sender'
+				}
+			},
+			{
+				$unwind: "$sender"
+			},
+			{
+				$lookup: {
+					from: 'users',
+					localField: 'receiver',
+					foreignField: '_id',
+					as: 'receiver'
+				}
+			},
+			{
+				$unwind: "$receiver"
+			},
+			{
+				$lookup: {
+					from: 'events',
+					localField: 'eventId',
+					foreignField: '_id',
+					as: 'eventId'
+				}
+			},
+			{
+				$unwind: "$eventId"
+			},
+			{$sort: {createdAt: -1}},
+			{$skip : +numberRecord * (+pageNumber - 1)},
+			{$limit : +numberRecord}
+		])
 
 		if (!pay) {
 			return next({ error: { message: 'Err', code: 700 } });
@@ -59,8 +99,8 @@ module.exports = {
 	},
 
 	refund: async (req, res, next, nextHandle) => {
-		let { paymentId, joinUserId, eventId, sessionId, applyEvent, sendNoti, eventChange, isUserEvent} = req.body;
-		
+		let { paymentId, joinUserId, eventId, sessionId, applyEvent, sendNoti, eventChange, isUserEvent } = req.body;
+
 		if (paymentId) {
 			try {
 				Promise.all([
@@ -543,9 +583,9 @@ module.exports = {
 						customerId: customer.id,
 						userId: req.user
 					});
-					
+
 					await newCard.save();
-					
+
 					createCard(customer.id, req.body.cardToken, res)
 				} else {
 					res.status(600).json({ message: "can't create card customer" });

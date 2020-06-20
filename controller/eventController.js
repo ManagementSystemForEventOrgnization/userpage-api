@@ -652,7 +652,7 @@ module.exports = {
             // }},
             {
                 $project: {
-                    name: 1, cate: 1, user: 1, createdAt: 1, status: 1,
+                    name: 1, 
                     arrApply: 1,
                     arrayApply:1,
                     payment: 1,
@@ -668,7 +668,7 @@ module.exports = {
             }
         ]);
 
-        // let e1 = await Event.update({},{$set: {status: 'PENDING'}}, {multi: true});
+        // let e1 = await Event.find({session: {$exists : true, $not : {$type : 'null', $size : 0}}})
 
 
         res.send(e);
