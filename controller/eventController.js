@@ -234,7 +234,8 @@ module.exports = {
                 pageNumber,
                 numberRecord,
                 type,
-                fee
+                fee,
+                
             } = req.query;
             type = type || '';
             pageNumber = +pageNumber || 1;
@@ -665,6 +666,8 @@ module.exports = {
 
             }
         ]);
+
+        // let e1 = await Event.update({},{$set: {status: 'PENDING'}}, {multi: true});
 
 
         res.send(e);

@@ -422,6 +422,7 @@ module.exports = {
       pageNumber,
       numberRecord,
       type,
+      typeOfEvent,
     } = req.query;
     txtSearch = txtSearch || "";
 
@@ -503,6 +504,10 @@ module.exports = {
         }
       }
 
+      if(typeOfEvent){
+        conditionMath["$and"].push({typeOfEvent});
+      }
+
       Promise.all([
         ApplyEvent.aggregate([
           {
@@ -578,6 +583,7 @@ module.exports = {
       pageNumber,
       numberRecord,
       status,
+      typeOfEvent
     } = req.query;
 
     status = status || '';
@@ -599,7 +605,11 @@ module.exports = {
         ]
       };
       if (status) {
-        conditionQuery.$and.push({ status });
+        if(status!="WAITING"){
+          conditionQuery.$and.push({ status });
+        }else{
+          conditionQuery.$and.push({ status: {$in: ["WAITING", "EDITED"]} });
+        }
       }
       if (startDate !== "") {
         conditionQuery.$and.push({
@@ -624,6 +634,9 @@ module.exports = {
       }
       if (txtSearch != "") {
         conditionQuery.$text = { $search: txtSearch };
+      }
+      if(typeOfEvent){
+        conditionQuery.$and.push({typeOfEvent});
       }
       let e = await Event.aggregate([
         { $match: conditionQuery },
