@@ -118,7 +118,7 @@ module.exports = {
                     if((e.status || '') == 'PUBLIC'){
                         objectUpdate.status = 'EDITED';
                     }else if (!isPreview) {
-                        objectUpdate.status = 'PENDING';
+                        objectUpdate.status = 'WAITING';
                     }
                     Promise.all([
                         Event.findByIdAndUpdate({ _id: ObjectId(_idE) }, objectUpdate),
@@ -243,7 +243,7 @@ module.exports = {
             categoryEventId = categoryEventId || '';
             categoryEventId = categoryEventId.split(',');
             let idUserLogin = req.user;
-            let query = { 'status': { $nin: ["CANCEL", "DRAFT", 'DELETE'] } };
+            let query = { 'status': { $nin: ["CANCEL", "DRAFT", 'DELETE'] }, typeOFEvent: {$ne: 'Private'} };
             if (txtSearch != "") {
                 query.$text = { $search: txtSearch };
             }
