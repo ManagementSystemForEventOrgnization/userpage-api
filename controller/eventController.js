@@ -11,6 +11,67 @@ const ApplyEvent = mongoose.model('applyEvent');
 
 module.exports = {
 
+    publicPrivateEvent: async (req, res, next) => {
+        if (typeof req.body.eventId === 'undefined'){
+            next({ error: { message: "Invalid data", code: 402 } });
+            return;
+        }
+
+        let {eventId} = req.body;
+        let userId = req.user;
+
+        try {
+            let event = await Event.findOne({ _id: ObjectId(eventId), userId: ObjectId(userId) });
+
+            if (!event) {
+                return next({ error: { message: 'Event not exists!', code: 777 } });
+            }
+
+            let typeOfEvent = event.typeOfEvent === "Public" ? "Private" : "Public"
+            event.typeOfEvent = typeOfEvent
+
+            await event.save();
+
+            res.status(200).json({ result: event });
+        } catch (error) {
+            next({ error: { message: 'Err', code: 601 } });
+        }
+    },
+
+    publishEvent: async (req, res, next) => {
+        if (typeof req.body.eventId === 'undefined'){
+            next({ error: { message: "Invalid data", code: 402 } });
+            return;
+        }
+
+        let {eventId} = req.body;
+        let userId = req.user;
+
+        try {
+            let event = await Event.findOne({ _id: ObjectId(eventId), userId: ObjectId(userId) });
+
+            if (!event) {
+                return next({ error: { message: 'Event not exists!', code: 777 } });
+            }
+            console.log(event)
+            if (event.status === "DRAFT") {
+                event.status = "WAITING"
+            } else if (event.status === "PUBLIC") {
+                return next({ error: { message: 'This event did public', code: 755 } });
+            } else if (event.status === "CANCEL") {
+                return next({ error: { message: 'This event cancelled', code: 754 } });
+            } else {
+                return next({ error: { message: 'This event is waiting for review', code: 753 } });
+            }
+            
+            await event.save();
+
+            res.status(200).json({ result: event });
+        } catch (error) {
+            next({ error: { message: 'Err', code: 601 } });
+        }
+    },
+
     updateEvent: async (req, res, next) => {
 
         let objectUpdate = { ...req.body };
@@ -142,7 +203,7 @@ module.exports = {
                         Event.findByIdAndUpdate({ _id: ObjectId(_idE) }, { isPreview: isPreview }),
                         page.save()
                     ]).then(([e, pe]) => {
-                        if (!pe) {
+                        if (!p) {
                             return next({ error: { message: 'Invalid data, can\'t save data', code: 422 } });
                         }
                     })
@@ -245,7 +306,7 @@ module.exports = {
             categoryEventId = categoryEventId || '';
             categoryEventId = categoryEventId.split(',');
             let idUserLogin = req.user;
-            let query = { 'status': { $nin: ["CANCEL", "DRAFT", 'DELETE'] }, typeOFEvent: {$ne: 'Private'} };
+            let query = { 'status': { $nin: ["CANCEL", "DRAFT", 'DELETE'] }, typeOfEvent: {$ne: 'Private'} };
             if (txtSearch != "") {
                 query.$text = { $search: txtSearch };
             }
@@ -652,7 +713,7 @@ module.exports = {
             // }},
             {
                 $project: {
-                    name: 1, 
+                    name: 1, cate: 1, user: 1, createdAt: 1, status: 1,
                     arrApply: 1,
                     arrayApply:1,
                     payment: 1,
@@ -668,7 +729,7 @@ module.exports = {
             }
         ]);
 
-        // let e1 = await Event.find({session: {$exists : true, $not : {$type : 'null', $size : 0}}})
+        // let e1 = await Event.update({},{$set: {status: 'PENDING'}}, {multi: true});
 
 
         res.send(e);
