@@ -8,6 +8,8 @@ const Event = mongoose.model('event');
 const PageEvent = mongoose.model('pageEvent');
 const Comment = mongoose.model('comment');
 const ApplyEvent = mongoose.model('applyEvent');
+const Notification = mongoose.model('notification');
+const adminId = "5ee5d9aff7a5a623d08718d5"
 
 module.exports = {
 
@@ -49,13 +51,38 @@ module.exports = {
 
         try {
             let event = await Event.findOne({ _id: ObjectId(eventId), userId: ObjectId(userId) });
-
+            
             if (!event) {
                 return next({ error: { message: 'Event not exists!', code: 777 } });
             }
-            console.log(event)
+            
             if (event.status === "DRAFT") {
                 event.status = "WAITING"
+
+                const newNotification = new Notification({
+                    sender: userId,
+                    receiver: [adminId],
+                    type: "PUBLISH_EVENT",
+                    message: "",
+                    title: "{sender} has required review for the event " + event.name,
+                    linkTo: {
+                        key: "EventDetail",
+                        _id: eventId,
+                    },
+                    isRead: false,
+                    isDelete: false,
+                    session: []
+                });
+
+                Promise.all([
+                    event.save(),
+                    newNotification.save()
+                ]).then (() => {
+                    res.status(200).json({ result: event });
+                }).catch( (err) => {
+                    return next({ error: { message: 'Execute failed!', code: 776 } });
+                })
+
             } else if (event.status === "PUBLIC") {
                 return next({ error: { message: 'This event did public', code: 755 } });
             } else if (event.status === "CANCEL") {
@@ -63,12 +90,8 @@ module.exports = {
             } else {
                 return next({ error: { message: 'This event is waiting for review', code: 753 } });
             }
-            
-            await event.save();
-
-            res.status(200).json({ result: event });
         } catch (error) {
-            next({ error: { message: 'Err', code: 601 } });
+            next({ error: { message: 'Error', code: 601 } });
         }
     },
 
