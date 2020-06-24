@@ -691,7 +691,6 @@ module.exports = {
 
 
     res.status(200).json({ result: user });
-
   },
 
   updateBankInf: async (req, res, next) => {
