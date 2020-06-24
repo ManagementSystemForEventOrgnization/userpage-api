@@ -59,6 +59,10 @@ module.exports = {
                     next({ error: { message: 'Event cancelled', code: 719 } });
                     return;
                 }
+                if (currentEvent.status !== "PUBLIC") {
+                    next({ error: { message: 'Waiting for public event', code: 730 } });
+                    return;
+                }
 
                 var sessions = []
 
@@ -132,6 +136,7 @@ module.exports = {
                     linkTo: {
                         key: "EventDetail",
                         _id: eventId,
+                        urlWeb: currentEvent.domain + currentEvent.urlWeb
                     },
                     isRead: false,
                     isDelete: false,
@@ -297,6 +302,7 @@ module.exports = {
                         linkTo: {
                             key: "EventDetail",
                             _id: eventId,
+                            urlWeb: currentEvent.domain + currentEvent.urlWeb
                         },
                         session: [sessionId],
                         isRead: false,
@@ -526,6 +532,7 @@ module.exports = {
                         linkTo: {
                             key: "EventDetail",
                             _id: eventId,
+                            urlWeb: event.domain + event.urlWeb
                         },
                         isRead: false,
                         isDelete: false,
@@ -546,6 +553,7 @@ module.exports = {
                     linkTo: {
                         key: "EventDetail",
                         _id: eventId,
+                        urlWeb: event.domain + event.urlWeb
                     },
                     isRead: false,
                     isDelete: false,
