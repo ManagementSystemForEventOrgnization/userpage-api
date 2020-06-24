@@ -108,7 +108,7 @@ module.exports = {
 					Event.findById(eventId)
 				]).then(async ([currentPayment, event]) => {
 					let userId = event.userId;
-					console.log(event)
+					
 					if (!currentPayment.sessionRefunded.includes(sessionId)) {
 						var refundNoti = async function (type, success) {
 							const newNotification = new Notification({
@@ -137,6 +137,13 @@ module.exports = {
 									needNotification.save()
 								]).then(async ([p, n]) => {
 									if (isUserEvent != false) {
+										applyEvent.session.forEach(ele => {
+											if (ele.id == sessionId) {
+												ele.isRefund = true;
+												return;
+											}
+										})
+						
 										sendEvent.session.forEach(ele => {
 											if (ele.id == sessionId) {
 												var refundNumber = ele.refundNumber || 0;

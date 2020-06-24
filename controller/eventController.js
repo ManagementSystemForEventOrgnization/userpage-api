@@ -8,8 +8,92 @@ const Event = mongoose.model('event');
 const PageEvent = mongoose.model('pageEvent');
 const Comment = mongoose.model('comment');
 const ApplyEvent = mongoose.model('applyEvent');
+const Notification = mongoose.model('notification');
+const adminId = "5ee5d9aff7a5a623d08718d5"
 
 module.exports = {
+
+    publicPrivateEvent: async (req, res, next) => {
+        if (typeof req.body.eventId === 'undefined'){
+            next({ error: { message: "Invalid data", code: 402 } });
+            return;
+        }
+
+        let {eventId} = req.body;
+        let userId = req.user;
+
+        try {
+            let event = await Event.findOne({ _id: ObjectId(eventId), userId: ObjectId(userId) });
+
+            if (!event) {
+                return next({ error: { message: 'Event not exists!', code: 777 } });
+            }
+
+            let typeOfEvent = event.typeOfEvent === "Public" ? "Private" : "Public"
+            event.typeOfEvent = typeOfEvent
+
+            await event.save();
+
+            res.status(200).json({ result: event });
+        } catch (error) {
+            next({ error: { message: 'Err', code: 601 } });
+        }
+    },
+
+    publishEvent: async (req, res, next) => {
+        if (typeof req.body.eventId === 'undefined'){
+            next({ error: { message: "Invalid data", code: 402 } });
+            return;
+        }
+
+        let {eventId} = req.body;
+        let userId = req.user;
+
+        try {
+            let event = await Event.findOne({ _id: ObjectId(eventId), userId: ObjectId(userId) });
+            
+            if (!event) {
+                return next({ error: { message: 'Event not exists!', code: 777 } });
+            }
+            
+            if (event.status === "DRAFT") {
+                event.status = "WAITING"
+
+                const newNotification = new Notification({
+                    sender: userId,
+                    receiver: [adminId],
+                    type: "PUBLISH_EVENT",
+                    message: "",
+                    title: "{sender} has required review for the event " + event.name,
+                    linkTo: {
+                        key: "EventDetail",
+                        _id: eventId,
+                    },
+                    isRead: false,
+                    isDelete: false,
+                    session: []
+                });
+
+                Promise.all([
+                    event.save(),
+                    newNotification.save()
+                ]).then (() => {
+                    res.status(200).json({ result: event });
+                }).catch( (err) => {
+                    return next({ error: { message: 'Execute failed!', code: 776 } });
+                })
+
+            } else if (event.status === "PUBLIC") {
+                return next({ error: { message: 'This event did public', code: 755 } });
+            } else if (event.status === "CANCEL") {
+                return next({ error: { message: 'This event cancelled', code: 754 } });
+            } else {
+                return next({ error: { message: 'This event is waiting for review', code: 753 } });
+            }
+        } catch (error) {
+            next({ error: { message: 'Error', code: 601 } });
+        }
+    },
 
     updateEvent: async (req, res, next) => {
 
@@ -142,7 +226,7 @@ module.exports = {
                         Event.findByIdAndUpdate({ _id: ObjectId(_idE) }, { isPreview: isPreview }),
                         page.save()
                     ]).then(([e, pe]) => {
-                        if (!pe) {
+                        if (!p) {
                             return next({ error: { message: 'Invalid data, can\'t save data', code: 422 } });
                         }
                     })
