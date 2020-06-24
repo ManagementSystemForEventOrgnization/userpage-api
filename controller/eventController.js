@@ -68,6 +68,7 @@ module.exports = {
                     linkTo: {
                         key: "EventDetail",
                         _id: eventId,
+                        urlWeb: event.domain + event.urlWeb
                     },
                     isRead: false,
                     isDelete: false,
@@ -204,6 +205,24 @@ module.exports = {
                         objectUpdate.status = 'EDITED';
                     } else if (!isPreview) {
                         objectUpdate.status = 'WAITING';
+                        
+                        const newNotification = new Notification({
+                            sender: checkEventUrl.userId,
+                            receiver: [adminId],
+                            type: "PUBLISH_EVENT",
+                            message: "",
+                            title: "{sender} has required review for the event " + checkEventUrl.name,
+                            linkTo: {
+                                key: "EventDetail",
+                                _id: eventId,
+                                urlWeb: checkEventUrl.domain + checkEventUrl.urlWeb
+                            },
+                            isRead: false,
+                            isDelete: false,
+                            session: []
+                        });
+        
+                        newNotification.save();
                     }
                     Promise.all([
                         Event.findByIdAndUpdate({ _id: ObjectId(_idE) }, objectUpdate),
