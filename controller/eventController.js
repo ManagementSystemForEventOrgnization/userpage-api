@@ -9,6 +9,8 @@ const PageEvent = mongoose.model('pageEvent');
 const Comment = mongoose.model('comment');
 const ApplyEvent = mongoose.model('applyEvent');
 const Notification = mongoose.model('notification');
+const Axios = require('axios');
+
 const adminId = "5ee5d9aff7a5a623d08718d5"
 
 module.exports = {
@@ -203,9 +205,7 @@ module.exports = {
                     let objectUpdate = { isPreview };
                     if ((e.status || '') == 'PUBLIC') {
                         objectUpdate.status = 'EDITED';
-                    } else if (!isPreview) {
-                        objectUpdate.status = 'WAITING';
-                        
+
                         const newNotification = new Notification({
                             sender: checkEventUrl.userId,
                             receiver: [adminId],
@@ -221,8 +221,13 @@ module.exports = {
                             isDelete: false,
                             session: []
                         });
-        
-                        newNotification.save();
+
+                        newNotification.save().then(e => {
+                            Axios.post(`https://event-admin-page.herokuapp.com/api/push_notification`,
+                                { content: `${checkEventUrl.userId} has required review for the event ${checkEventUrl.name}` });
+                        })
+                    } else if (!isPreview) {
+                        objectUpdate.status = 'WAITING';
                     }
                     Promise.all([
                         Event.findByIdAndUpdate({ _id: ObjectId(_idE) }, objectUpdate),
@@ -245,15 +250,10 @@ module.exports = {
                         Event.findByIdAndUpdate({ _id: ObjectId(_idE) }, { isPreview: isPreview }),
                         page.save()
                     ]).then(([e, pe]) => {
-                        if (!p) {
+                        if (!pe) {
                             return next({ error: { message: 'Invalid data, can\'t save data', code: 422 } });
                         }
                     })
-
-                    // let p = await page.save();
-                    // if (!p) {
-                    //     return next({ error: { message: 'Invalid data, can\'t save data', code: 422 } });
-                    // }
                 }
                 res.status(200).json({ result: 'success' })
             }).catch((err) => {
@@ -353,7 +353,7 @@ module.exports = {
             }
 
             if (startDate && endDate) {
-                query.session = { $elemMatch :{day: { $gt: new Date(startDate) , $lt: new Date(endDate)} } };
+                query.session = { $elemMatch: { day: { $gt: new Date(startDate), $lt: new Date(endDate) } } };
             }
 
             if (fee) {
