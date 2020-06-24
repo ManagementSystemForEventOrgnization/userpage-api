@@ -577,31 +577,41 @@ module.exports = {
             return;
         }
 
+
         let { paymentId, joinUserId, eventId } = req.body;
-        req.body.eventId = ObjectId(eventId)
-        req.body.joinUserId = ObjectId(joinUserId)
-        req.body.paymentId = ObjectId(paymentId)
-        req.body.applyEvent = null;
-        req.body.sendNoti = null;
         
         try {
-            const nextHandle = async function (result, isUserEvent, applyEvent, event, noti) {
-                if (result === false) {
-                    return res.status(200).json({ result: false });
-                } else {
-                    Promise.all([
-                        Event.findByIdAndUpdate({ _id: event._id }, { session: event.session })
-                    ]).then ( async() => {
-                        return res.status(200).json({ result: true });
-                    })
-                }
-            }
+            let currentApplyEvent = await ApplyEvent.findOne({ userId: ObjectId(joinUserId), eventId: ObjectId(eventId) });
 
-            Promise.all([
-                payment_Controller.refund(req, res, next, nextHandle)
-            ]).then().catch((err) => {
-                next({ error: { message: "Execute failed!", code: 776 } });
-            })
+            if (currentApplyEvent) {
+                req.body.eventId = ObjectId(eventId)
+                req.body.joinUserId = ObjectId(joinUserId)
+                req.body.paymentId = ObjectId(paymentId)
+                req.body.applyEvent = currentApplyEvent;
+                req.body.sendNoti = null;
+
+                const nextHandle = async function (result, isUserEvent, applyEvent, event, noti) {
+                    if (result === false) {
+                        return res.status(200).json({ result: false });
+                    } else {
+                        console.log(applyEvent)
+                        Promise.all([
+                            ApplyEvent.findByIdAndUpdate({ _id: applyEvent._id }, { session: applyEvent.session }),
+                            Event.findByIdAndUpdate({ _id: event._id }, { session: event.session })
+                        ]).then ( async() => {
+                            return res.status(200).json({ result: true });
+                        })
+                    }
+                }
+    
+                Promise.all([
+                    payment_Controller.refund(req, res, next, nextHandle)
+                ]).then().catch((err) => {
+                    next({ error: { message: "Execute failed!", code: 776 } });
+                })
+            } else {
+                next({ error: { message: "User have not joined this event!", code: 733 } });
+            }
         } catch (err) {
             next({ error: { message: "Object not found", code: 777 } });
         }
