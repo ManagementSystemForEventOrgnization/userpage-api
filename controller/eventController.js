@@ -334,8 +334,7 @@ module.exports = {
             }
 
             if (startDate && endDate) {
-                query.session = { $elemMatch :{day: { $gt: new Date(startDate) , $lt: new Date(endDate)} } }
-                
+                query.session = { $elemMatch :{day: { $gt: new Date(startDate) , $lt: new Date(endDate)} } };
             }
 
             if (fee) {
