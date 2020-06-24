@@ -14,12 +14,12 @@ const adminId = "5ee5d9aff7a5a623d08718d5"
 module.exports = {
 
     publicPrivateEvent: async (req, res, next) => {
-        if (typeof req.body.eventId === 'undefined'){
+        if (typeof req.body.eventId === 'undefined') {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
-        let {eventId} = req.body;
+        let { eventId } = req.body;
         let userId = req.user;
 
         try {
@@ -41,21 +41,21 @@ module.exports = {
     },
 
     publishEvent: async (req, res, next) => {
-        if (typeof req.body.eventId === 'undefined'){
+        if (typeof req.body.eventId === 'undefined') {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
-        let {eventId} = req.body;
+        let { eventId } = req.body;
         let userId = req.user;
 
         try {
             let event = await Event.findOne({ _id: ObjectId(eventId), userId: ObjectId(userId) });
-            
+
             if (!event) {
                 return next({ error: { message: 'Event not exists!', code: 777 } });
             }
-            
+
             if (event.status === "DRAFT") {
                 event.status = "WAITING"
 
@@ -77,9 +77,9 @@ module.exports = {
                 Promise.all([
                     event.save(),
                     newNotification.save()
-                ]).then (() => {
+                ]).then(() => {
                     res.status(200).json({ result: event });
-                }).catch( (err) => {
+                }).catch((err) => {
                     return next({ error: { message: 'Execute failed!', code: 776 } });
                 })
 
@@ -320,7 +320,6 @@ module.exports = {
                 numberRecord,
                 type,
                 fee,
-
             } = req.query;
             type = type || '';
             pageNumber = +pageNumber || 1;
@@ -329,16 +328,22 @@ module.exports = {
             categoryEventId = categoryEventId || '';
             categoryEventId = categoryEventId.split(',');
             let idUserLogin = req.user;
-            let query = { 'status': { $nin: ["CANCEL", "DRAFT", 'DELETE'] }, typeOFEvent: { $ne: 'Private' } };
+            let query = { 'status': 'PUBLIC', typeOfEvent: 'Public' };
             if (txtSearch != "") {
                 query.$text = { $search: txtSearch };
             }
+
+            if (startDate && endDate) {
+                query.session = { $elemMatch :{day: { $gt: new Date(startDate) , $lt: new Date(endDate)} } }
+                
+            }
+
             if (fee) {
                 query.isSellTicket = { $exists: true };
                 query.ticket = { $exists: true };
                 query["ticket.price"] = { $ne: 0 }
-
             }
+
             if (categoryEventId[0]) {
                 let category = { $or: [] };
                 categoryEventId.forEach(e => {
@@ -346,6 +351,7 @@ module.exports = {
                 });
                 query.$or = category.$or;
             }
+
             let projectQuery = {
                 'eventCategories': 1,
                 'users': 1,
@@ -367,7 +373,7 @@ module.exports = {
             } else {
                 sortQuery.createdAt = -1;
             }
-
+            console.log(query);
             Promise.all([
                 Event.aggregate([
                     { $match: query },
@@ -800,10 +806,10 @@ module.exports = {
                             cond: { $eq: ["$$item.isCancel", true] }
                         }
                     },
-                    payment:1
+                    payment: 1
                 }
             },
-            {$match: {'payment' : {$elemMatch: {'$session': '$sessionRefunded'}}}}
+            { $match: { 'payment': { $elemMatch: { '$session': '$sessionRefunded' } } } }
         ])
 
 
