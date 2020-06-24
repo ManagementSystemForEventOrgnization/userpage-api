@@ -78,6 +78,7 @@ module.exports = {
     }
 
     passport.authenticate("local", function (err, user, info) {
+
       if (err) {
         return next(err);
       }
@@ -156,6 +157,7 @@ module.exports = {
           if (err) {
             return next(err);
           }
+
           return res.status(200).json({ result: user });
         });
       })(req, res, next);
