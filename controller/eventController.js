@@ -9,17 +9,19 @@ const PageEvent = mongoose.model('pageEvent');
 const Comment = mongoose.model('comment');
 const ApplyEvent = mongoose.model('applyEvent');
 const Notification = mongoose.model('notification');
+const Axios = require('axios');
+
 const adminId = "5ee5d9aff7a5a623d08718d5"
 
 module.exports = {
 
     publicPrivateEvent: async (req, res, next) => {
-        if (typeof req.body.eventId === 'undefined'){
+        if (typeof req.body.eventId === 'undefined') {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
-        let {eventId} = req.body;
+        let { eventId } = req.body;
         let userId = req.user;
 
         try {
@@ -41,21 +43,21 @@ module.exports = {
     },
 
     publishEvent: async (req, res, next) => {
-        if (typeof req.body.eventId === 'undefined'){
+        if (typeof req.body.eventId === 'undefined') {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
-        let {eventId} = req.body;
+        let { eventId } = req.body;
         let userId = req.user;
 
         try {
             let event = await Event.findOne({ _id: ObjectId(eventId), userId: ObjectId(userId) });
-            
+
             if (!event) {
                 return next({ error: { message: 'Event not exists!', code: 777 } });
             }
-            
+
             if (event.status === "DRAFT") {
                 event.status = "WAITING"
 
@@ -68,6 +70,7 @@ module.exports = {
                     linkTo: {
                         key: "EventDetail",
                         _id: eventId,
+                        urlWeb: event.domain + event.urlWeb
                     },
                     isRead: false,
                     isDelete: false,
@@ -77,9 +80,9 @@ module.exports = {
                 Promise.all([
                     event.save(),
                     newNotification.save()
-                ]).then (() => {
+                ]).then(() => {
                     res.status(200).json({ result: event });
-                }).catch( (err) => {
+                }).catch((err) => {
                     return next({ error: { message: 'Execute failed!', code: 776 } });
                 })
 
@@ -202,6 +205,26 @@ module.exports = {
                     let objectUpdate = { isPreview };
                     if ((e.status || '') == 'PUBLIC') {
                         objectUpdate.status = 'EDITED';
+                        const newNotification = new Notification({
+                            sender: checkEventUrl.userId,
+                            receiver: [adminId],
+                            type: "PUBLISH_EVENT",
+                            message: "",
+                            title: "{sender} has required review for the event " + checkEventUrl.name,
+                            linkTo: {
+                                key: "EventDetail",
+                                _id: eventId,
+                                urlWeb: checkEventUrl.domain + checkEventUrl.urlWeb
+                            },
+                            isRead: false,
+                            isDelete: false,
+                            session: []
+                        });
+
+                        newNotification.save().then(e => {
+                            Axios.post(`https://event-admin-page.herokuapp.com/api/push_notification`,
+                                { content: `${checkEventUrl.userId} has required review for the event ${checkEventUrl.name}` });
+                        })
                     } else if (!isPreview) {
                         objectUpdate.status = 'WAITING';
                     }
@@ -212,6 +235,26 @@ module.exports = {
                         if (!pe) {
                             return next({ error: { message: 'Event is not exists', code: 422 } });
                         }
+                        
+                        // else if (e.status === "EDITED") {
+                        //     const newNotification = new Notification({
+                        //         sender: checkEventUrl.userId,
+                        //         receiver: [adminId],
+                        //         type: "PUBLISH_EVENT",
+                        //         message: "",
+                        //         title: "{sender} has required review for the event " + checkEventUrl.name,
+                        //         linkTo: {
+                        //             key: "EventDetail",
+                        //             _id: eventId,
+                        //             urlWeb: checkEventUrl.domain + checkEventUrl.urlWeb
+                        //         },
+                        //         isRead: false,
+                        //         isDelete: false,
+                        //         session: []
+                        //     });
+            
+                        //     newNotification.save();
+                        // }
                     })
                 } else {
                     let page = new PageEvent(
@@ -226,15 +269,10 @@ module.exports = {
                         Event.findByIdAndUpdate({ _id: ObjectId(_idE) }, { isPreview: isPreview }),
                         page.save()
                     ]).then(([e, pe]) => {
-                        if (!p) {
+                        if (!pe) {
                             return next({ error: { message: 'Invalid data, can\'t save data', code: 422 } });
                         }
                     })
-
-                    // let p = await page.save();
-                    // if (!p) {
-                    //     return next({ error: { message: 'Invalid data, can\'t save data', code: 422 } });
-                    // }
                 }
                 res.status(200).json({ result: 'success' })
             }).catch((err) => {
@@ -320,7 +358,6 @@ module.exports = {
                 numberRecord,
                 type,
                 fee,
-
             } = req.query;
             type = type || '';
             pageNumber = +pageNumber || 1;
@@ -329,16 +366,21 @@ module.exports = {
             categoryEventId = categoryEventId || '';
             categoryEventId = categoryEventId.split(',');
             let idUserLogin = req.user;
-            let query = { 'status': { $nin: ["CANCEL", "DRAFT", 'DELETE'] }, typeOFEvent: { $ne: 'Private' } };
+            let query = { 'status': 'PUBLIC', typeOfEvent: 'Public' };
             if (txtSearch != "") {
                 query.$text = { $search: txtSearch };
             }
+
+            if (startDate && endDate) {
+                query.session = { $elemMatch: { day: { $gt: new Date(startDate), $lt: new Date(endDate) } } };
+            }
+
             if (fee) {
                 query.isSellTicket = { $exists: true };
                 query.ticket = { $exists: true };
                 query["ticket.price"] = { $ne: 0 }
-
             }
+
             if (categoryEventId[0]) {
                 let category = { $or: [] };
                 categoryEventId.forEach(e => {
@@ -346,6 +388,7 @@ module.exports = {
                 });
                 query.$or = category.$or;
             }
+
             let projectQuery = {
                 'eventCategories': 1,
                 'users': 1,
@@ -367,7 +410,7 @@ module.exports = {
             } else {
                 sortQuery.createdAt = -1;
             }
-
+            console.log(query);
             Promise.all([
                 Event.aggregate([
                     { $match: query },
@@ -800,10 +843,10 @@ module.exports = {
                             cond: { $eq: ["$$item.isCancel", true] }
                         }
                     },
-                    payment:1
+                    payment: 1
                 }
             },
-            {$match: {'payment' : {$elemMatch: {'$session': '$sessionRefunded'}}}}
+            { $match: { 'payment': { $elemMatch: { '$session': '$sessionRefunded' } } } }
         ])
 
 

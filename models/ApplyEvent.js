@@ -2,9 +2,9 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const applyEventSchema = new Schema({
-    userId: { type : Schema.Types.ObjectId , ref: 'users'},
-    eventId: { type : Schema.Types.ObjectId, ref: 'event' },
-    session :  [
+    userId: { type: Schema.Types.ObjectId, ref: 'users' },
+    eventId: { type: Schema.Types.ObjectId, ref: 'event' },
+    session: [
         {
             id: String,
             day: Date,
@@ -17,18 +17,18 @@ const applyEventSchema = new Schema({
             status: String,
             isConfirm: Boolean,
             isReject: Boolean,
-            paymentId: {type: Schema.Types.ObjectId, ref: 'payment'},
+            paymentId: { type: Schema.Types.ObjectId, ref: 'payment' },
             isCancel: Boolean,
-            isRefund: Boolean,
-            createdAt: {type: Date, default: Date.now}
+            isRefund: { type: Boolean, default: false },
+            createdAt: { type: Date, default: Date.now }
         }
     ],
-    qrcode: { type:String, "index": "text" }
-}, { 
-	timestamps: { 
-		createdAt: 'createdAt', 
-		updatedAt: 'updatedAt' 
-	}
+    qrcode: { type: String, "index": "text" }
+}, {
+    timestamps: {
+        createdAt: 'createdAt',
+        updatedAt: 'updatedAt'
+    }
 })
 
 mongoose.model('applyEvent', applyEventSchema);
