@@ -208,6 +208,12 @@ module.exports = {
                     let objectUpdate = { isPreview };
                     if ((e.status || '') == 'PUBLIC') {
                         objectUpdate.status = 'EDITED';
+
+                        // if(e.isRequire){
+                        //     objectUpdate.isRequire = false;
+                        //     objectUpdate.isEdit = false;
+                        // }
+                        
                         const newNotification = new Notification({
                             sender: checkEventUrl.userId,
                             receiver: [adminId],
@@ -226,7 +232,7 @@ module.exports = {
 
                         newNotification.save().then(e => {
                             Axios.post(`https://event-admin-page.herokuapp.com/api/push_notification`,
-                                { content: `${checkEventUrl.userId} has required review for the event ${checkEventUrl.name}` });
+                                { content: `${checkEventUrl.name} has required review for the event ${checkEventUrl.name}` });
                         })
                     } else if (!isPreview) {
                         objectUpdate.status = 'WAITING';
@@ -314,18 +320,19 @@ module.exports = {
                 }
                 let result = {};
 
-                if(editSite && (idUser != e.userId)){
-                    next({error : {message: 'You are not authorization'}});
+                if (editSite && (idUser != e.userId)) {
+                    next({ error: { message: 'You are not authorization' } });
                     return;
                 }
 
                 if (editSite && checkApply) {
-                    if(!e.isEdit){
+                    
+                    if ((+(e.isEdit || 0) - (Date.now()))<0) {
                         next({ error: { message: 'Event has user apply! Please contact with admin to resolve!', code: 700 } });
                         return;
                     }
                 }
-                
+
                 if (ap) {
                     let eS = e.session;
                     let apS = ap.session;
@@ -363,19 +370,20 @@ module.exports = {
         }
     },
 
-    require_edit_event: async(req,res,next)=>{
+    require_edit_event: async (req, res, next) => {
+        let { eventId, urlWeb } = req.body;
 
-        let {eventId, urlWeb} = req.body;
-        
-        if(!eventId){
-            let e = await Event.findOne({urlWeb});
+        if (!eventId) {
+            let e = await Event.findOne({ urlWeb });
             eventId = e._id;
         }
         let checkEventUrl = await Event.findById(eventId);
-        if(!checkEventUrl){
-            next({error: {message: 'Event is not exists'}});
+        if (!checkEventUrl) {
+            next({ error: { message: 'Event is not exists' } });
             return;
         }
+        checkEventUrl.isRequire = true;
+
         const newNotification = new Notification({
             sender: checkEventUrl.userId,
             receiver: [adminId],
@@ -392,12 +400,16 @@ module.exports = {
             session: []
         });
 
-        newNotification.save().then(e => {
-            Axios.post(`https://event-admin-page.herokuapp.com/api/push_notification`,
-                { content: `${checkEventUrl.name} has required edit for the event ${checkEventUrl.name}` });
+        checkEventUrl.save().then(e => {
+            newNotification.save().then(e => {
+                Axios.post(`https://event-admin-page.herokuapp.com/api/push_notification`,
+                    { content: `${checkEventUrl.name} has required edit for the event ${checkEventUrl.name}` });
+            })
+            res.status(200).json({ result: true });
+        }).catch(err => {
+            next({ error: { message: 'Something is wrong' } });
         })
 
-        res.status(200).json({result: true});
     },
 
     getListEvent: async (req, res, next) => {
