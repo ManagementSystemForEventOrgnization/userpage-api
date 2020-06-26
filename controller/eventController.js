@@ -320,8 +320,11 @@ module.exports = {
                 }
 
                 if (editSite && checkApply) {
-                    next({ error: { message: 'Event has user apply! Please contact with admin to resolve!' } });
-                    return;
+                    if(!e.isEdit){
+                        next({ error: { message: 'Event has user apply! Please contact with admin to resolve!' } });
+                        return;
+                    }
+                    
                 } else if (ap) {
                     let eS = e.session;
                     let apS = ap.session;
