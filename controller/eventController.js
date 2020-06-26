@@ -9,6 +9,7 @@ const PageEvent = mongoose.model('pageEvent');
 const Comment = mongoose.model('comment');
 const ApplyEvent = mongoose.model('applyEvent');
 const Notification = mongoose.model('notification');
+const Payment = mongoose.model('payment');
 const Axios = require('axios');
 
 const adminId = "5ee5d9aff7a5a623d08718d5"
@@ -82,6 +83,8 @@ module.exports = {
                     newNotification.save()
                 ]).then(() => {
                     res.status(200).json({ result: event });
+                    // Axios.post(`https://event-admin-page.herokuapp.com/api/push_notification`,
+                    //             { content: `${checkEventUrl.userId} has required review for the event ${checkEventUrl.name}` });
                 }).catch((err) => {
                     return next({ error: { message: 'Execute failed!', code: 776 } });
                 })
@@ -120,7 +123,7 @@ module.exports = {
         let { eventId: id } = req.body;
         try {
 
-            let checkApply = await ApplyEvent.findOne({ eventId: ObjectId(id), 'session': { $elemMatch: { isCancel: false, isReject: false } } });
+            let checkApply = await ApplyEvent.findOne({ eventId: ObjectId(id), 'session': { $elemMatch: { isCancel: true, isRefund: false } } });
 
             if (checkApply) {
                 return next({ error: { message: 'Event has user apply. Can\'t delete', code: 700 } });
@@ -235,7 +238,7 @@ module.exports = {
                         if (!pe) {
                             return next({ error: { message: 'Event is not exists', code: 422 } });
                         }
-                        
+
                         // else if (e.status === "EDITED") {
                         //     const newNotification = new Notification({
                         //         sender: checkEventUrl.userId,
@@ -252,7 +255,7 @@ module.exports = {
                         //         isDelete: false,
                         //         session: []
                         //     });
-            
+
                         //     newNotification.save();
                         // }
                     })
@@ -706,149 +709,26 @@ module.exports = {
 
     test: async (req, res, next) => {
 
-
-        // let e = await Event.aggregate([
-        //     {
-        //         $match: {
-        //             $and: [{ 'session.isCancel': true },
-        //             { isSellTicket: true },
-        //             { ticket: { $exists: true } },
-        //             { 'ticket.price': { $ne: 0 } }]
-        //         }
-        //     },
-        //     {
-        //         $lookup:
-        //         {
-        //             from: "users",
-        //             localField: "userId",
-        //             foreignField: "_id",
-        //             as: "user"
-        //         }
-        //     },
-        //     {
-        //         $unwind: "$user"
-        //     },
-        //     {
-        //         $lookup:
-        //         {
-        //             from: "eventcategories",
-        //             localField: "category",
-        //             foreignField: "_id",
-        //             as: "cate"
-        //         }
-        //     },
-        //     {
-        //         $unwind: "$cate"
-        //     },
-        //     {
-        //         $project: {
-        //             _id: 1, name: 1, cate: 1, user: 1, createdAt: 1, status: 1,
-        //             'session': {
-        //                 $filter: {
-        //                     input: "$session",
-        //                     as: "item",
-        //                     cond: { $eq: ["$$item.isCancel", true] }
-        //                 }
-        //             }
-        //         }
-        //     },
-        //     { /* danh sách các người dùng tham gia vào event sesion */
-        //         $lookup: {
-        //             from: 'applyevents',
-        //             let: { event_id: "$_id", session_event: '$session' },
-        //             pipeline: [
-        //                 {
-        //                     $match: {
-        //                         $expr: {
-        //                             $and: [
-        //                                 { $eq: ["$eventId", "$$event_id"] },
-        //                             ],
-        //                         },
-        //                     }
-        //                 },
-        //             ],
-        //             as: "arrApply"
-        //         }
-        //     },
-        //     {
-        //         $project: {
-        //             _id: 1, name: 1, cate: 1, user: 1, createdAt: 1, status: 1,
-        //             arrApply: 1,
-        //             'session': 1
-        //         }
-        //     },
-        //     // { $match: { 'arrApply.session.paymentId': { $exists: true } } },
-        //     {
-        //         $lookup: {
-        //             from: 'payments',
-        //             localField: 'arrApply.session.paymentId',
-        //             foreignField: '_id',
-        //             as: 'payment'
-        //         }
-        //     },
-        //     // {$match : {
-        //     //     $eq: [{$size: '$payment'}, {$size: ''}]
-        //     // }},
-        //     {
-        //         $project: {
-        //             name: 1,
-        //             arrApply: 1,
-        //             payment: 1,
-        //             'session': {
-        //                 $filter: {
-        //                     input: "$session",
-        //                     as: "item",
-        //                     cond: { $eq: ["$$item.isCancel", true] }
-        //                 }
-        //             }
-        //         },
-
-        //     }
-        // ]);
-
-        let e1 = await ApplyEvent.aggregate([
-            {
-                $match: {
-                    eventId: ObjectId('5eefc719dd13001b34af2f1c'),
-                    session: { $elemMatch: { isCancel: true } }
-                }
-            },
+        let e1 = await Payment.aggregate([
             {
                 $project: {
-                    eventId: 1, userId: 1,
-                    session: {
-                        $filter: {
-                            input: "$session",
-                            as: "item",
-                            cond: { $eq: ["$$item.isCancel", true] }
-                        }
-                    }
+                    status: 1,
+                    sender:1, receiver:1,
+                    amount:1,
+                    description:1,eventId:1,
+                    payType:1,
+                    num: { $size: '$session' },
+                    num1: { $size: '$sessionRefunded' }
                 }
             },
-            {
-                $lookup: {
-                    from: 'payments',
-                    localField: 'session.paymentId',
-                    foreignField: '_id',
-                    as: 'payment'
-                }
-            },
-            {
-                $project: {
-                    eventId: 1, userId: 1,
-                    session: {
-                        $filter: {
-                            input: "$session",
-                            as: "item",
-                            cond: { $eq: ["$$item.isCancel", true] }
-                        }
-                    },
-                    payment: 1
-                }
-            },
-            { $match: { 'payment': { $elemMatch: { '$session': '$sessionRefunded' } } } }
+            {$match : {
+                $expr : {
+                //     $and: [
+                      $eq : ['$num1', '$num']
+                    //   ]  
+                  }
+            }}
         ])
-
 
         res.send(e1);
     }

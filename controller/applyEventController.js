@@ -585,7 +585,6 @@ module.exports = {
             return;
         }
 
-
         let { paymentId, joinUserId, eventId } = req.body;
         
         try {
