@@ -377,11 +377,14 @@ module.exports = {
             if (startDate && endDate) {
                 query.session = { $elemMatch: { day: { $gt: new Date(startDate), $lt: new Date(endDate) } } };
             }
+            
+            query.isSellTicket = { $exists: true };
+            query.ticket = { $exists: true };
 
             if (fee) {
-                query.isSellTicket = { $exists: true };
-                query.ticket = { $exists: true };
                 query["ticket.price"] = { $ne: 0 }
+            } else {
+                query["ticket.price"] = { $eq: 0 }
             }
 
             if (categoryEventId[0]) {
