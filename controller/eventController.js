@@ -321,7 +321,7 @@ module.exports = {
 
                 if (editSite && checkApply) {
                     if(!e.isEdit){
-                        next({ error: { message: 'Event has user apply! Please contact with admin to resolve!', code: 500 } });
+                        next({ error: { message: 'Event has user apply! Please contact with admin to resolve!', code: 700 } });
                         return;
                     }
                 }
