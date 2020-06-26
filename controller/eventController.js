@@ -356,7 +356,7 @@ module.exports = {
 
                 res.status(200).json({ result: result });
             }).catch(err => {
-                return next({ error: { message: 'Event is not exists!', code: 700 } });
+                return next({ error: { message: 'Event is not exists!', code: 600 } });
             })
         } catch (err) {
             next({ error: { message: err, code: 500 } })
