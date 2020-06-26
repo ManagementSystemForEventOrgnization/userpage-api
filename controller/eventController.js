@@ -287,7 +287,7 @@ module.exports = {
     },
 
     getPageEvent: async (req, res, next) => {
-        let { eventId, index } = req.query; // eventId, index: 0,1,2,3,4
+        let { eventId, index, editSite } = req.query; // eventId, index: 0,1,2,3,4
         //trả lên header, rows[index];
         index = index || 0;
 
@@ -303,17 +303,26 @@ module.exports = {
             eventId = await checkEventUrl._id;
             let idUser = req.user;
             Promise.all([
+                ApplyEvent.findOne({ eventId: ObjectId(eventId), session: { $elemMatch: { isRefund: false } } }),
                 ApplyEvent.findOne({ eventId: ObjectId(eventId), userId: ObjectId(idUser) }),
                 Event.findOne({ _id: ObjectId(eventId) }),
                 PageEvent.findOne({ eventId: new ObjectId(eventId) },
                     { _id: 0, __v: 0, createdAt: 0, updatedAt: 0 }),
-            ]).then(([ap, e, p]) => {
+            ]).then(([checkApply, ap, e, p]) => {
                 if (!e) {
                     return next({ error: { message: 'Event is not exists', code: 422 } });
                 }
                 let result = {};
 
-                if (ap) {
+                if(editSite && (idUser != e.userId)){
+                    next({error : {message: 'You are not authorization'}});
+                    return;
+                }
+
+                if (editSite && checkApply) {
+                    next({ error: { message: 'Event has user apply! Please contact with admin to resolve!' } });
+                    return;
+                } else if (ap) {
                     let eS = e.session;
                     let apS = ap.session;
                     for (let i = 0; i < apS.length; i++) {
@@ -336,7 +345,7 @@ module.exports = {
                 result.event = e;
                 result.header = p.header;
                 result.eventId = p.eventId;
-                result.rows = p.rows[index] || {};
+                result.rows = editSite ? (p.rows) : (p.rows[index]);
                 if (!p) {
                     return next({ error: { message: 'Event is not exists!', code: 500 } });
                 }
@@ -348,6 +357,43 @@ module.exports = {
         } catch (err) {
             next({ error: { message: err, code: 500 } })
         }
+    },
+
+    require_edit_event: async(req,res,next)=>{
+
+        let {eventId, urlWeb} = req.body;
+        
+        if(!eventId){
+            let e = await Event.findOne({urlWeb});
+            eventId = e._id;
+        }
+        let checkEventUrl = await Event.findById(eventId);
+        if(!checkEventUrl){
+            next({error: {message: 'Event is not exists'}});
+            return;
+        }
+        const newNotification = new Notification({
+            sender: checkEventUrl.userId,
+            receiver: [adminId],
+            type: "REQUIRE_EDIT",
+            message: "",
+            title: "{sender} has required edit for the event " + checkEventUrl.name,
+            linkTo: {
+                key: "EventDetail",
+                _id: eventId,
+                urlWeb: checkEventUrl.domain + checkEventUrl.urlWeb
+            },
+            isRead: false,
+            isDelete: false,
+            session: []
+        });
+
+        newNotification.save().then(e => {
+            Axios.post(`https://event-admin-page.herokuapp.com/api/push_notification`,
+                { content: `${checkEventUrl.name} has required edit for the event ${checkEventUrl.name}` });
+        })
+
+        res.status(200).json({result: true});
     },
 
     getListEvent: async (req, res, next) => {
@@ -377,7 +423,7 @@ module.exports = {
             if (startDate && endDate) {
                 query.session = { $elemMatch: { day: { $gt: new Date(startDate), $lt: new Date(endDate) } } };
             }
-            
+
             query.isSellTicket = { $exists: true };
             query.ticket = { $exists: true };
 
@@ -716,21 +762,23 @@ module.exports = {
             {
                 $project: {
                     status: 1,
-                    sender:1, receiver:1,
-                    amount:1,
-                    description:1,eventId:1,
-                    payType:1,
+                    sender: 1, receiver: 1,
+                    amount: 1,
+                    description: 1, eventId: 1,
+                    payType: 1,
                     num: { $size: '$session' },
                     num1: { $size: '$sessionRefunded' }
                 }
             },
-            {$match : {
-                $expr : {
-                //     $and: [
-                      $eq : ['$num1', '$num']
-                    //   ]  
-                  }
-            }}
+            {
+                $match: {
+                    $expr: {
+                        //     $and: [
+                        $eq: ['$num1', '$num']
+                        //   ]  
+                    }
+                }
+            }
         ])
 
         res.send(e1);
