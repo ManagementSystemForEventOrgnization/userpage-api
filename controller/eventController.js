@@ -324,7 +324,9 @@ module.exports = {
                         next({ error: { message: 'Event has user apply! Please contact with admin to resolve!' } });
                         return;
                     }
-                } else if (ap) {
+                }
+                
+                if (ap) {
                     let eS = e.session;
                     let apS = ap.session;
                     for (let i = 0; i < apS.length; i++) {
