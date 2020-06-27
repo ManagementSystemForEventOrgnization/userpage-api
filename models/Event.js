@@ -33,6 +33,8 @@ const eventSchema = new Schema({
     category: { type : Schema.Types.ObjectId , ref: 'eventCategory'},
     status: { type: String, "index": "text", default: "DRAFT" }, // DRAFT, WAITING, PUBLIC, EDITED, CANCEL
     bannerUrl: String,
+    isEdit : {type: String},
+    isRequire: {type: Boolean, default : false},
     isPreview: { type: Boolean },
 }, { 
 	timestamps: { 

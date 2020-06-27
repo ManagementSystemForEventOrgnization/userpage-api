@@ -9,6 +9,7 @@ const PageEvent = mongoose.model('pageEvent');
 const Comment = mongoose.model('comment');
 const ApplyEvent = mongoose.model('applyEvent');
 const Notification = mongoose.model('notification');
+const Payment = mongoose.model('payment');
 const Axios = require('axios');
 
 const adminId = "5ee5d9aff7a5a623d08718d5"
@@ -82,6 +83,8 @@ module.exports = {
                     newNotification.save()
                 ]).then(() => {
                     res.status(200).json({ result: event });
+                    // Axios.post(`https://event-admin-page.herokuapp.com/api/push_notification`,
+                    //             { content: `${checkEventUrl.userId} has required review for the event ${checkEventUrl.name}` });
                 }).catch((err) => {
                     return next({ error: { message: 'Execute failed!', code: 776 } });
                 })
@@ -120,7 +123,7 @@ module.exports = {
         let { eventId: id } = req.body;
         try {
 
-            let checkApply = await ApplyEvent.findOne({ eventId: ObjectId(id), 'session': { $elemMatch: { isCancel: false, isReject: false } } });
+            let checkApply = await ApplyEvent.findOne({ eventId: ObjectId(id), 'session': { $elemMatch: { isCancel: true, isRefund: false } } });
 
             if (checkApply) {
                 return next({ error: { message: 'Event has user apply. Can\'t delete', code: 700 } });
@@ -205,6 +208,12 @@ module.exports = {
                     let objectUpdate = { isPreview };
                     if ((e.status || '') == 'PUBLIC') {
                         objectUpdate.status = 'EDITED';
+
+                        // if(e.isRequire){
+                        //     objectUpdate.isRequire = false;
+                        //     objectUpdate.isEdit = false;
+                        // }
+                        
                         const newNotification = new Notification({
                             sender: checkEventUrl.userId,
                             receiver: [adminId],
@@ -223,7 +232,7 @@ module.exports = {
 
                         newNotification.save().then(e => {
                             Axios.post(`https://event-admin-page.herokuapp.com/api/push_notification`,
-                                { content: `${checkEventUrl.userId} has required review for the event ${checkEventUrl.name}` });
+                                { content: `${checkEventUrl.name} has required review for the event ${checkEventUrl.name}` });
                         })
                     } else if (!isPreview) {
                         objectUpdate.status = 'WAITING';
@@ -235,7 +244,7 @@ module.exports = {
                         if (!pe) {
                             return next({ error: { message: 'Event is not exists', code: 422 } });
                         }
-                        
+
                         // else if (e.status === "EDITED") {
                         //     const newNotification = new Notification({
                         //         sender: checkEventUrl.userId,
@@ -252,7 +261,7 @@ module.exports = {
                         //         isDelete: false,
                         //         session: []
                         //     });
-            
+
                         //     newNotification.save();
                         // }
                     })
@@ -284,7 +293,7 @@ module.exports = {
     },
 
     getPageEvent: async (req, res, next) => {
-        let { eventId, index } = req.query; // eventId, index: 0,1,2,3,4
+        let { eventId, index, editSite } = req.query; // eventId, index: 0,1,2,3,4
         //trả lên header, rows[index];
         index = index || 0;
 
@@ -300,15 +309,29 @@ module.exports = {
             eventId = await checkEventUrl._id;
             let idUser = req.user;
             Promise.all([
+                ApplyEvent.findOne({ eventId: ObjectId(eventId), session: { $elemMatch: { isRefund: false } } }),
                 ApplyEvent.findOne({ eventId: ObjectId(eventId), userId: ObjectId(idUser) }),
                 Event.findOne({ _id: ObjectId(eventId) }),
                 PageEvent.findOne({ eventId: new ObjectId(eventId) },
                     { _id: 0, __v: 0, createdAt: 0, updatedAt: 0 }),
-            ]).then(([ap, e, p]) => {
+            ]).then(([checkApply, ap, e, p]) => {
                 if (!e) {
                     return next({ error: { message: 'Event is not exists', code: 422 } });
                 }
                 let result = {};
+
+                if (editSite && (idUser != e.userId)) {
+                    next({ error: { message: 'You are not authorization' } });
+                    return;
+                }
+
+                if (editSite && checkApply) {
+                    
+                    if ((+(e.isEdit || 0) - (Date.now()))<0) {
+                        next({ error: { message: 'Event has user apply! Please contact with admin to resolve!', code: 700 } });
+                        return;
+                    }
+                }
 
                 if (ap) {
                     let eS = e.session;
@@ -333,18 +356,60 @@ module.exports = {
                 result.event = e;
                 result.header = p.header;
                 result.eventId = p.eventId;
-                result.rows = p.rows[index] || {};
+                result.rows = editSite ? (p.rows) : (p.rows[index]);
                 if (!p) {
                     return next({ error: { message: 'Event is not exists!', code: 500 } });
                 }
 
                 res.status(200).json({ result: result });
             }).catch(err => {
-                return next({ error: { message: 'Event is not exists!', code: 700 } });
+                return next({ error: { message: 'Event is not exists!', code: 600 } });
             })
         } catch (err) {
             next({ error: { message: err, code: 500 } })
         }
+    },
+
+    require_edit_event: async (req, res, next) => {
+        let { eventId, urlWeb } = req.body;
+
+        if (!eventId) {
+            let e = await Event.findOne({ urlWeb });
+            eventId = e._id;
+        }
+        let checkEventUrl = await Event.findById(eventId);
+        if (!checkEventUrl) {
+            next({ error: { message: 'Event is not exists' } });
+            return;
+        }
+        checkEventUrl.isRequire = true;
+
+        const newNotification = new Notification({
+            sender: checkEventUrl.userId,
+            receiver: [adminId],
+            type: "REQUIRE_EDIT",
+            message: "",
+            title: "{sender} has required edit for the event " + checkEventUrl.name,
+            linkTo: {
+                key: "EventDetail",
+                _id: eventId,
+                urlWeb: checkEventUrl.domain + checkEventUrl.urlWeb
+            },
+            isRead: false,
+            isDelete: false,
+            session: []
+        });
+
+        checkEventUrl.save().then(e => {
+            newNotification.save().then(e => {
+                Axios.post(`https://event-admin-page.herokuapp.com/api/push_notification`,
+                    { content: `${checkEventUrl.name} has required edit for the event ${checkEventUrl.name}` });
+            })
+            res.status(200).json({ result: true });
+        }).catch(err => {
+            next({ error: { message: 'Something is wrong' } });
+        })
+
     },
 
     getListEvent: async (req, res, next) => {
@@ -375,10 +440,13 @@ module.exports = {
                 query.session = { $elemMatch: { day: { $gt: new Date(startDate), $lt: new Date(endDate) } } };
             }
 
+            query.isSellTicket = { $exists: true };
+            query.ticket = { $exists: true };
+
             if (fee) {
-                query.isSellTicket = { $exists: true };
-                query.ticket = { $exists: true };
                 query["ticket.price"] = { $ne: 0 }
+            } else {
+                query["ticket.price"] = { $eq: 0 }
             }
 
             if (categoryEventId[0]) {
@@ -706,149 +774,28 @@ module.exports = {
 
     test: async (req, res, next) => {
 
-
-        // let e = await Event.aggregate([
-        //     {
-        //         $match: {
-        //             $and: [{ 'session.isCancel': true },
-        //             { isSellTicket: true },
-        //             { ticket: { $exists: true } },
-        //             { 'ticket.price': { $ne: 0 } }]
-        //         }
-        //     },
-        //     {
-        //         $lookup:
-        //         {
-        //             from: "users",
-        //             localField: "userId",
-        //             foreignField: "_id",
-        //             as: "user"
-        //         }
-        //     },
-        //     {
-        //         $unwind: "$user"
-        //     },
-        //     {
-        //         $lookup:
-        //         {
-        //             from: "eventcategories",
-        //             localField: "category",
-        //             foreignField: "_id",
-        //             as: "cate"
-        //         }
-        //     },
-        //     {
-        //         $unwind: "$cate"
-        //     },
-        //     {
-        //         $project: {
-        //             _id: 1, name: 1, cate: 1, user: 1, createdAt: 1, status: 1,
-        //             'session': {
-        //                 $filter: {
-        //                     input: "$session",
-        //                     as: "item",
-        //                     cond: { $eq: ["$$item.isCancel", true] }
-        //                 }
-        //             }
-        //         }
-        //     },
-        //     { /* danh sách các người dùng tham gia vào event sesion */
-        //         $lookup: {
-        //             from: 'applyevents',
-        //             let: { event_id: "$_id", session_event: '$session' },
-        //             pipeline: [
-        //                 {
-        //                     $match: {
-        //                         $expr: {
-        //                             $and: [
-        //                                 { $eq: ["$eventId", "$$event_id"] },
-        //                             ],
-        //                         },
-        //                     }
-        //                 },
-        //             ],
-        //             as: "arrApply"
-        //         }
-        //     },
-        //     {
-        //         $project: {
-        //             _id: 1, name: 1, cate: 1, user: 1, createdAt: 1, status: 1,
-        //             arrApply: 1,
-        //             'session': 1
-        //         }
-        //     },
-        //     // { $match: { 'arrApply.session.paymentId': { $exists: true } } },
-        //     {
-        //         $lookup: {
-        //             from: 'payments',
-        //             localField: 'arrApply.session.paymentId',
-        //             foreignField: '_id',
-        //             as: 'payment'
-        //         }
-        //     },
-        //     // {$match : {
-        //     //     $eq: [{$size: '$payment'}, {$size: ''}]
-        //     // }},
-        //     {
-        //         $project: {
-        //             name: 1,
-        //             arrApply: 1,
-        //             payment: 1,
-        //             'session': {
-        //                 $filter: {
-        //                     input: "$session",
-        //                     as: "item",
-        //                     cond: { $eq: ["$$item.isCancel", true] }
-        //                 }
-        //             }
-        //         },
-
-        //     }
-        // ]);
-
-        let e1 = await ApplyEvent.aggregate([
+        let e1 = await Payment.aggregate([
+            {
+                $project: {
+                    status: 1,
+                    sender: 1, receiver: 1,
+                    amount: 1,
+                    description: 1, eventId: 1,
+                    payType: 1,
+                    num: { $size: '$session' },
+                    num1: { $size: '$sessionRefunded' }
+                }
+            },
             {
                 $match: {
-                    eventId: ObjectId('5eefc719dd13001b34af2f1c'),
-                    session: { $elemMatch: { isCancel: true } }
-                }
-            },
-            {
-                $project: {
-                    eventId: 1, userId: 1,
-                    session: {
-                        $filter: {
-                            input: "$session",
-                            as: "item",
-                            cond: { $eq: ["$$item.isCancel", true] }
-                        }
+                    $expr: {
+                        //     $and: [
+                        $eq: ['$num1', '$num']
+                        //   ]  
                     }
                 }
-            },
-            {
-                $lookup: {
-                    from: 'payments',
-                    localField: 'session.paymentId',
-                    foreignField: '_id',
-                    as: 'payment'
-                }
-            },
-            {
-                $project: {
-                    eventId: 1, userId: 1,
-                    session: {
-                        $filter: {
-                            input: "$session",
-                            as: "item",
-                            cond: { $eq: ["$$item.isCancel", true] }
-                        }
-                    },
-                    payment: 1
-                }
-            },
-            { $match: { 'payment': { $elemMatch: { '$session': '$sessionRefunded' } } } }
+            }
         ])
-
 
         res.send(e1);
     }
