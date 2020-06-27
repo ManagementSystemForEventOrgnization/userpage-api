@@ -3,10 +3,8 @@ const ApplyEvent = mongoose.model('applyEvent');
 const Event = mongoose.model('event');
 const Payment = mongoose.model('payment');
 const Notification = mongoose.model('notification');
-
+const keys = require('../config/key.js');
 const ObjectId = mongoose.Types.ObjectId;
-const adminId = "5ee5d9aff7a5a623d08718d5"
-
 const payment_Controller = require('../controller/payment_Controller');
 
 module.exports = {
@@ -33,7 +31,7 @@ module.exports = {
                 next({ error: { message: 'Not found this payment', code: 703 } });
             }
         } catch (err) {
-            next(err);
+            next({ error: { message: "Server execute failed!", code: 776 } });
         }
     },
 
@@ -162,7 +160,7 @@ module.exports = {
             }
         }
         catch (err) {
-            next(err);
+            next({ error: { message: "Server execute failed!", code: 776 } });
         }
     },
 
@@ -206,7 +204,7 @@ module.exports = {
             }
         }
         catch (err) {
-            next(err);
+            next({ error: { message: "Server execute failed!", code: 776 } });
         }
     },
 
@@ -258,7 +256,7 @@ module.exports = {
                 next({ error: { message: 'Join user have not participated in this event', code: 702 } });
             }
         } catch (err) {
-            next(err);
+            next({ error: { message: "Server execute failed!", code: 776 } });
         }
     },
 
@@ -388,7 +386,12 @@ module.exports = {
                     }
                 })
 
-                applyEvents = await ApplyEvent.find({ eventId: eventId, session: { $elemMatch: { id: { $in: sessionIds } } } });
+                if (isUserEvent) {
+                    applyEvents = await ApplyEvent.find({ eventId: eventId, session: { $elemMatch: { id: { $in: sessionIds } } } });
+                } else {
+                    applyEvents = await ApplyEvent.find({ eventId: eventId, userId: userId, session: { $elemMatch: { id: { $in: sessionIds } } } });
+                }
+                
             } else {
                 event.session.forEach(ele => {
                     ele.isCancel = true
@@ -406,8 +409,10 @@ module.exports = {
             var isCancelled = false
 
             const nextHandle = async function (result, isUserEvent, applyEvent, event, noti) {
+                console.log("result1")
                 var subSessions = applyEvent.session
 
+                console.log("result", result)
                 if (!isUserEvent) {
                     subSessions = subSessions.filter(ele => {
                         if (!sessionIds.includes(ele.id)) {
@@ -484,7 +489,7 @@ module.exports = {
                             req.body.eventChange = event
                             req.body.isUserEvent = isUserEvent
                             req.body.sendNoti = null;
-
+                            
                             Promise.all([
                                 payment_Controller.refund(req, res, next, nextHandle)
                             ])
@@ -525,7 +530,7 @@ module.exports = {
                 if (event.isSellTicket == true && isUserEvent) {
                     const adminNotification = new Notification({
                         sender: userId,
-                        receiver: [adminId],
+                        receiver: [keys.adminId],
                         type: typeNoti,
                         message: "",
                         title: titleMess,
@@ -571,7 +576,7 @@ module.exports = {
                 return res.status(200).json({ result: true });
             }
         } catch (err) {
-            next(err);
+            next({ error: { message: "Server execute failed!", code: 776 } });
         }
     },
 
@@ -579,13 +584,18 @@ module.exports = {
         if (typeof req.body.eventId === 'undefined' ||
             typeof req.body.sessionId === 'undefined' ||
             typeof req.body.joinUserId === 'undefined' ||
-            typeof req.body.paymentId === 'undefined'
+            typeof req.body.paymentId === 'undefined' ||
+            typeof req.body.adminId === 'undefined' 
         ) {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
-        let { paymentId, joinUserId, eventId } = req.body;
+        let { paymentId, joinUserId, eventId, adminId } = req.body;
+
+        if (adminId !== keys.adminId) {
+            return next({ error: { message: "not an administrator!", code: 788 } });
+        }
         
         try {
             let currentApplyEvent = await ApplyEvent.findOne({ userId: ObjectId(joinUserId), eventId: ObjectId(eventId) });
@@ -614,13 +624,13 @@ module.exports = {
                 Promise.all([
                     payment_Controller.refund(req, res, next, nextHandle)
                 ]).then().catch((err) => {
-                    next({ error: { message: "Execute failed!", code: 776 } });
+                    return next({ error: { message: "Server execute failed!", code: 776 } });
                 })
             } else {
-                next({ error: { message: "User have not joined this event!", code: 733 } });
+                return next({ error: { message: "User have not joined this event!", code: 733 } });
             }
         } catch (err) {
-            next({ error: { message: "Object not found", code: 777 } });
+            return next({ error: { message: "Object not found", code: 777 } });
         }
     },
 
