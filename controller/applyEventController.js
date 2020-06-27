@@ -344,7 +344,8 @@ module.exports = {
                         req.body.applyEvent = applyEvent
                         req.body.sendNoti = newNotification
                         req.body.eventChange = currentEvent
-                        req.body.isUserEvent = false
+                        req.body.isUserEvent = true
+                        req.body.isRejectUser = true
 
                         Promise.all([
                             payment_Controller.refund(req, res, next, nextHandle)
@@ -614,6 +615,7 @@ module.exports = {
                 req.body.paymentId = ObjectId(paymentId)
                 req.body.applyEvent = currentApplyEvent;
                 req.body.sendNoti = null;
+                req.body.isUserEvent = false;
 
                 const nextHandle = async function (result, isUserEvent, applyEvent, event, noti) {
                     if (result === false) {
