@@ -183,24 +183,34 @@ module.exports = {
             currentApplyEvent.session.forEach(element => {
                 if (sessionIds.includes(element.id)) {
                     count += 1;
+
+                    if (element.isReject == true) {
+                        count = 0;
+                        return next({ error: { message: 'You have rejected', code: 705 } });
+                    } else if (element.isCancel == true) {
+                        count = 0;
+                        return next({ error: { message: 'Session have cancelled', code: 726 } })
+                    }
                 }
             })
 
-            if (count != sessionIds.length) {
-                next({ error: { message: 'Choose session pay failed, please!', code: 720 } })
-            }
-
-            if (currentEvent && currentApplyEvent) {
-                req.body.amount = (currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price) * sessionIds.length;
-                req.body.receiver = currentEvent.userId;
-
-                if (payType === "CREDIT_CARD") {
-                    await payment_Controller.create_charges(req, res, next);
-                } else {
-                    await payment_Controller.create_order(req, res, next);
+            if (count > 0) {
+                if (count != sessionIds.length) {
+                    next({ error: { message: 'Choose session pay failed, please!', code: 720 } })
                 }
-            } else {
-                next({ error: { message: 'Not found!', code: 707 } });
+
+                if (currentEvent && currentApplyEvent) {
+                    req.body.amount = (currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price) * sessionIds.length;
+                    req.body.receiver = currentEvent.userId;
+
+                    if (payType === "CREDIT_CARD") {
+                        await payment_Controller.create_charges(req, res, next);
+                    } else {
+                        await payment_Controller.create_order(req, res, next);
+                    }
+                } else {
+                    next({ error: { message: 'Not found!', code: 707 } });
+                }
             }
         }
         catch (err) {
@@ -409,10 +419,8 @@ module.exports = {
             var isCancelled = false
 
             const nextHandle = async function (result, isUserEvent, applyEvent, event, noti) {
-                console.log("result1")
                 var subSessions = applyEvent.session
 
-                console.log("result", result)
                 if (!isUserEvent) {
                     subSessions = subSessions.filter(ele => {
                         if (!sessionIds.includes(ele.id)) {
@@ -611,7 +619,6 @@ module.exports = {
                     if (result === false) {
                         return res.status(200).json({ result: false });
                     } else {
-                        console.log(applyEvent)
                         Promise.all([
                             ApplyEvent.findByIdAndUpdate({ _id: applyEvent._id }, { session: applyEvent.session }),
                             Event.findByIdAndUpdate({ _id: event._id }, { session: event.session })

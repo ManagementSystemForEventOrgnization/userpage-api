@@ -142,7 +142,7 @@ module.exports = {
 								isDelete: false,
 								session: [sessionId]
 							});
-
+							
 							let needNotification = sendNoti || newNotification
 
 							if (success == true) {
@@ -216,7 +216,7 @@ module.exports = {
 
 							axios.post(config.urlRefund, null, { params })
 								.then(res => {
-									if (res.data.returncode == 1) {
+									if (res.data.returncode > 0) {
 										refundNoti("ZALOPAY_REFUND_SUCCESS", true);
 									} else {
 										refundNoti("ZALOPAY_REFUND_FAILED", false);
@@ -316,13 +316,13 @@ module.exports = {
 					await newPayment.save();
 					await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
 
-					next({ error: { message: 'Create payment failed', code: 901 } });
+					next({ error: { message: 'Payment failed', code: 901 } });
 				}
 			} else {
 				next({ error: { message: 'You have not participated in this event', code: 702 } });
 			}
 		} catch (err) {
-			next({ error: { message: "Create payment failed!", code: 901 } });
+			next({ error: { message: "Server execute failed!", code: 776 } });
 		}
 	},
 
@@ -377,11 +377,7 @@ module.exports = {
 
 				if (cardFind) {
 					const nextHandle = async function (cardFind, currentApplyEvent, charge, err) {
-						console.log(cardFind)
-						console.log(currentApplyEvent)
-						console.log(charge)
-						console.log(err)
-
+						
 						const newPayment = new Payment({
 							sender: userId,
 							eventId: eventId,
