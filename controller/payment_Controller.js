@@ -8,7 +8,7 @@ const Event = mongoose.model('event');
 const Notification = mongoose.model('notification');
 
 const ObjectId = mongoose.Types.ObjectId;
-const adminId = "5ee5d9aff7a5a623d08718d5"
+const keys = require('../config/key.js');
 
 const axios = require('axios');
 const CryptoJS = require('crypto-js');
@@ -113,7 +113,7 @@ module.exports = {
 						var refundNoti = async function (type, success) {
 							const newNotification = new Notification({
 								sender: userId,
-								receiver: success == true ? joinUserId : adminId,
+								receiver: success == true ? joinUserId : keys.adminId,
 								type: type,
 								message: "",
 								title: "{sender} refunded for event " + event.name,

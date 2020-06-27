@@ -11,8 +11,7 @@ const ApplyEvent = mongoose.model('applyEvent');
 const Notification = mongoose.model('notification');
 const Payment = mongoose.model('payment');
 const Axios = require('axios');
-
-const adminId = "5ee5d9aff7a5a623d08718d5"
+const keys = require('../config/key.js');
 
 module.exports = {
 
@@ -62,25 +61,25 @@ module.exports = {
             if (event.status === "DRAFT") {
                 event.status = "WAITING"
 
-                const newNotification = new Notification({
-                    sender: userId,
-                    receiver: [adminId],
-                    type: "PUBLISH_EVENT",
-                    message: "",
-                    title: "{sender} has required review for the event " + event.name,
-                    linkTo: {
-                        key: "EventDetail",
-                        _id: eventId,
-                        urlWeb: event.domain + event.urlWeb
-                    },
-                    isRead: false,
-                    isDelete: false,
-                    session: []
-                });
+                // const newNotification = new Notification({
+                //     sender: userId,
+                //     receiver: [adminId],
+                //     type: "PUBLISH_EVENT",
+                //     message: "",
+                //     title: "{sender} has required review for the event " + event.name,
+                //     linkTo: {
+                //         key: "EventDetail",
+                //         _id: eventId,
+                //         urlWeb: event.domain + event.urlWeb
+                //     },
+                //     isRead: false,
+                //     isDelete: false,
+                //     session: []
+                // });
 
                 Promise.all([
                     event.save(),
-                    newNotification.save()
+                    // newNotification.save()
                 ]).then(() => {
                     res.status(200).json({ result: event });
                     // Axios.post(`https://event-admin-page.herokuapp.com/api/push_notification`,
@@ -216,7 +215,7 @@ module.exports = {
                         
                         const newNotification = new Notification({
                             sender: checkEventUrl.userId,
-                            receiver: [adminId],
+                            receiver: [keys.adminId],
                             type: "PUBLISH_EVENT",
                             message: "",
                             title: "{sender} has required review for the event " + checkEventUrl.name,
@@ -386,7 +385,7 @@ module.exports = {
 
         const newNotification = new Notification({
             sender: checkEventUrl.userId,
-            receiver: [adminId],
+            receiver: [keys.adminId],
             type: "REQUIRE_EDIT",
             message: "",
             title: "{sender} has required edit for the event " + checkEventUrl.name,

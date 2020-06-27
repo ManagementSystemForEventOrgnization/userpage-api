@@ -3,10 +3,8 @@ const ApplyEvent = mongoose.model('applyEvent');
 const Event = mongoose.model('event');
 const Payment = mongoose.model('payment');
 const Notification = mongoose.model('notification');
-
+const keys = require('../config/key.js');
 const ObjectId = mongoose.Types.ObjectId;
-const adminId = "5ee5d9aff7a5a623d08718d5"
-
 const payment_Controller = require('../controller/payment_Controller');
 
 module.exports = {
@@ -525,7 +523,7 @@ module.exports = {
                 if (event.isSellTicket == true && isUserEvent) {
                     const adminNotification = new Notification({
                         sender: userId,
-                        receiver: [adminId],
+                        receiver: [keys.adminId],
                         type: typeNoti,
                         message: "",
                         title: titleMess,
@@ -579,13 +577,18 @@ module.exports = {
         if (typeof req.body.eventId === 'undefined' ||
             typeof req.body.sessionId === 'undefined' ||
             typeof req.body.joinUserId === 'undefined' ||
-            typeof req.body.paymentId === 'undefined'
+            typeof req.body.paymentId === 'undefined' ||
+            typeof req.body.adminId === 'undefined' 
         ) {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
-        let { paymentId, joinUserId, eventId } = req.body;
+        let { paymentId, joinUserId, eventId, adminId } = req.body;
+
+        if (adminId !== keys.adminId) {
+            return next({ error: { message: "not an administrator!", code: 788 } });
+        }
         
         try {
             let currentApplyEvent = await ApplyEvent.findOne({ userId: ObjectId(joinUserId), eventId: ObjectId(eventId) });
