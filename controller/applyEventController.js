@@ -31,7 +31,7 @@ module.exports = {
                 next({ error: { message: 'Not found this payment', code: 703 } });
             }
         } catch (err) {
-            next(err);
+            next({ error: { message: "Server execute failed!", code: 776 } });
         }
     },
 
@@ -160,7 +160,7 @@ module.exports = {
             }
         }
         catch (err) {
-            next(err);
+            next({ error: { message: "Server execute failed!", code: 776 } });
         }
     },
 
@@ -204,7 +204,7 @@ module.exports = {
             }
         }
         catch (err) {
-            next(err);
+            next({ error: { message: "Server execute failed!", code: 776 } });
         }
     },
 
@@ -256,7 +256,7 @@ module.exports = {
                 next({ error: { message: 'Join user have not participated in this event', code: 702 } });
             }
         } catch (err) {
-            next(err);
+            next({ error: { message: "Server execute failed!", code: 776 } });
         }
     },
 
@@ -386,7 +386,12 @@ module.exports = {
                     }
                 })
 
-                applyEvents = await ApplyEvent.find({ eventId: eventId, session: { $elemMatch: { id: { $in: sessionIds } } } });
+                if (isUserEvent) {
+                    applyEvents = await ApplyEvent.find({ eventId: eventId, session: { $elemMatch: { id: { $in: sessionIds } } } });
+                } else {
+                    applyEvents = await ApplyEvent.find({ eventId: eventId, userId: userId, session: { $elemMatch: { id: { $in: sessionIds } } } });
+                }
+                
             } else {
                 event.session.forEach(ele => {
                     ele.isCancel = true
@@ -404,8 +409,10 @@ module.exports = {
             var isCancelled = false
 
             const nextHandle = async function (result, isUserEvent, applyEvent, event, noti) {
+                console.log("result1")
                 var subSessions = applyEvent.session
 
+                console.log("result", result)
                 if (!isUserEvent) {
                     subSessions = subSessions.filter(ele => {
                         if (!sessionIds.includes(ele.id)) {
@@ -482,7 +489,7 @@ module.exports = {
                             req.body.eventChange = event
                             req.body.isUserEvent = isUserEvent
                             req.body.sendNoti = null;
-
+                            
                             Promise.all([
                                 payment_Controller.refund(req, res, next, nextHandle)
                             ])
@@ -569,7 +576,7 @@ module.exports = {
                 return res.status(200).json({ result: true });
             }
         } catch (err) {
-            next(err);
+            next({ error: { message: "Server execute failed!", code: 776 } });
         }
     },
 
@@ -617,13 +624,13 @@ module.exports = {
                 Promise.all([
                     payment_Controller.refund(req, res, next, nextHandle)
                 ]).then().catch((err) => {
-                    next({ error: { message: "Execute failed!", code: 776 } });
+                    return next({ error: { message: "Server execute failed!", code: 776 } });
                 })
             } else {
-                next({ error: { message: "User have not joined this event!", code: 733 } });
+                return next({ error: { message: "User have not joined this event!", code: 733 } });
             }
         } catch (err) {
-            next({ error: { message: "Object not found", code: 777 } });
+            return next({ error: { message: "Object not found", code: 777 } });
         }
     },
 
