@@ -228,12 +228,13 @@ module.exports = {
                             header: header
                         }
                     );
+                    let updateObject = {isPreview: isPreview };
                     
                     if(isPreview){
-                        page.status = 'WAITING';
+                        updateObject.status = 'WAITING';
                     }
                     Promise.all([
-                        Event.findByIdAndUpdate({ _id: ObjectId(_idE) }, { isPreview: isPreview }),
+                        Event.findByIdAndUpdate({ _id: ObjectId(_idE) }, updateObject),
                         page.save()
                     ]).then(([e, pe]) => {
                         if (!pe) {
