@@ -99,7 +99,7 @@ module.exports = {
 	},
 
 	refund: async (req, res, next, nextHandle) => {
-		let { paymentId, joinUserId, eventId, sessionId, applyEvent, sendNoti, eventChange, isUserEvent } = req.body;
+		let { paymentId, joinUserId, eventId, sessionId, applyEvent, sendNoti, eventChange, isUserEvent, isRejectUser } = req.body;
 
 		if (paymentId) {
 			try {
@@ -108,6 +108,23 @@ module.exports = {
 					Event.findById(eventId)
 				]).then(async ([currentPayment, event]) => {
 					let userId = event.userId;
+					var sendEvent = eventChange || event
+
+					if (currentPayment.status !== "PAID") {
+						if (isUserEvent != false) {
+							sendEvent.session.forEach(ele => {
+								if (ele.id == sessionId) {
+									var refundNumber = ele.refundNumber || 0;
+									refundNumber += 1;
+									ele.refundNumber = refundNumber;
+									return;
+								}
+							})
+						}
+						
+						await nextHandle(true, isUserEvent, applyEvent, sendEvent, sendNoti);
+						return true;
+					}
 					
 					if (!currentPayment.sessionRefunded.includes(sessionId)) {
 						var refundNoti = async function (type, success) {
@@ -125,8 +142,7 @@ module.exports = {
 								isDelete: false,
 								session: [sessionId]
 							});
-
-							var sendEvent = eventChange || event
+							
 							let needNotification = sendNoti || newNotification
 
 							if (success == true) {
@@ -136,7 +152,7 @@ module.exports = {
 									Payment.findByIdAndUpdate({ _id: currentPayment._id }, { sessionRefunded: currentPayment.sessionRefunded }),
 									needNotification.save()
 								]).then(async ([p, n]) => {
-									if (isUserEvent != false) {
+									if (isUserEvent == true) {
 										applyEvent.session.forEach(ele => {
 											if (ele.id == sessionId) {
 												ele.isRefund = true;
@@ -144,14 +160,16 @@ module.exports = {
 											}
 										})
 						
-										sendEvent.session.forEach(ele => {
-											if (ele.id == sessionId) {
-												var refundNumber = ele.refundNumber || 0;
-												refundNumber += 1;
-												ele.refundNumber = refundNumber;
-												return;
-											}
-										})
+										if (isRejectUser != true) {
+											sendEvent.session.forEach(ele => {
+												if (ele.id == sessionId) {
+													var refundNumber = ele.refundNumber || 0;
+													refundNumber += 1;
+													ele.refundNumber = refundNumber;
+													return;
+												}
+											})
+										}
 									}
 
 									nextHandle(true, isUserEvent, applyEvent, sendEvent, newNotification);
@@ -200,7 +218,7 @@ module.exports = {
 
 							axios.post(config.urlRefund, null, { params })
 								.then(res => {
-									if (res.data.returncode == 1) {
+									if (res.data.returncode > 0) {
 										refundNoti("ZALOPAY_REFUND_SUCCESS", true);
 									} else {
 										refundNoti("ZALOPAY_REFUND_FAILED", false);
@@ -217,7 +235,7 @@ module.exports = {
 					return false;
 				})
 			} catch (err) {
-				next(err);
+				next({ error: { message: "Server execute failed!", code: 776 } });
 				return;
 			}
 		}
@@ -300,13 +318,13 @@ module.exports = {
 					await newPayment.save();
 					await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
 
-					next({ error: { message: 'Create payment failed', code: 901 } });
+					next({ error: { message: 'Payment failed', code: 901 } });
 				}
 			} else {
 				next({ error: { message: 'You have not participated in this event', code: 702 } });
 			}
 		} catch (err) {
-			next(err);
+			next({ error: { message: "Server execute failed!", code: 776 } });
 		}
 	},
 
@@ -355,52 +373,66 @@ module.exports = {
 
 		try {
 			var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId });
-
+			
 			if (currentApplyEvent) {
 				let cardFind = await Cards.findOne({ userId: req.user });
 
 				if (cardFind) {
-					let charge = await stripe.charges.create(
-						{
+					const nextHandle = async function (cardFind, currentApplyEvent, charge, err) {
+						
+						const newPayment = new Payment({
+							sender: userId,
+							eventId: eventId,
+							receiver: receiver,
 							amount: amount,
-							currency: 'vnd',
-							customer: cardFind.customerId,
-							description: description || ("Payment for event " + eventId),
+							payType: "CREDIT_CARD",
+							description: description,
+							cardId: cardFind.id,
+							session: sessionIds
 						});
-
-					const newPayment = new Payment({
-						sender: userId,
-						eventId: eventId,
-						receiver: receiver,
-						amount: amount,
-						payType: "CREDIT_CARD",
-						description: description,
-						cardId: cardFind.id,
-						session: sessionIds
-					});
-
-					currentApplyEvent.session.forEach(element => {
-						if (sessionIds.includes(element.id)) {
-							element.paymentId = newPayment._id;
+	
+						currentApplyEvent.session.forEach(element => {
+							if (sessionIds.includes(element.id)) {
+								element.paymentId = newPayment._id;
+							}
+						})
+	
+						if (charge) {
+							newPayment.cardId = cardFind.id;
+							newPayment.chargeId = charge.id;
+							newPayment.status = "PAID";
+						} else {
+							newPayment.status = "FAILED";
+							await newPayment.save();
+							await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
+	
 						}
-					})
 
-					if (charge) {
-						newPayment.cardId = cardFind.id;
-						newPayment.chargeId = charge.id;
-						newPayment.status = "PAID";
-
-						await newPayment.save();
-						await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
-
-						res.status(200).json({ result: true });
-					} else {
-						newPayment.status = "FAILED";
-						await newPayment.save();
-						await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
-
-						next({ error: { message: 'Payment failed', code: 901 } });
+						Promise.all([
+							newPayment.save(),
+							ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session }), 
+							charge
+						]).then(([payment, applyEvent, charge]) => {
+							if (charge) {
+								res.status(200).json({ result: true });
+							} else {
+								next({ error: { message: 'Payment failed', code: 901 } });
+							}
+						}).catch(() => {
+							next({ error: { message: "Server execute failed!", code: 776 } });
+						})
 					}
+					
+					stripe.charges.create(
+					{
+						amount: amount,
+						currency: 'vnd',
+						customer: cardFind.customerId,
+						description: description || ("Payment for event " + eventId),
+					},
+					function(err, charge) {
+						nextHandle(cardFind, currentApplyEvent, charge, err);
+					});
 				} else {
 					next({ error: { message: 'Card customer not found', code: 900 } });
 				}
@@ -408,7 +440,7 @@ module.exports = {
 				next({ error: { message: 'You have not participated in this event', code: 702 } });
 			}
 		} catch (err) {
-			next(err);
+			next({ error: { message: "Server execute failed!", code: 776 } });
 		}
 	},
 
@@ -418,7 +450,7 @@ module.exports = {
 		try {
 			cardFind = await Cards.findOne({ 'userId': req.user });
 		} catch (err) {
-			next(err);
+			next({ error: { message: "Server execute failed!", code: 776 } });
 			return;
 		}
 
@@ -433,7 +465,7 @@ module.exports = {
 				},
 				function (err, cards) {
 					if (err != null) {
-						next(err);
+						next({ error: { message: "Server execute failed!", code: 776 } });
 					} else {
 						res.status(200).json({ result: cards.data });
 					}
@@ -448,31 +480,29 @@ module.exports = {
 			return;
 		}
 
-		let cardFind = null;
-
 		try {
-			cardFind = await Cards.findOne({ 'userId': req.user });
-		} catch (err) {
-			next(err);
-			return;
-		}
+			let cardFind = await Cards.findOne({ 'userId': req.user });
 
-		if (cardFind == null || cardFind.customerId == null) {
-			res.status(600).json({ error: { message: "card customer not found", code: 900 } });
-		} else {
-			stripe.customers.update(
-				cardFind.customerId,
-				{
-					default_source: req.body.cardId
-				},
-				function (err, customer) {
-					if (err != null) {
-						next(err);
-					} else {
-						res.status(200).json({ result: true });
+			if (cardFind == null || cardFind.customerId == null) {
+				res.status(600).json({ error: { message: "card customer not found", code: 900 } });
+			} else {
+				stripe.customers.update(
+					cardFind.customerId,
+					{
+						default_source: req.body.cardId
+					},
+					function (err, customer) {
+						if (err != null) {
+							next({ error: { message: "Server execute failed!", code: 776 } });
+						} else {
+							res.status(200).json({ result: true });
+						}
 					}
-				}
-			);
+				);
+			}
+		} catch (err) {
+			next({ error: { message: "Server execute failed!", code: 776 } });
+			return;
 		}
 	},
 
@@ -482,29 +512,27 @@ module.exports = {
 			return;
 		}
 
-		let cardFind = null;
-
 		try {
-			cardFind = await Cards.findOne({ 'userId': req.user });
-		} catch (err) {
-			next(err);
-			return;
-		}
+			let cardFind = await Cards.findOne({ 'userId': req.user });
 
-		if (cardFind == null || cardFind.customerId == null) {
-			res.status(600).json({ error: { message: "card customer not found", code: 900 } });
-		} else {
-			stripe.customers.deleteSource(
-				cardFind.customerId,
-				req.body.cardId,
-				function (err, confirmation) {
-					if (err != null) {
-						next(err);
-					} else {
-						res.status(200).json({ result: confirmation.deleted });
+			if (cardFind == null || cardFind.customerId == null) {
+				res.status(600).json({ error: { message: "card customer not found", code: 900 } });
+			} else {
+				stripe.customers.deleteSource(
+					cardFind.customerId,
+					req.body.cardId,
+					function (err, confirmation) {
+						if (err != null) {
+							next({ error: { message: "Server execute failed!", code: 776 } });
+						} else {
+							res.status(200).json({ result: confirmation.deleted });
+						}
 					}
-				}
-			);
+				);
+			}
+		} catch (err) {
+			next({ error: { message: "Server execute failed!", code: 776 } });
+			return;
 		}
 	},
 
@@ -514,7 +542,7 @@ module.exports = {
 		try {
 			cardFind = await Cards.findOne({ 'userId': req.user });
 		} catch (err) {
-			next(err);
+			next({ error: { message: "Server execute failed!", code: 776 } });
 			return;
 		}
 
@@ -526,7 +554,7 @@ module.exports = {
 			try {
 				confirmation = await stripe.customers.del(cardFind.customerId);
 			} catch (err) {
-				next(err);
+				next({ error: { message: "Server execute failed!", code: 776 } });
 				return;
 			}
 
@@ -538,7 +566,7 @@ module.exports = {
 					res.status(200).json({ result: false })
 				}
 			} catch (err) {
-				next(err);
+				next({ error: { message: "Server execute failed!", code: 776 } });
 			}
 		}
 	},
@@ -549,60 +577,46 @@ module.exports = {
 			return;
 		}
 
-		let cardFind = null;
-
 		try {
-			cardFind = await Cards.findOne({ 'userId': req.user });
-		} catch (err) {
-			next(err);
-			return;
-		}
+			let cardFind = await Cards.findOne({ 'userId': req.user });
 
-		var createCard = function (customerId, cardToken, res) {
-			stripe.customers.createSource(
-				customerId,
-				{ source: cardToken },
-				function (err, card) {
-					if (err != null) {
-						next(err);
-					} else {
-						res.status(200).json({ result: card });
+			var createCard = function (customerId, cardToken, res) {
+				stripe.customers.createSource(
+					customerId,
+					{ source: cardToken },
+					function (err, card) {
+						if (err != null) {
+							next({ error: { message: "Server execute failed!", code: 776 } });
+						} else {
+							res.status(200).json({ result: card });
+						}
 					}
-				}
-			);
-		}
-
-		if (cardFind == null || cardFind.customerId == null) {
-			var customer = null
-
-			try {
-				customer = await stripe.customers.create({
-					description: 'My First Test Customer (created for API docs)'
-				});
-			} catch (err) {
-				next(err);
-				return;
+				);
 			}
 
-			try {
+			if (cardFind == null || cardFind.customerId == null) {
+				var customer = await stripe.customers.create({
+					description: 'My First Test Customer (created for API docs)'
+				});
+	
 				if (customer) {
 					const newCard = new Cards({
 						customerId: customer.id,
 						userId: req.user
 					});
-
+	
 					await newCard.save();
-
+	
 					createCard(customer.id, req.body.cardToken, res)
 				} else {
 					res.status(600).json({ message: "can't create card customer" });
 				}
-			} catch (err) {
-				next(err);
-				return;
+			} else {
+				createCard(cardFind.customerId, req.body.cardToken, res)
 			}
-		} else {
-			createCard(cardFind.customerId, req.body.cardToken, res)
+		} catch (err) {
+			next({ error: { message: "Server execute failed!", code: 776 } });
+			return;
 		}
 	}
 }

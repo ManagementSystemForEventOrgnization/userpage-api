@@ -31,7 +31,7 @@ module.exports = {
                 next({ error: { message: 'Not found this payment', code: 703 } });
             }
         } catch (err) {
-            next(err);
+            next({ error: { message: "Server execute failed!", code: 776 } });
         }
     },
 
@@ -160,7 +160,7 @@ module.exports = {
             }
         }
         catch (err) {
-            next(err);
+            next({ error: { message: "Server execute failed!", code: 776 } });
         }
     },
 
@@ -183,28 +183,38 @@ module.exports = {
             currentApplyEvent.session.forEach(element => {
                 if (sessionIds.includes(element.id)) {
                     count += 1;
+
+                    if (element.isReject == true) {
+                        count = 0;
+                        return next({ error: { message: 'You have rejected', code: 705 } });
+                    } else if (element.isCancel == true) {
+                        count = 0;
+                        return next({ error: { message: 'Session have cancelled', code: 726 } })
+                    }
                 }
             })
 
-            if (count != sessionIds.length) {
-                next({ error: { message: 'Choose session pay failed, please!', code: 720 } })
-            }
-
-            if (currentEvent && currentApplyEvent) {
-                req.body.amount = (currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price) * sessionIds.length;
-                req.body.receiver = currentEvent.userId;
-
-                if (payType === "CREDIT_CARD") {
-                    await payment_Controller.create_charges(req, res, next);
-                } else {
-                    await payment_Controller.create_order(req, res, next);
+            if (count > 0) {
+                if (count != sessionIds.length) {
+                    next({ error: { message: 'Choose session pay failed, please!', code: 720 } })
                 }
-            } else {
-                next({ error: { message: 'Not found!', code: 707 } });
+
+                if (currentEvent && currentApplyEvent) {
+                    req.body.amount = (currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price) * sessionIds.length;
+                    req.body.receiver = currentEvent.userId;
+
+                    if (payType === "CREDIT_CARD") {
+                        await payment_Controller.create_charges(req, res, next);
+                    } else {
+                        await payment_Controller.create_order(req, res, next);
+                    }
+                } else {
+                    next({ error: { message: 'Not found!', code: 707 } });
+                }
             }
         }
         catch (err) {
-            next(err);
+            next({ error: { message: "Server execute failed!", code: 776 } });
         }
     },
 
@@ -256,7 +266,7 @@ module.exports = {
                 next({ error: { message: 'Join user have not participated in this event', code: 702 } });
             }
         } catch (err) {
-            next(err);
+            next({ error: { message: "Server execute failed!", code: 776 } });
         }
     },
 
@@ -334,7 +344,8 @@ module.exports = {
                         req.body.applyEvent = applyEvent
                         req.body.sendNoti = newNotification
                         req.body.eventChange = currentEvent
-                        req.body.isUserEvent = false
+                        req.body.isUserEvent = true
+                        req.body.isRejectUser = true
 
                         Promise.all([
                             payment_Controller.refund(req, res, next, nextHandle)
@@ -386,7 +397,12 @@ module.exports = {
                     }
                 })
 
-                applyEvents = await ApplyEvent.find({ eventId: eventId, session: { $elemMatch: { id: { $in: sessionIds } } } });
+                if (isUserEvent) {
+                    applyEvents = await ApplyEvent.find({ eventId: eventId, session: { $elemMatch: { id: { $in: sessionIds } } } });
+                } else {
+                    applyEvents = await ApplyEvent.find({ eventId: eventId, userId: userId, session: { $elemMatch: { id: { $in: sessionIds } } } });
+                }
+                
             } else {
                 event.session.forEach(ele => {
                     ele.isCancel = true
@@ -482,7 +498,7 @@ module.exports = {
                             req.body.eventChange = event
                             req.body.isUserEvent = isUserEvent
                             req.body.sendNoti = null;
-
+                            
                             Promise.all([
                                 payment_Controller.refund(req, res, next, nextHandle)
                             ])
@@ -569,7 +585,7 @@ module.exports = {
                 return res.status(200).json({ result: true });
             }
         } catch (err) {
-            next(err);
+            next({ error: { message: "Server execute failed!", code: 776 } });
         }
     },
 
@@ -599,12 +615,12 @@ module.exports = {
                 req.body.paymentId = ObjectId(paymentId)
                 req.body.applyEvent = currentApplyEvent;
                 req.body.sendNoti = null;
+                req.body.isUserEvent = false;
 
                 const nextHandle = async function (result, isUserEvent, applyEvent, event, noti) {
                     if (result === false) {
                         return res.status(200).json({ result: false });
                     } else {
-                        console.log(applyEvent)
                         Promise.all([
                             ApplyEvent.findByIdAndUpdate({ _id: applyEvent._id }, { session: applyEvent.session }),
                             Event.findByIdAndUpdate({ _id: event._id }, { session: event.session })
@@ -617,13 +633,13 @@ module.exports = {
                 Promise.all([
                     payment_Controller.refund(req, res, next, nextHandle)
                 ]).then().catch((err) => {
-                    next({ error: { message: "Execute failed!", code: 776 } });
+                    return next({ error: { message: "Server execute failed!", code: 776 } });
                 })
             } else {
-                next({ error: { message: "User have not joined this event!", code: 733 } });
+                return next({ error: { message: "User have not joined this event!", code: 733 } });
             }
         } catch (err) {
-            next({ error: { message: "Object not found", code: 777 } });
+            return next({ error: { message: "Object not found", code: 777 } });
         }
     },
 

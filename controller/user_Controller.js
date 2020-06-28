@@ -14,7 +14,7 @@ module.exports = {
   login: (req, res, next) => {
     passport.authenticate("local", function (err, user, info) {
       if (err) {
-        return next(err);
+        return next({ error: { message: "Server execute failed!", code: 776 } });
       }
 
       if (!user) {
@@ -23,7 +23,7 @@ module.exports = {
 
       req.logIn(user._id, function (err) {
         if (err) {
-          return next(err);
+            return next({ error: { message: "Server execute failed!", code: 776 } });
         }
         return res.status(200).json({ result: user });
       });
@@ -41,7 +41,7 @@ module.exports = {
       let u = await User.findById(id, { bank: 0 });
       res.status(200).json({ result: u });
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
     }
   },
 
@@ -80,7 +80,7 @@ module.exports = {
     passport.authenticate("local", function (err, user, info) {
 
       if (err) {
-        return next(err);
+        return next({ error: { message: "Server execute failed!", code: 776 } });
       }
 
       if (!user) {
@@ -89,7 +89,7 @@ module.exports = {
 
       req.logIn(user._id, function (err) {
         if (err) {
-          return next(err);
+          return next({ error: { message: "Server execute failed!", code: 776 } });
         }
 
         return res.status(200).json({ result: user });
@@ -125,7 +125,7 @@ module.exports = {
     try {
       userFind = await User.findOne({ email: email });
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
       return;
     }
 
@@ -147,7 +147,7 @@ module.exports = {
 
       passport.authenticate("local", function (err, user, info) {
         if (err) {
-          return next(err);
+          return next({ error: { message: "Server execute failed!", code: 776 } });
         }
         if (!user) {
           return next({ error: { message: info.message, code: 620 } });
@@ -155,14 +155,14 @@ module.exports = {
 
         req.logIn(user._id, function (err) {
           if (err) {
-            return next(err);
+            return next({ error: { message: "Server execute failed!", code: 776 } });
           }
 
           return res.status(200).json({ result: user });
         });
       })(req, res, next);
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
       return;
     }
   },
@@ -181,7 +181,7 @@ module.exports = {
       let id = req.user;
       userNow = await User.findById(id);
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
     }
 
     let tokenDB = userNow.TOKEN;
@@ -196,7 +196,7 @@ module.exports = {
         await userNow.save();
         return res.status(200).json({ result: true });
       } catch (err) {
-        next(err);
+        next({ error: { message: "Server execute failed!", code: 776 } });
       }
     }
   },
@@ -227,7 +227,7 @@ module.exports = {
     try {
       currentUser = await User.findOne({ email: email });
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
       return;
     }
 
@@ -244,14 +244,14 @@ module.exports = {
         try {
           await currentUser.save();
         } catch (err) {
-          next(err);
+          next({ error: { message: "Server execute failed!", code: 776 } });
           return;
         }
 
         res.status(200).json({ result: true });
       })
       .catch((err) => {
-        next(err);
+        next({ error: { message: "Server execute failed!", code: 776 } });
         return;
       });
   },
@@ -271,7 +271,7 @@ module.exports = {
     try {
       currentUser = await User.findOne({ email: email });
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
       return;
     }
 
@@ -302,7 +302,7 @@ module.exports = {
     try {
       currentUser = await User.findOne({ email: email });
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
       return;
     }
 
@@ -324,7 +324,7 @@ module.exports = {
       await currentUser.save();
       res.status(200).json({ result: true });
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
     }
   },
 
@@ -335,7 +335,7 @@ module.exports = {
     try {
       currentUser = await User.findById(id);
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
       return;
     }
 
@@ -371,7 +371,7 @@ module.exports = {
         result: u
       });
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
     }
   },
 
@@ -391,7 +391,7 @@ module.exports = {
     try {
       currentUser = await User.findById(id);
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
       return;
     }
 
@@ -411,7 +411,7 @@ module.exports = {
       await currentUser.save();
       res.status(200).json({ result: true });
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
     }
   },
 
@@ -680,7 +680,7 @@ module.exports = {
 
       res.status(200).json({ result: e });
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
     }
   },
 

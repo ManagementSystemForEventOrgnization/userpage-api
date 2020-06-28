@@ -61,31 +61,12 @@ module.exports = {
             if (event.status === "DRAFT") {
                 event.status = "WAITING"
 
-                // const newNotification = new Notification({
-                //     sender: userId,
-                //     receiver: [adminId],
-                //     type: "PUBLISH_EVENT",
-                //     message: "",
-                //     title: "{sender} has required review for the event " + event.name,
-                //     linkTo: {
-                //         key: "EventDetail",
-                //         _id: eventId,
-                //         urlWeb: event.domain + event.urlWeb
-                //     },
-                //     isRead: false,
-                //     isDelete: false,
-                //     session: []
-                // });
-
                 Promise.all([
-                    event.save(),
-                    // newNotification.save()
+                    event.save()
                 ]).then(() => {
                     res.status(200).json({ result: event });
-                    // Axios.post(`https://event-admin-page.herokuapp.com/api/push_notification`,
-                    //             { content: `${checkEventUrl.userId} has required review for the event ${checkEventUrl.name}` });
                 }).catch((err) => {
-                    return next({ error: { message: 'Execute failed!', code: 776 } });
+                    return next({ error: { message: "Server execute failed!", code: 776 } });
                 })
 
             } else if (event.status === "PUBLIC") {
