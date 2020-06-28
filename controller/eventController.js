@@ -230,7 +230,7 @@ module.exports = {
                     );
                     let updateObject = {isPreview: isPreview };
                     
-                    if(isPreview){
+                    if(!isPreview){
                         updateObject.status = 'WAITING';
                     }
                     Promise.all([
