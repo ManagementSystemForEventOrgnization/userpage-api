@@ -14,7 +14,7 @@ router.get('/get_list_event', eventController.getListEvent);
 router.get('/get_list_event_coming_up', eventController.getListEventComingUp);
 router.get('/get_event_inf', eventController.getEventInf);
 router.get('/get_user_join_event', eventController.getUserJoinEvent);
-router.get('/test',eventController.test);
+router.post('/test',eventController.test);
 router.post('/require_edit_event', Unauthorized, eventController.require_edit_event);
 
 router.post('/public_private_event', eventController.publicPrivateEvent);

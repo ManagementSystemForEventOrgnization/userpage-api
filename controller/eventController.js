@@ -208,11 +208,6 @@ module.exports = {
                     if ((e.status || '') == 'PUBLIC') {
                         objectUpdate.status = 'EDITED';
 
-                        // if(e.isRequire){
-                        //     objectUpdate.isRequire = false;
-                        //     objectUpdate.isEdit = false;
-                        // }
-                        
                         const newNotification = new Notification({
                             sender: checkEventUrl.userId,
                             receiver: [keys.adminId],
@@ -243,26 +238,6 @@ module.exports = {
                         if (!pe) {
                             return next({ error: { message: 'Event is not exists', code: 422 } });
                         }
-
-                        // else if (e.status === "EDITED") {
-                        //     const newNotification = new Notification({
-                        //         sender: checkEventUrl.userId,
-                        //         receiver: [adminId],
-                        //         type: "PUBLISH_EVENT",
-                        //         message: "",
-                        //         title: "{sender} has required review for the event " + checkEventUrl.name,
-                        //         linkTo: {
-                        //             key: "EventDetail",
-                        //             _id: eventId,
-                        //             urlWeb: checkEventUrl.domain + checkEventUrl.urlWeb
-                        //         },
-                        //         isRead: false,
-                        //         isDelete: false,
-                        //         session: []
-                        //     });
-
-                        //     newNotification.save();
-                        // }
                     })
                 } else {
                     let page = new PageEvent(
@@ -272,7 +247,10 @@ module.exports = {
                             header: header
                         }
                     );
-
+                    
+                    if(isPreview){
+                        page.status = 'WAITING';
+                    }
                     Promise.all([
                         Event.findByIdAndUpdate({ _id: ObjectId(_idE) }, { isPreview: isPreview }),
                         page.save()
@@ -325,8 +303,8 @@ module.exports = {
                 }
 
                 if (editSite && checkApply) {
-                    
-                    if ((+(e.isEdit || 0) - (Date.now()))<0) {
+
+                    if ((+(e.isEdit || 0) - (Date.now())) < 0) {
                         next({ error: { message: 'Event has user apply! Please contact with admin to resolve!', code: 700 } });
                         return;
                     }
@@ -477,7 +455,6 @@ module.exports = {
             } else {
                 sortQuery.createdAt = -1;
             }
-            console.log(query);
             Promise.all([
                 Event.aggregate([
                     { $match: query },
@@ -772,31 +749,10 @@ module.exports = {
     },
 
     test: async (req, res, next) => {
+        console.log(req.body.paymentId);
+        let e = await Event.find();
 
-        let e1 = await Payment.aggregate([
-            {
-                $project: {
-                    status: 1,
-                    sender: 1, receiver: 1,
-                    amount: 1,
-                    description: 1, eventId: 1,
-                    payType: 1,
-                    num: { $size: '$session' },
-                    num1: { $size: '$sessionRefunded' }
-                }
-            },
-            {
-                $match: {
-                    $expr: {
-                        //     $and: [
-                        $eq: ['$num1', '$num']
-                        //   ]  
-                    }
-                }
-            }
-        ])
-
-        res.send(e1);
+        res.status(600).json(e);
     }
 
 }
