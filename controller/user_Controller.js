@@ -36,7 +36,8 @@ module.exports = {
   },
 
   current_user: async (req, res, next) => {
-    let id = req.user;
+    let { userId } = req.query;
+    let id = userId || req.user;
     try {
       let u = await User.findById(id, { bank: 0 });
       res.status(200).json({ result: u });

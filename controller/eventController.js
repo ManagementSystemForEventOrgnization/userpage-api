@@ -618,6 +618,18 @@ module.exports = {
                         {
                             $unwind: "$eventCategory"
                         },
+                        {
+                            $lookup:
+                            {
+                                from: "users",
+                                localField: "userId",
+                                foreignField: "_id",
+                                as: "user"
+                            }
+                        },// user
+                        {
+                            $unwind: "$user"
+                        },
                     ]
                 ),
                 Comment.countDocuments({ eventId: ObjectId(eventId) }),
