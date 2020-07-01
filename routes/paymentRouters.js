@@ -15,7 +15,6 @@ router.post('/add_card', Unauthorized, payment_Controller.create_customer);
 router.post('/create_order_callback', Unauthorized, payment_Controller.create_order_callback);
 
 router.get('/payment_history', Unauthorized, payment_Controller.paymentHis);
-
-
+router.get('/payment_info', Unauthorized, payment_Controller.paymentDetail);
 
 module.exports = router;

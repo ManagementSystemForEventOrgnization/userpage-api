@@ -10,6 +10,9 @@ const mongoose = require('mongoose');
 
 mongoose.connect(keys.mongoURI, { useNewUrlParser: true, useUnifiedTopology: true, 'useCreateIndex': true, useFindAndModify: false });
 
+require('./middlewares/loadMongoose');
+const notification_Controller = require('./controller/notificationController');
+
 var app = express();
 
 app.use(
@@ -26,8 +29,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(passport.initialize());
 app.use(passport.session());
 
-require('./middlewares/loadMongoose');
-
 require('./utils/passport-google');
 require('./utils/passportLogin')(app);
 app.use('/api', require('./routes/commentRouter'));
@@ -42,6 +43,8 @@ app.use('/api/evenCategory', require('./routes/eventCategoryRouter'));
 app.use('/', require('./routes/googleRouter'));
 
 //require('./routes/authRouters')(app);
+
+notification_Controller.startEventNoti();
 
 //Xử lý error 404
 app.use((req, res, next) => {

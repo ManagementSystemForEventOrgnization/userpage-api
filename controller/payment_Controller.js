@@ -98,6 +98,59 @@ module.exports = {
 		res.status(200).json({ result: pay });
 	},
 
+	paymentDetail: async (req, res, next) => {
+		if (typeof req.query.paymentId === 'undefined') {
+            next({ error: { message: "Invalid data", code: 402 } });
+            return;
+		}
+		
+		let { paymentId } = req.query;
+		let condition = { _id: ObjectId(paymentId) };
+
+		let pay = await Payment.aggregate([
+			{ $match: condition },
+			{
+				$lookup: {
+					from: 'users',
+					localField: 'sender',
+					foreignField: '_id',
+					as: 'sender'
+				}
+			},
+			{
+				$unwind: "$sender"
+			},
+			{
+				$lookup: {
+					from: 'users',
+					localField: 'receiver',
+					foreignField: '_id',
+					as: 'receiver'
+				}
+			},
+			{
+				$unwind: "$receiver"
+			},
+			{
+				$lookup: {
+					from: 'events',
+					localField: 'eventId',
+					foreignField: '_id',
+					as: 'eventId'
+				}
+			},
+			{
+				$unwind: "$eventId"
+			}
+		])
+
+		if (!pay || pay.length == 0) {
+			return next({ error: { message: 'Payment not found', code: 728 } });
+		}
+
+		res.status(200).json({ result: pay[0] });
+	},
+
 	refund: async (req, res, next, nextHandle) => {
 		let { paymentId, joinUserId, eventId, sessionId, applyEvent, sendNoti, eventChange, isUserEvent, isRejectUser } = req.body;
 
