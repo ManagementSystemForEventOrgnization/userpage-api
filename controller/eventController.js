@@ -228,9 +228,9 @@ module.exports = {
                             header: header
                         }
                     );
-                    let updateObject = {isPreview: isPreview };
-                    
-                    if(!isPreview){
+                    let updateObject = { isPreview: isPreview };
+
+                    if (!isPreview) {
                         updateObject.status = 'WAITING';
                     }
                     Promise.all([
@@ -399,13 +399,14 @@ module.exports = {
                 query.session = { $elemMatch: { day: { $gt: new Date(startDate), $lt: new Date(endDate) } } };
             }
 
-            query.isSellTicket = { $exists: true };
-            query.ticket = { $exists: true };
+
 
             if (fee) {
                 query["ticket.price"] = { $ne: 0 }
+                query.isSellTicket = { $exists: true };
+                query.ticket = { $exists: true };
             } else {
-                query["ticket.price"] = { $eq: 0 }
+                //query["ticket.price"] = { $eq: 0 }
             }
 
             if (categoryEventId[0]) {
@@ -437,6 +438,7 @@ module.exports = {
             } else {
                 sortQuery.createdAt = -1;
             }
+            console.log(query)
             Promise.all([
                 Event.aggregate([
                     { $match: query },
@@ -531,7 +533,7 @@ module.exports = {
             categoryEventId = categoryEventId.split(',');
             let idUserLogin = req.user;
             let query = {
-                'status': 'PUBLIC' ,  typeOfEvent: 'Public' ,
+                'status': 'PUBLIC', typeOfEvent: 'Public',
                 'session.day': { $gt: new Date() }
             };
 
@@ -578,7 +580,6 @@ module.exports = {
                 { $limit: +numberRecord },
                 { $sort: { 'session.day': 1 } }
             ])
-            console.log("Tcl:", e);
             res.status(200).json({ result: e });
         } catch (error) {
             next({ error: { message: 'Something is wrong!', code: 700 } });
