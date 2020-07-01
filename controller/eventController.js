@@ -531,7 +531,7 @@ module.exports = {
             categoryEventId = categoryEventId.split(',');
             let idUserLogin = req.user;
             let query = {
-                'status': { $nin: ["CANCEL", "DRAFT", 'DELETE'] },
+                'status': 'PUBLIC' ,  typeOfEvent: 'Public' ,
                 'session.day': { $gt: new Date() }
             };
 
