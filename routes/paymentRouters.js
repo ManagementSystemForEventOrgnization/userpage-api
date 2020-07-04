@@ -9,6 +9,8 @@ router.post('/set_card_default', Unauthorized, payment_Controller.set_card_defau
 router.post('/del_card', Unauthorized, payment_Controller.del_card);
 // router.post('/del_customer', Unauthorized, payment_Controller.del_customer);
 router.post('/add_card', Unauthorized, payment_Controller.create_customer);
+router.get('/get_card', Unauthorized, payment_Controller.get_card_info);
+
 // router.post('/payouts', payment_Controller.payouts);
 
 // router.post('/zalopay_create_order', payment_Controller.create_order);

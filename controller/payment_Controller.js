@@ -429,7 +429,7 @@ module.exports = {
 			return;
 		}
 
-		let { eventId, sessionIds, amount, description, receiver, event } = req.body;
+		let { eventId, sessionIds, cardId, amount, description, receiver, event } = req.body;
 		let userId = req.user;
 
 		try {
@@ -448,6 +448,7 @@ module.exports = {
 							payType: "CREDIT_CARD",
 							description: description,
 							cardId: cardFind.id,
+							cardStripeId: cardId,
 							session: sessionIds
 						});
 	
@@ -487,6 +488,7 @@ module.exports = {
 						amount: amount,
 						currency: 'vnd',
 						customer: cardFind.customerId,
+						source: cardId,
 						description: description || ("Payment for event " + eventId),
 					},
 					function(err, charge) {
@@ -497,6 +499,37 @@ module.exports = {
 				}
 			} else {
 				next({ error: { message: 'You have not participated in this event', code: 702 } });
+			}
+		} catch (err) {
+			next({ error: { message: "Server execute failed!", code: 776 } });
+		}
+	},
+
+	
+	get_card_info: async (req, res, next) => {
+		if (typeof req.cardId == undefined) {
+			res.status(600).json({ error: { message: "Invalid data", code: 402 } });
+			return;
+		}
+		let { cardId } = req.query;
+		console.log(req.query)
+		try {
+			let cardFind = await Cards.findOne({ 'userId': req.user });
+
+			if (cardFind == null || cardFind.customerId == null) {
+				next({ error: { message: "Card not found!", code: 747 } });
+			} else {
+				stripe.customers.retrieveSource(
+					cardFind.customerId,
+					cardId,
+					function(err, card) {
+						if (err != null) {
+							next({ error: { message: "Server execute failed!", code: 776 } });
+						} else {
+							res.status(200).json({ result: card });
+						}
+					}
+				);
 			}
 		} catch (err) {
 			next({ error: { message: "Server execute failed!", code: 776 } });
