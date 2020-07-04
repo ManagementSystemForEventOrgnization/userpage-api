@@ -19,13 +19,17 @@ module.exports = {
         }
 
         let { eventId, sessionIds, paymentId, status, transactionId } = req.body;
+        let userId = req.user;
         console.log(req.body);
         Promise.all([
             Event.findById(eventId),
+            ApplyEvent.findOne({ userId: userId, eventId: eventId }),
             Payment.findById(paymentId)
-        ]).then(([currentEvent, currentPayment]) => {
-            console.log(currentEvent)
+        ]).then(([currentEvent, applyEvent, currentPayment]) => {
             if (currentPayment) {
+                currentPayment.zptransId = transactionId
+                currentPayment.status = status == true ? "PAID" : "FAILED";
+
                 if (status == true) {
                     currentEvent.session.forEach(element => {
                         if (sessionIds.includes(element.id)) {
@@ -43,15 +47,17 @@ module.exports = {
                             }
                         }
                     })
-                }
 
-                console.log("req.body", currentEvent);
-                
-                currentPayment.zptransId = transactionId
-                currentPayment.status = status == true ? "PAID" : "FAILED";
+                    applyEvent.session.forEach(ele => {
+                        if (ele.paymentId == ObjectId(paymentId)) {
+                            ele.paymentStatus = currentPayment.status
+                        }
+                    })
+                }
 
                 Promise.all([
                     currentPayment.save(),
+                    ApplyEvent.findByIdAndUpdate({ _id: applyEvent._id }, { session: applyEvent.session }),
                     Event.findByIdAndUpdate({ _id: currentEvent._id }, { session: currentEvent.session })
                 ]).then (() => {
                     return res.status(200).json({ result: true })
