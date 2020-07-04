@@ -29,7 +29,7 @@ module.exports = {
             if (currentPayment) {
                 currentPayment.zptransId = transactionId
                 currentPayment.status = status == true ? "PAID" : "FAILED";
-
+                console.log(applyEvent)
                 if (status == true) {
                     currentEvent.session.forEach(element => {
                         if (sessionIds.includes(element.id)) {
@@ -55,6 +55,8 @@ module.exports = {
                     })
                 }
 
+                console.log(applyEvent)
+                console.log(currentPayment)
                 Promise.all([
                     currentPayment.save(),
                     ApplyEvent.findByIdAndUpdate({ _id: applyEvent._id }, { session: applyEvent.session }),
