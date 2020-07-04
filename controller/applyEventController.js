@@ -10,6 +10,8 @@ const payment_Controller = require('../controller/payment_Controller');
 module.exports = {
     updatePaymentStatus: async (req, res, next) => {
         if (typeof req.body.paymentId === 'undefined' ||
+            typeof req.body.eventId === 'undefined' ||
+            typeof req.body.sessionIds === 'undefined' ||
             typeof req.body.transactionId === 'undefined' ||
             typeof req.body.status === 'undefined') {
             next({ error: { message: "Invalid data", code: 402 } });
@@ -18,21 +20,47 @@ module.exports = {
 
         let { paymentId, status, transactionId } = req.body;
 
-        try {
-            var currentPayment = await Payment.findById(paymentId);
-
+        Promise.all([
+            Event.findById(eventId),
+            Payment.findById(paymentId)
+        ]).then(([currentEvent, currentPayment]) => {
             if (currentPayment) {
+                if (status == true) {
+                    currentEvent.session.forEach(element => {
+                        if (sessionIds.includes(element.id)) {
+                            if (element.isCancel == true) {
+                                return next({ error: { message: 'Some session cancelled, can you reload and choose again', code: 718 } });
+                            }
+    
+                            var joinNumber = element.joinNumber || 0;
+                            joinNumber += 1;
+    
+                            if (joinNumber <= element.limitNumber) {
+                                element.joinNumber = joinNumber;
+                            } else {
+                                return next({ error: { message: 'Exceeded the amount possible', code: 700 } });
+                            }
+                        }
+                    })
+                }
+                
                 currentPayment.zptransId = transactionId
                 currentPayment.status = status == true ? "PAID" : "FAILED";
-                await currentPayment.save();
 
-                return res.status(200).json({ result: true })
+                Promise.all([
+                    currentPayment.save(),
+                    Event.findByIdAndUpdate({ _id: currentEvent._id }, { session: currentEvent.session })
+                ]).then (() => {
+                    return res.status(200).json({ result: true })
+                }).catch ((err) => {
+                    return next({ error: { message: "Server execute failed!", code: 776 } });
+                })
             } else {
                 next({ error: { message: 'Not found this payment', code: 703 } });
             }
-        } catch (err) {
+        }).catch((err) => {
             next({ error: { message: "Server execute failed!", code: 776 } });
-        }
+        })
     },
 
     joinEvent: async (req, res, next) => {
@@ -76,6 +104,7 @@ module.exports = {
 
                         if (joinNumber <= element.limitNumber) {
                             element.joinNumber = joinNumber;
+
                             sessions.push(element);
                         } else {
                             next({ error: { message: 'Exceeded the amount possible', code: 700 } });
@@ -91,29 +120,27 @@ module.exports = {
                     return
                 }
 
-                var updateSession = async function () {
-                    await Event.findByIdAndUpdate({ _id: currentEvent._id }, { session: currentEvent.session })
-
+                var updateSession = function (isSet) {
                     sessions.forEach(element => {
-                        element.status = "JOINED"
-                        element.isConfirm = false
-                        element.isReject = false
+                        element.status = isSet ? "JOINED" : undefined
+                        element.isConfirm = isSet ? false : undefined
+                        element.isReject = isSet ? false : undefined
                     })
                 }
 
                 if (currentApplyEvent) {
                     currentApplyEvent.session.forEach(element => {
                         if (sessionIds.includes(element.id)) {
-                            next({ error: { message: 'You have already joined in one of these session', code: 701 } });
+                            return next({ error: { message: 'You have already joined in one of these session', code: 701 } });
                         }
                     })
 
-                    await updateSession()
+                    updateSession(true)
                     let changeSession = currentApplyEvent.session.concat(sessions)
 
                     await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: changeSession })
                 } else {
-                    await updateSession()
+                    updateSession(true)
 
                     let newApplyEvent = new ApplyEvent({
                         userId: userId,
@@ -142,10 +169,12 @@ module.exports = {
                 });
 
                 newNotification.save();
+                updateSession(false)
 
-                if (currentEvent.isSellTicket) {
+                if (currentEvent.isSellTicket == true) {
                     req.body.amount = (currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price) * sessions.length;
                     req.body.receiver = currentEvent.userId;
+                    req.body.event = currentEvent;
 
                     if (payType === "CREDIT_CARD") {
                         await payment_Controller.create_charges(req, res, next);
@@ -153,6 +182,8 @@ module.exports = {
                         await payment_Controller.create_order(req, res, next);
                     }
                 } else {
+                    await Event.findByIdAndUpdate({ _id: currentEvent._id }, { session: currentEvent.session })
+
                     return res.status(200).json({ result: true })
                 }
             } else {
@@ -194,6 +225,20 @@ module.exports = {
                 }
             })
 
+            currentEvent.session.forEach(ele => {
+                if (ele.isCancel != true && sessionIds.includes(ele.id)) {
+                    var joinNumber = ele.joinNumber || 0;
+                    joinNumber += 1;
+
+                    if (joinNumber <= ele.limitNumber) {
+                        ele.joinNumber = joinNumber;
+                    } else {
+                        next({ error: { message: 'Exceeded the amount possible', code: 700 } });
+                        return;
+                    }
+                }
+            })
+
             if (count > 0) {
                 if (count != sessionIds.length) {
                     next({ error: { message: 'Choose session pay failed, please!', code: 720 } })
@@ -202,15 +247,18 @@ module.exports = {
                 if (currentEvent && currentApplyEvent) {
                     req.body.amount = (currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price) * sessionIds.length;
                     req.body.receiver = currentEvent.userId;
-
+                    req.body.event = currentEvent;
+                    console.log(currentEvent)
                     if (payType === "CREDIT_CARD") {
                         await payment_Controller.create_charges(req, res, next);
                     } else {
                         await payment_Controller.create_order(req, res, next);
                     }
                 } else {
-                    next({ error: { message: 'Not found!', code: 707 } });
+                    next({ error: { message: 'Session  not found!', code: 707 } });
                 }
+            } else {
+                next({ error: { message: 'Session  not found!', code: 707 } });
             }
         }
         catch (err) {
@@ -402,7 +450,7 @@ module.exports = {
                 } else {
                     applyEvents = await ApplyEvent.find({ eventId: eventId, userId: userId, session: { $elemMatch: { id: { $in: sessionIds } } } });
                 }
-                
+
             } else {
                 event.session.forEach(ele => {
                     ele.isCancel = true
@@ -410,6 +458,10 @@ module.exports = {
 
                 event.status = "CANCEL";
                 applyEvents = await ApplyEvent.find({ eventId: eventId });
+            }
+
+            if (applyEvents.length == 0 ) {
+                return next({ error: { message: "Session not found!", code: 700 } });
             }
 
             var joinUserIds = [];
@@ -498,7 +550,7 @@ module.exports = {
                             req.body.eventChange = event
                             req.body.isUserEvent = isUserEvent
                             req.body.sendNoti = null;
-                            
+
                             Promise.all([
                                 payment_Controller.refund(req, res, next, nextHandle)
                             ])
@@ -594,7 +646,7 @@ module.exports = {
             typeof req.body.sessionId === 'undefined' ||
             typeof req.body.joinUserId === 'undefined' ||
             typeof req.body.paymentId === 'undefined' ||
-            typeof req.body.adminId === 'undefined' 
+            typeof req.body.adminId === 'undefined'
         ) {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
@@ -605,7 +657,7 @@ module.exports = {
         if (adminId !== keys.adminId) {
             return next({ error: { message: "not an administrator!", code: 788 } });
         }
-        
+
         try {
             let currentApplyEvent = await ApplyEvent.findOne({ userId: ObjectId(joinUserId), eventId: ObjectId(eventId) });
 
@@ -624,12 +676,12 @@ module.exports = {
                         Promise.all([
                             ApplyEvent.findByIdAndUpdate({ _id: applyEvent._id }, { session: applyEvent.session }),
                             Event.findByIdAndUpdate({ _id: event._id }, { session: event.session })
-                        ]).then ( async() => {
+                        ]).then(async () => {
                             return res.status(200).json({ result: true });
                         })
                     }
                 }
-    
+
                 Promise.all([
                     payment_Controller.refund(req, res, next, nextHandle)
                 ]).then().catch((err) => {

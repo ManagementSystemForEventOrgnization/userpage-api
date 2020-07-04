@@ -316,7 +316,7 @@ module.exports = {
 			return;
 		}
 
-		let { eventId, sessionIds, amount, description, receiver } = req.body;
+		let { eventId, sessionIds, amount, description, receiver, event } = req.body;
 		let userId = req.user;
 
 		try {
@@ -353,26 +353,34 @@ module.exports = {
 					session: sessionIds
 				});
 
-				currentApplyEvent.session.forEach(element => {
-					if (sessionIds.includes(element.id)) {
-						element.paymentId = newPayment._id;
-					}
-				})
-
 				if (result.data) {
 					result.data.paymentId = newPayment._id;
 					newPayment.zptransId = result.data.zptranstoken;
-					await newPayment.save();
-					await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
-
-					res.status(200).json({ result: true, resultOrder: result.data });
 				} else {
 					newPayment.status = "UNPAID";
-					await newPayment.save();
-					await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
-
-					next({ error: { message: 'Payment failed', code: 901 } });
 				}
+
+				currentApplyEvent.session.forEach(element => {
+					if (sessionIds.includes(element.id)) {
+						element.paymentId = newPayment._id;
+						element.paymentStatus = newPayment.status;
+					}
+				})
+
+				Promise.all([
+					newPayment.save(),
+					ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session }), 
+					// Event.findByIdAndUpdate({ _id: event._id }, { session: event.session }),
+					result.data
+				]).then(([payment, applyEvent, dataResult]) => {
+					if (dataResult) {
+						res.status(200).json({ result: true, resultOrder: dataResult });
+					} else {
+						next({ error: { message: 'Payment failed', code: 901 } });
+					}
+				}).catch(() => {
+					next({ error: { message: "Server execute failed!", code: 776 } });
+				})
 			} else {
 				next({ error: { message: 'You have not participated in this event', code: 702 } });
 			}
@@ -421,7 +429,7 @@ module.exports = {
 			return;
 		}
 
-		let { eventId, sessionIds, amount, description, receiver } = req.body;
+		let { eventId, sessionIds, amount, description, receiver, event } = req.body;
 		let userId = req.user;
 
 		try {
@@ -432,7 +440,6 @@ module.exports = {
 
 				if (cardFind) {
 					const nextHandle = async function (cardFind, currentApplyEvent, charge, err) {
-						
 						const newPayment = new Payment({
 							sender: userId,
 							eventId: eventId,
@@ -444,28 +451,27 @@ module.exports = {
 							session: sessionIds
 						});
 	
-						currentApplyEvent.session.forEach(element => {
-							if (sessionIds.includes(element.id)) {
-								element.paymentId = newPayment._id;
-							}
-						})
-	
 						if (charge) {
 							newPayment.cardId = cardFind.id;
 							newPayment.chargeId = charge.id;
 							newPayment.status = "PAID";
 						} else {
 							newPayment.status = "FAILED";
-							await newPayment.save();
-							await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
-	
 						}
+
+						currentApplyEvent.session.forEach(element => {
+							if (sessionIds.includes(element.id)) {
+								element.paymentId = newPayment._id;
+								element.paymentStatus = newPayment.status;
+							}
+						})
 
 						Promise.all([
 							newPayment.save(),
 							ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session }), 
+							Event.findByIdAndUpdate({ _id: event._id }, { session: event.session }),
 							charge
-						]).then(([payment, applyEvent, charge]) => {
+						]).then(([payment, applyEvent, event, charge]) => {
 							if (charge) {
 								res.status(200).json({ result: true });
 							} else {

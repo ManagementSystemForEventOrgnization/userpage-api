@@ -17,6 +17,7 @@ const applyEventSchema = new Schema({
             status: String,
             isConfirm: Boolean,
             isReject: Boolean,
+            paymentStatus: String,
             paymentId: { type: Schema.Types.ObjectId, ref: 'payment' },
             isCancel: Boolean,
             isRefund: { type: Boolean, default: false },
