@@ -18,12 +18,13 @@ module.exports = {
             return;
         }
 
-        let { paymentId, status, transactionId } = req.body;
-
+        let { eventId, sessionIds, paymentId, status, transactionId } = req.body;
+        console.log(req.body);
         Promise.all([
             Event.findById(eventId),
             Payment.findById(paymentId)
         ]).then(([currentEvent, currentPayment]) => {
+            console.log(currentEvent)
             if (currentPayment) {
                 if (status == true) {
                     currentEvent.session.forEach(element => {
@@ -43,6 +44,8 @@ module.exports = {
                         }
                     })
                 }
+
+                console.log("req.body", currentEvent);
                 
                 currentPayment.zptransId = transactionId
                 currentPayment.status = status == true ? "PAID" : "FAILED";
@@ -248,7 +251,7 @@ module.exports = {
                     req.body.amount = (currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price) * sessionIds.length;
                     req.body.receiver = currentEvent.userId;
                     req.body.event = currentEvent;
-                    console.log(currentEvent)
+
                     if (payType === "CREDIT_CARD") {
                         await payment_Controller.create_charges(req, res, next);
                     } else {
