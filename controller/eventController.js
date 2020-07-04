@@ -689,12 +689,27 @@ module.exports = {
         if (!eventId) {
             return next({ error: { message: 'Invalid data!', code: 700 } });
         }
+
+        let event = await Event.findById(ObjectId(eventId));
+
+        if (!event) {
+            return next({ error: { message: 'Something is wrong!' } })
+        }
+
         let query = { eventId: new ObjectId(eventId) }
 
         if (sessionId) {
-            query.session = { $elemMatch: { id: sessionId, isReject: false } };
+            if (event.isSellTicket == true) {
+                query.session = { $elemMatch: { id: sessionId, isReject: false, paymentStatus: 'PAID', paymentId: { $exists: true } } };
+            } else {
+                query.session = { $elemMatch: { id: sessionId, isReject: false } };
+            }
         } else {
-            query.session = { $elemMatch: { isReject: false } };
+            if (event.isSellTicket == true) {
+                query.session = { $elemMatch: { isReject: false, paymentStatus: 'PAID', paymentId: { $exists: true } } };
+            } else {
+                query.session = { $elemMatch: { isReject: false } };
+            }
         }
 
         let users = await ApplyEvent.aggregate([
