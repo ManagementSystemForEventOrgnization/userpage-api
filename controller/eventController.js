@@ -270,7 +270,7 @@ module.exports = {
             Promise.all([
                 ApplyEvent.findOne({ eventId: ObjectId(eventId), session: { $elemMatch: { isRefund: false } } }),
                 ApplyEvent.findOne({ eventId: ObjectId(eventId), userId: ObjectId(idUser) }).populate('session.paymentId'),
-                (await Event.findOne({ _id: ObjectId(eventId) })),
+                Event.findOne({ _id: ObjectId(eventId) }),
                 PageEvent.findOne({ eventId: new ObjectId(eventId) },
                     { _id: 0, __v: 0, createdAt: 0, updatedAt: 0 }),
             ]).then(([checkApply, ap, e, p]) => {
