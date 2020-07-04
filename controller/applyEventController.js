@@ -49,8 +49,9 @@ module.exports = {
                     })
 
                     applyEvent.session.forEach(ele => {
-                        if (ele.paymentId == ObjectId(paymentId)) {
+                        if (sessionIds.includes(ele.id)) {
                             ele.paymentStatus = currentPayment.status
+                            console.log(ele)
                         }
                     })
                 }
