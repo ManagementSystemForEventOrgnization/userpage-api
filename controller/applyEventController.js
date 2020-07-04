@@ -80,6 +80,15 @@ module.exports = {
         }
 
         let { eventId, sessionIds, payType } = req.body;
+
+        // if ( payType === "CREDIT_CARD" ) {
+        //     if (typeof req.body.cardId === 'undefined') {
+        //         next({ error: { message: "Invalid data", code: 402 } });
+        //         return;
+        //     }
+        // }
+        console.log(req.body)
+
         let userId = req.user;
 
         try {
@@ -214,6 +223,13 @@ module.exports = {
 
         let { eventId, sessionIds, payType } = req.body;
         let userId = req.user;
+
+        // if ( payType === "CREDIT_CARD" ) {
+        //     if (typeof req.body.cardId === 'undefined') {
+        //         next({ error: { message: "Invalid data", code: 402 } });
+        //         return;
+        //     }
+        // }
 
         try {
             var currentEvent = await Event.findById(eventId);
