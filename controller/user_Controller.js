@@ -11,11 +11,10 @@ const otp = require("../utils/otp");
 var passport = require("passport");
 
 module.exports = {
-
   login: (req, res, next) => {
     passport.authenticate("local", function (err, user, info) {
       if (err) {
-        return next(err);
+        return next({ error: { message: "Server execute failed!", code: 776 } });
       }
 
       if (!user) {
@@ -24,7 +23,7 @@ module.exports = {
 
       req.logIn(user._id, function (err) {
         if (err) {
-          return next(err);
+            return next({ error: { message: "Server execute failed!", code: 776 } });
         }
         return res.status(200).json({ result: user });
       });
@@ -37,12 +36,13 @@ module.exports = {
   },
 
   current_user: async (req, res, next) => {
-    let id = req.user;
+    let { userId } = req.query;
+    let id = userId || req.user;
     try {
       let u = await User.findById(id, { bank: 0 });
       res.status(200).json({ result: u });
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
     }
   },
 
@@ -79,8 +79,9 @@ module.exports = {
     }
 
     passport.authenticate("local", function (err, user, info) {
+
       if (err) {
-        return next(err);
+        return next({ error: { message: "Server execute failed!", code: 776 } });
       }
 
       if (!user) {
@@ -89,7 +90,7 @@ module.exports = {
 
       req.logIn(user._id, function (err) {
         if (err) {
-          return next(err);
+          return next({ error: { message: "Server execute failed!", code: 776 } });
         }
 
         return res.status(200).json({ result: user });
@@ -125,7 +126,7 @@ module.exports = {
     try {
       userFind = await User.findOne({ email: email });
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
       return;
     }
 
@@ -147,7 +148,7 @@ module.exports = {
 
       passport.authenticate("local", function (err, user, info) {
         if (err) {
-          return next(err);
+          return next({ error: { message: "Server execute failed!", code: 776 } });
         }
         if (!user) {
           return next({ error: { message: info.message, code: 620 } });
@@ -155,13 +156,14 @@ module.exports = {
 
         req.logIn(user._id, function (err) {
           if (err) {
-            return next(err);
+            return next({ error: { message: "Server execute failed!", code: 776 } });
           }
+
           return res.status(200).json({ result: user });
         });
       })(req, res, next);
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
       return;
     }
   },
@@ -180,7 +182,7 @@ module.exports = {
       let id = req.user;
       userNow = await User.findById(id);
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
     }
 
     let tokenDB = userNow.TOKEN;
@@ -195,19 +197,22 @@ module.exports = {
         await userNow.save();
         return res.status(200).json({ result: true });
       } catch (err) {
-        next(err);
+        next({ error: { message: "Server execute failed!", code: 776 } });
       }
     }
   },
 
   profile_user: async (req, res, next) => {
-    let id = req.user;
+    let { id } = req.query;
 
     try {
       let u = await User.findById(id, { bank: 0 });
+      if (!u) {
+        return next({ error: { message: 'User is not exists!', code: 700 } });
+      }
       res.status(200).json({ result: u });
     } catch (err) {
-      next(err);
+      next({ error: { message: err, code: 500 } });
     }
   },
 
@@ -223,7 +228,7 @@ module.exports = {
     try {
       currentUser = await User.findOne({ email: email });
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
       return;
     }
 
@@ -240,14 +245,14 @@ module.exports = {
         try {
           await currentUser.save();
         } catch (err) {
-          next(err);
+          next({ error: { message: "Server execute failed!", code: 776 } });
           return;
         }
 
         res.status(200).json({ result: true });
       })
       .catch((err) => {
-        next(err);
+        next({ error: { message: "Server execute failed!", code: 776 } });
         return;
       });
   },
@@ -267,7 +272,7 @@ module.exports = {
     try {
       currentUser = await User.findOne({ email: email });
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
       return;
     }
 
@@ -298,7 +303,7 @@ module.exports = {
     try {
       currentUser = await User.findOne({ email: email });
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
       return;
     }
 
@@ -320,7 +325,7 @@ module.exports = {
       await currentUser.save();
       res.status(200).json({ result: true });
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
     }
   },
 
@@ -331,7 +336,7 @@ module.exports = {
     try {
       currentUser = await User.findById(id);
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
       return;
     }
 
@@ -367,7 +372,7 @@ module.exports = {
         result: u
       });
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
     }
   },
 
@@ -387,7 +392,7 @@ module.exports = {
     try {
       currentUser = await User.findById(id);
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
       return;
     }
 
@@ -407,7 +412,7 @@ module.exports = {
       await currentUser.save();
       res.status(200).json({ result: true });
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
     }
   },
 
@@ -420,6 +425,7 @@ module.exports = {
       pageNumber,
       numberRecord,
       type,
+      typeOfEvent,
     } = req.query;
     txtSearch = txtSearch || "";
 
@@ -427,7 +433,7 @@ module.exports = {
     numberRecord = +numberRecord || 10;
     categoryEventId = categoryEventId || '';
     categoryEventId = categoryEventId.split(",");
-    
+
     startDate = startDate || '';
     endDate = endDate || new Date().toISOString();
     let idUserLogin = req.user;
@@ -445,9 +451,9 @@ module.exports = {
 
 
       if (categoryEventId[0]) {
-        let category={$or: []};
+        let category = { $or: [] };
         categoryEventId.forEach(e => {
-          category.$or.push({ $eq : ["$category" , ObjectId(e)]});
+          category.$or.push({ $eq: ["$category", ObjectId(e)] });
         });
         //conditionQuery["$expr"]["$and"].push({ $eq: ["$category", categoryEventId] });
         conditionQuery["$expr"]["$and"].push(category);
@@ -459,7 +465,7 @@ module.exports = {
 
       let conditionMath = {
         $and: [
-          { "events.status": { $nin: ["CANCEL"] } },
+          { "events.status": { $nin: ["CANCEL", "DELETE"] } },
         ],
       };
 
@@ -467,8 +473,8 @@ module.exports = {
         conditionMath["$and"].push(
           {
             "events.session.day": {
-              $gt: startDate,
-              $lt: endDate,
+              $gt: new Date(startDate),
+              $lt: new Date(endDate),
             },
           })
       }
@@ -478,7 +484,7 @@ module.exports = {
             conditionMath["$and"].push(
               {
                 'events.session.day': {
-                  $gt: new Date().toISOString(),
+                  $gt: new Date(),
                 }
               }
             );
@@ -489,7 +495,7 @@ module.exports = {
             conditionMath["$and"].push(
               {
                 'events.session.day': {
-                  $lt: `${new Date().toISOString()}`,
+                  $lt: new Date(),
                 }
               }
             );
@@ -501,69 +507,77 @@ module.exports = {
         }
       }
 
+      if (typeOfEvent) {
+        conditionMath["$and"].push({ 'events.typeOfEvent' : typeOfEvent });
+      }
+
+      conditionMath.$and.push({
+        'events.session': {$exists : true, $not : {$type : 'null', $size : 0}}
+      })
+
       Promise.all([
         ApplyEvent.aggregate([
-            {
-              $match: {
-                userId: ObjectId(idUserLogin),
-              },
+          {
+            $match: {
+              userId: ObjectId(idUserLogin),
             },
-            {
-              $lookup: {
-                from: "events",
-                let: { event_id: "$eventId" },
-                pipeline: [
-                  {
-                    $match: conditionQuery,
-                  },
-                ],
-                as: "events",
-              },
+          },
+          {
+            $lookup: {
+              from: "events",
+              let: { event_id: "$eventId" },
+              pipeline: [
+                {
+                  $match: conditionQuery,
+                },
+              ],
+              as: "events",
             },
+          },
+          {
+            $unwind: "$events"
+          },
+          {
+            $lookup:
             {
-              $unwind: "$events"
-            },
-            {
-              $lookup:
-              {
-                from: "eventcategories",
-                localField: "events.category",
-                foreignField: "_id",
-                as: "eventCategories"
-              }
-            },
-            {
-              $unwind: "$eventCategories"
-            },
-            {
-              $match: conditionMath,
-            },
-            {
-              $project: { events: 1, eventCategories: 1, _id:0 },
-            },
-            { $skip: +numberRecord * (+pageNumber - 1) },
-            { $limit: +numberRecord },
-          ]),
-          User.findById(req.user)
-      ]).then(([arrEvent,user])=>{
-        if(!user){
-            next({error: {message: 'You have to login', code: 700}});
+              from: "eventcategories",
+              localField: "events.category",
+              foreignField: "_id",
+              as: "eventCategories"
+            }
+          },
+          {
+            $unwind: "$eventCategories"
+          },
+          {
+            $match: conditionMath,
+          },
+          {
+            $project: { events: 1, eventCategories: 1, _id: 0 },
+          },
+          { $skip: +numberRecord * (+pageNumber - 1) },
+          { $limit: +numberRecord },
+        ]),
+        User.findById(req.user)
+      ]).then(([arrEvent, user]) => {
+        if (!user) {
+          next({ error: { message: 'You have to login', code: 700 } });
         }
         let result = [];
-        arrEvent.forEach((e,i) => {
-            let temp = e.events;
-            temp.eventCategory = e.eventCategories;
-            temp.user = user;
-            result.push(temp);
+        arrEvent.forEach((e, i) => {
+          let temp = e.events;
+          temp.eventCategory = e.eventCategories;
+          temp.user = user;
+          result.push(temp);
         });
 
-      res.status(200).json({ result: result });
+        res.status(200).json({ result: result });
 
-      }).catch(err=>{
-        next({error: {message: 'Error', code: 700}});
+      }).catch(err => {
+        next({ error: { message: 'Error', code: 700 } });
       })
     } catch (err) {
-      next({error: {message: err, code: 700}});
+      next({ error: { message: err, code: 700 } });
     }
   },
 
@@ -576,15 +590,16 @@ module.exports = {
       pageNumber,
       numberRecord,
       status,
+      typeOfEvent
     } = req.query;
-    
+
     status = status || '';
     txtSearch = txtSearch || "";
     startDate = startDate || "";
     categoryEventId = categoryEventId || '';
     pageNumber = +pageNumber || 1;
     numberRecord = +numberRecord || 10;
-    categoryEventId =categoryEventId.split(',');
+    categoryEventId = categoryEventId.split(',');
     let idUserLogin = req.user;
     try {
       let arrEvent = null;
@@ -592,66 +607,81 @@ module.exports = {
       let conditionQuery = {
         $and: [{
           userId: ObjectId(idUserLogin)
-        }]
+        },
+        { status: { $nin: ["DELETE"] } }
+        ]
       };
-      if(status){
-        conditionQuery.$and.push({status});
+      if (status) {
+        if (status != "WAITING") {
+          conditionQuery.$and.push({ status });
+        } else {
+          conditionQuery.$and.push({ status: { $in: ["WAITING", "EDITED"] } });
+        }
       }
-
       if (startDate !== "") {
         conditionQuery.$and.push({
           'session.day': {
-            $gt: startDate,
-            $lt: (endDate || new Date().toString()),
+            $gt: new Date(startDate)
           }
         })
+        if (endDate) {
+          conditionQuery.$and.push({
+            'session.day': {
+              $lte: new Date(endDate),
+            }
+          })
+        }
       }
       if (categoryEventId[0]) {
-        let category={$or: []};
+        let category = { $or: [] };
         categoryEventId.forEach(e => {
-          category.$or.push({"category" : ObjectId(e)});
+          category.$or.push({ "category": ObjectId(e) });
         });
         conditionQuery["$and"].push(category);
       }
-
       if (txtSearch != "") {
         conditionQuery.$text = { $search: txtSearch };
       }
+      if (typeOfEvent) {
+        conditionQuery.$and.push({ typeOfEvent });
+      }
+
+      conditionQuery.$and.push({session: {$exists : true, $not : {$type : 'null', $size : 0}}});
 
       let e = await Event.aggregate([
         { $match: conditionQuery },
         {
-            $lookup:
-            {
-                from: "users",
-                localField: "userId",
-                foreignField: "_id",
-                as: "user"
-            }
+          $lookup:
+          {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "user"
+          }
         },
         {
-            $unwind: "$user"
+          $unwind: "$user"
         },
         {
-            $lookup:
-            {
-                from: "eventcategories",
-                localField: "category",
-                foreignField: "_id",
-                as: "eventCategory"
-            }
+          $lookup:
+          {
+            from: "eventcategories",
+            localField: "category",
+            foreignField: "_id",
+            as: "eventCategory"
+          }
         },
         {
-            $unwind: "$eventCategory"
+          $unwind: "$eventCategory"
         },
         { $skip: +numberRecord * (+pageNumber - 1) },
         { $limit: +numberRecord },
         { $sort: { 'session.day': 1 } }
-    ])
+      ])
 
       res.status(200).json({ result: e });
     } catch (err) {
-      next(err);
+      next({ error: { message: "Server execute failed!", code: 776 } });
     }
   },
 
@@ -662,7 +692,6 @@ module.exports = {
 
 
     res.status(200).json({ result: user });
-
   },
 
   updateBankInf: async (req, res, next) => {
@@ -676,6 +705,34 @@ module.exports = {
 
     res.status(200).json({ result: 'success' });
 
-  }
+  },
 
+  reportUser: async (req, res, next) => {
+    let { userId, cause, eventId } = req.body;
+    if (!userId) {
+      return next({ error: { message: 'Invalid data', code: 600 } });
+    }
+
+    let userReport = req.user;
+
+    if (userId == userReport) {
+      return next({ error: { message: 'You can\'t report yourself' } });
+    }
+
+    let objData = { userId: userReport, cause: cause || '' };
+    if (eventId) {
+      objData.eventId = eventId;
+    }
+
+    try {
+      let u = await User.findByIdAndUpdate(userId, { $push: { "userReport": objData } });
+      if (!u) {
+        return next({ error: { message: 'User is not exists', code: 601 } });
+      }
+
+      res.status(200).json({ result: u });
+    } catch (error) {
+      next({ error: { message: error, code: 500 } });
+    }
+  }
 };

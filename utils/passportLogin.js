@@ -25,45 +25,55 @@ module.exports = (app) => {
         passwordField: 'password',
     }, async (username, password, done) => {
         //1
-        if (typeof username === 'undefined' || typeof password === 'undefined') {
+        if (!username || !password) {
             return done(null, false, { message: 'Invalid data' });
         }
-        
         User.findOne({ 'email': username }).then( user => {
             if (!user) {
                 return done(null, false, { message: 'username incorrect' });
             }//compareSync
-            let ret =  bcrypt.compareSync(password, user.hashPass);
-            
-            let ret1 = password == user.google_id;
-            
-            if (!ret) {
+
+            const loginWithPass = async function () {
+                let ret =  bcrypt.compareSync(password, user.hashPass);
+
+                if (!ret) {
+                    return done(null, false, { message: 'Password incorrect' });
+                }
+
+                if (!user.isActive) {
+                    // false
+                    let too = otp.generateOTP();
+                    
+                    try {
+                        mailer.sentMailer('admin@gmail.com', { email: user.email }, 'confirm', `${too}`).then(json=>{
+                            if(json.code==400){
+                                return done(null, false, json);
+                            }else{
+                                user.TOKEN = too;
+                                user.save();
+                                return done(null, user);
+                            }
+                        });
+                    } catch (err) {
+                        return done(null, false,err);
+                    }
+                    
+                } else {
+                    return done(null, user);
+                }
+            }
+
+            if (user.google_id) {
+                let ret1 = password == user.google_id;
+                
                 if(ret1){
                     return done(null,user);
+                } else {
+                    loginWithPass()
                 }
-                return done(null, false, { message: 'Password incorrect' });
             }
-            if (!user.isActive) {
-                // false
-                let too = otp.generateOTP();
-                console.log(too);
-                try {
-                    mailer.sentMailer('admin@gmail.com', { email: user.email }, 'confirm', `${too}`).then(json=>{
-                        if(json.code==400){
-                            return done(null, false, json);
-                        }else{
-                            user.TOKEN = too;
-                            user.save();
-                            return done(null, user);
-                        }
-                    });
-                } catch (err) {
-                    return done(null, false,err);
-                }
-                
-            }else{
-                return done(null, user);
-            }
+
+            loginWithPass()
         }).catch(err => {
             // nay la sai cai ten dn
             return done(err, false, { message: err });

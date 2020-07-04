@@ -8,8 +8,10 @@ const bodyParser = require('body-parser');
 const passport = require('passport');
 const mongoose = require('mongoose');
 
-
 mongoose.connect(keys.mongoURI, { useNewUrlParser: true, useUnifiedTopology: true, 'useCreateIndex': true, useFindAndModify: false });
+
+require('./middlewares/loadMongoose');
+const notification_Controller = require('./controller/notificationController');
 
 var app = express();
 
@@ -27,11 +29,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(passport.initialize());
 app.use(passport.session());
 
-require('./middlewares/loadMongoose');
-
 require('./utils/passport-google');
 require('./utils/passportLogin')(app);
-
+app.use('/api', require('./routes/commentRouter'));
 app.use('/api', require('./routes/chatRouter'));
 app.use('/api', require('./routes/eventRouter'));
 app.use('/api', require('./routes/notificationRouters'));
@@ -44,9 +44,11 @@ app.use('/', require('./routes/googleRouter'));
 
 //require('./routes/authRouters')(app);
 
+notification_Controller.startEventNoti();
+
 //Xử lý error 404
 app.use((req, res, next) => {
-    res.status(404).json({ error: { message: 'API này hiện tại chưa hổ trợ' } });
+    res.status(404).json({ error: { message: 'API Not Found' } });
 })
 
 app.use((error, req, res, next) => {
