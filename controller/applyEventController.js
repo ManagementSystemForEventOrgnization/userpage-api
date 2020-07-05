@@ -503,16 +503,15 @@ module.exports = {
             if (sessionIds) {
                 event.session.forEach(ele => {
                     if (sessionIds.includes(ele.id)) {
-
-                        let currentDate = new Date()
-                        if (ele.day < currentDate) {
-                            isExit = true
-                            return next({ error: { message: 'Some session started, can you reload and choose again', code: 719 } });
-                        }
-
                         if (isUserEvent) {
                             ele.isCancel = true
                         } else {
+                            let currentDate = new Date()
+                            if (ele.day < currentDate) {
+                                isExit = true
+                                return next({ error: { message: 'Some session started, can you reload and choose again', code: 719 } });
+                            }
+                            
                             ele.joinNumber = ele.joinNumber == 0 ? 0 : (ele.joinNumber - 1)
                         }
                     }
