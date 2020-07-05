@@ -20,11 +20,11 @@ const applyEventSchema = new Schema({
             paymentStatus: String,
             paymentId: { type: Schema.Types.ObjectId, ref: 'payment' },
             isCancel: Boolean,
+            qrcode: { type: String },
             isRefund: { type: Boolean, default: false },
             createdAt: { type: Date, default: Date.now }
         }
-    ],
-    qrcode: { type: String, "index": "text" }
+    ]
 }, {
     timestamps: {
         createdAt: 'createdAt',

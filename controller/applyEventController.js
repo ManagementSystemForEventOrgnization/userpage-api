@@ -96,16 +96,13 @@ module.exports = {
 
             if (currentEvent) {
                 if (currentEvent.userId == userId) {
-                    next({ error: { message: 'Can not join in yourself event', code: 706 } });
-                    return;
+                    return next({ error: { message: 'Can not join in yourself event', code: 706 } });
                 }
-                if (currentEvent.status === "CANCEL") {
-                    next({ error: { message: 'Event cancelled', code: 719 } });
-                    return;
+                if (currentEvent.status === "CANCEL" || currentEvent.status === "DELETE") {
+                    return next({ error: { message: 'Event cancelled', code: 719 } });
                 }
                 if (currentEvent.status !== "PUBLIC") {
-                    next({ error: { message: 'Waiting for public event', code: 730 } });
-                    return;
+                    return next({ error: { message: 'Waiting for public event', code: 730 } });
                 }
 
                 var sessions = []
@@ -113,8 +110,10 @@ module.exports = {
                 currentEvent.session.forEach(element => {
                     if (sessionIds.includes(element.id)) {
                         if (element.isCancel == true) {
-                            next({ error: { message: 'Some session cancelled, can you reload and choose again', code: 718 } });
-                            return;
+                            return next({ error: { message: 'Some session cancelled, can you reload and choose again', code: 718 } });
+                        }
+                        if (element.day < Date()) {
+                            return next({ error: { message: 'Some session started, can you reload and choose again', code: 719 } });
                         }
 
                         var joinNumber = element.joinNumber || 0;
@@ -125,8 +124,7 @@ module.exports = {
 
                             sessions.push(element);
                         } else {
-                            next({ error: { message: 'Exceeded the amount possible', code: 700 } });
-                            return;
+                            return next({ error: { message: 'Exceeded the amount possible', code: 700 } });
                         }
                     }
                 })
@@ -134,8 +132,7 @@ module.exports = {
                 let currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId });
 
                 if (sessions.length == 0 || sessions.length != sessionIds.length) {
-                    next({ error: { message: 'Not found session!', code: 725 } });
-                    return
+                    return next({ error: { message: 'Not found session!', code: 725 } });
                 }
 
                 var updateSession = function (isSet) {
@@ -143,6 +140,7 @@ module.exports = {
                         element.status = isSet ? "JOINED" : undefined
                         element.isConfirm = isSet ? false : undefined
                         element.isReject = isSet ? false : undefined
+                        element.qrcode = isSet ? eventId + element.id : undefined
                     })
                 }
 
@@ -163,8 +161,7 @@ module.exports = {
                     let newApplyEvent = new ApplyEvent({
                         userId: userId,
                         eventId: eventId,
-                        session: sessions,
-                        qrcode: userId
+                        session: sessions
                     });
 
                     await newApplyEvent.save();
@@ -240,6 +237,10 @@ module.exports = {
                 if (sessionIds.includes(element.id)) {
                     count += 1;
 
+                    if (element.day < Date()) {
+                        return next({ error: { message: 'Some session started, can you reload and choose again', code: 719 } });
+                    }
+
                     if (element.isReject == true) {
                         count = 0;
                         return next({ error: { message: 'You have rejected', code: 705 } });
@@ -293,16 +294,17 @@ module.exports = {
 
     verifyEventMember: async (req, res, next) => {
         if (typeof req.body.eventId === 'undefined' ||
-            typeof req.body.joinUserId === 'undefined' ||
+            typeof req.body.qrcode === 'undefined' ||
             typeof req.body.sessionId === 'undefined') {
             next({ error: { message: "Invalid data", code: 402 } });
             return;
         }
 
-        let { joinUserId, eventId, sessionId } = req.body;
+        let { qrcode, eventId, sessionId } = req.body;
+        let userId = req.user;
 
         try {
-            var currentApplyEvent = await ApplyEvent.findOne({ userId: joinUserId, eventId: eventId });
+            var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId });
 
             if (currentApplyEvent) {
                 let session = currentApplyEvent.session.find(element => {
@@ -311,8 +313,13 @@ module.exports = {
                             next({ error: { message: 'Menber has verified!', code: 721 } });
                         }
 
-                        if (element.isReject != true && currentApplyEvent.qrcode == joinUserId) {
-                            element.isConfirm = true
+                        if (element.isCancel != true && element.isReject != true && element.qrcode === qrcode) {
+                            if (element.paymentStatus != undefined && element.paymentStatus != "PAID") {
+                                element.isConfirm = false
+                            } else {
+                                element.isConfirm = true
+                            }
+                            
                         } else {
                             element.isConfirm = false
                         }
@@ -320,10 +327,9 @@ module.exports = {
                     }
                 })
 
-                await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
-
                 if (session) {
                     if (session.isConfirm) {
+                        await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
                         return res.status(200).json({ result: true });
                     } else {
                         if (session.isReject) {
