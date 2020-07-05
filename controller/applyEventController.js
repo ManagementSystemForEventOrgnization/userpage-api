@@ -31,9 +31,12 @@ module.exports = {
                 currentPayment.status = status == true ? "PAID" : "FAILED";
                 
                 if (status == true) {
+                    var isExit = false
+
                     currentEvent.session.forEach(element => {
                         if (sessionIds.includes(element.id)) {
                             if (element.isCancel == true) {
+                                isExit = true
                                 return next({ error: { message: 'Some session cancelled, can you reload and choose again', code: 718 } });
                             }
     
@@ -43,10 +46,15 @@ module.exports = {
                             if (joinNumber <= element.limitNumber) {
                                 element.joinNumber = joinNumber;
                             } else {
+                                isExit = true
                                 return next({ error: { message: 'Exceeded the amount possible', code: 700 } });
                             }
                         }
                     })
+
+                    if (isExit === true) {
+                        return
+                    }
 
                     applyEvent.session.forEach(ele => {
                         if (sessionIds.includes(ele.id)) {
@@ -87,13 +95,12 @@ module.exports = {
         //         return;
         //     }
         // }
-        console.log(req.body)
-
         let userId = req.user;
 
         try {
             let currentEvent = await Event.findById(eventId);
-
+            var isExit = false
+            
             if (currentEvent) {
                 if (currentEvent.userId == userId) {
                     return next({ error: { message: 'Can not join in yourself event', code: 706 } });
@@ -110,9 +117,14 @@ module.exports = {
                 currentEvent.session.forEach(element => {
                     if (sessionIds.includes(element.id)) {
                         if (element.isCancel == true) {
+                            isExit = true
                             return next({ error: { message: 'Some session cancelled, can you reload and choose again', code: 718 } });
                         }
-                        if (element.day < Date()) {
+
+
+                        let currentDate = new Date()
+                        if (element.day < currentDate) {
+                            isExit = true
                             return next({ error: { message: 'Some session started, can you reload and choose again', code: 719 } });
                         }
 
@@ -124,10 +136,15 @@ module.exports = {
 
                             sessions.push(element);
                         } else {
+                            isExit = true
                             return next({ error: { message: 'Exceeded the amount possible', code: 700 } });
                         }
                     }
                 })
+
+                if (isExit === true) {
+                    return
+                }
 
                 let currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId });
 
@@ -143,13 +160,18 @@ module.exports = {
                         element.qrcode = isSet ? eventId + element.id : undefined
                     })
                 }
-
+                
                 if (currentApplyEvent) {
                     currentApplyEvent.session.forEach(element => {
                         if (sessionIds.includes(element.id)) {
+                            isExit = true
                             return next({ error: { message: 'You have already joined in one of these session', code: 701 } });
                         }
                     })
+
+                    if (isExit === true) {
+                        return
+                    }
 
                     updateSession(true)
                     let changeSession = currentApplyEvent.session.concat(sessions)
@@ -221,31 +243,30 @@ module.exports = {
         let { eventId, sessionIds, payType } = req.body;
         let userId = req.user;
 
-        // if ( payType === "CREDIT_CARD" ) {
-        //     if (typeof req.body.cardId === 'undefined') {
-        //         next({ error: { message: "Invalid data", code: 402 } });
-        //         return;
-        //     }
-        // }
-
         try {
             var currentEvent = await Event.findById(eventId);
             var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId });
             var count = 0
+            var isExit = false
 
             currentApplyEvent.session.forEach(element => {
                 if (sessionIds.includes(element.id)) {
                     count += 1;
 
-                    if (element.day < Date()) {
+
+                    let currentDate = new Date()
+                    if (element.day < currentDate) {
+                        isExit = true
                         return next({ error: { message: 'Some session started, can you reload and choose again', code: 719 } });
                     }
 
                     if (element.isReject == true) {
                         count = 0;
+                        isExit = true
                         return next({ error: { message: 'You have rejected', code: 705 } });
                     } else if (element.isCancel == true) {
                         count = 0;
+                        isExit = true
                         return next({ error: { message: 'Session have cancelled', code: 726 } })
                     }
                 }
@@ -259,12 +280,17 @@ module.exports = {
                     if (joinNumber <= ele.limitNumber) {
                         ele.joinNumber = joinNumber;
                     } else {
+                        isExit = true
                         next({ error: { message: 'Exceeded the amount possible', code: 700 } });
                         return;
                     }
                 }
             })
 
+            if (isExit === true) {
+                return
+            }
+            
             if (count > 0) {
                 if (count != sessionIds.length) {
                     next({ error: { message: 'Choose session pay failed, please!', code: 720 } })
@@ -332,7 +358,9 @@ module.exports = {
                         await ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session })
                         return res.status(200).json({ result: true });
                     } else {
-                        if (session.isReject) {
+                        if (session.isCancel) {
+                            next({ error: { message: 'This session have cancelled', code: 754 } });
+                        } else if (session.isReject) {
                             next({ error: { message: 'Join user have rejected', code: 705 } });
                         } else {
                             next({ error: { message: 'Join user have not payment for this event', code: 704 } });
@@ -359,7 +387,7 @@ module.exports = {
 
         let { joinUserId, eventId, sessionId } = req.body;
         let userId = req.user;
-
+        
         Promise.all([
             Event.findById(eventId),
             ApplyEvent.findOne({ userId: joinUserId, eventId: eventId })
@@ -369,14 +397,20 @@ module.exports = {
                     return element
                 }
             })
-
+            
             if (session) {
-                if (session.isReject != true) {
-                    if (session.isConfirm == true) {
-                        next({ error: { message: "Session starting, Can not reject user", code: 710 } });
-                        return;
-                    }
+                let currentDate = new Date()
+                
+                if (session.day < currentDate) {
+                    return next({ error: { message: 'Session started, Can not reject user', code: 719 } });
+                }
 
+                if (session.isCancel === true) {
+                    next({ error: { message: "Session cancelled, Can not reject user", code: 710 } });
+                    return;
+                }
+                
+                if (session.isReject != true) {
                     session.isReject = true,
                         session.status = "REJECT"
 
@@ -464,10 +498,18 @@ module.exports = {
 
             var applyEvents = null;
             let isUserEvent = userId == event.userId;
+            var isExit = false
 
             if (sessionIds) {
                 event.session.forEach(ele => {
                     if (sessionIds.includes(ele.id)) {
+
+                        let currentDate = new Date()
+                        if (ele.day < currentDate) {
+                            isExit = true
+                            return next({ error: { message: 'Some session started, can you reload and choose again', code: 719 } });
+                        }
+
                         if (isUserEvent) {
                             ele.isCancel = true
                         } else {
@@ -481,7 +523,6 @@ module.exports = {
                 } else {
                     applyEvents = await ApplyEvent.find({ eventId: eventId, userId: userId, session: { $elemMatch: { id: { $in: sessionIds } } } });
                 }
-
             } else {
                 event.session.forEach(ele => {
                     ele.isCancel = true
@@ -489,6 +530,10 @@ module.exports = {
 
                 event.status = "CANCEL";
                 applyEvents = await ApplyEvent.find({ eventId: eventId });
+            }
+
+            if (isExit === true) {
+                return
             }
 
             if (applyEvents.length == 0 ) {
