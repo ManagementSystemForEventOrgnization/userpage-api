@@ -25,6 +25,7 @@ const eventSchema = new Schema({
             status: String,
             isConfirm: Boolean,
             isReject: Boolean,
+            qrcode: { type: String },
             paymentId: {type: Schema.Types.ObjectId, ref: 'payment'},
             isCancel: Boolean,
             refundNumber: Number

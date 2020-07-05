@@ -512,7 +512,7 @@ module.exports = {
 			return;
 		}
 		let { cardId } = req.query;
-		console.log(req.query)
+		
 		try {
 			let cardFind = await Cards.findOne({ 'userId': req.user });
 
