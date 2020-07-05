@@ -400,7 +400,7 @@ module.exports = {
             
             if (session) {
                 let currentDate = new Date()
-                
+
                 if (session.day < currentDate) {
                     return next({ error: { message: 'Session started, Can not reject user', code: 719 } });
                 }
@@ -602,6 +602,10 @@ module.exports = {
                     }
                 })
 
+                if (isCancelled === true) {
+                    return
+                }
+
                 if (joinUserIds.indexOf(applyEvents[index].userId) === -1) {
                     joinUserIds.push(applyEvents[index].userId);
                 }
@@ -616,6 +620,10 @@ module.exports = {
                     if (itemCancel) {
                         if (sessionNoti.indexOf(itemCancel.id) === -1) {
                             sessionNoti.push(itemCancel.id);
+                        }
+                        if (itemCancel.isConfirm == true) {
+                            next({ error: { message: "Can not cancel!", code: 791 } });
+                            return;
                         }
 
                         if (itemCancel.isReject != true && itemCancel.paymentId !== undefined && itemCancel.paymentId !== null) {
