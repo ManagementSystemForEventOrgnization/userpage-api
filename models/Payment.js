@@ -9,6 +9,7 @@ const paymentSchema = new Schema({
     description: String,
     eventId: { type: Schema.Types.ObjectId, ref: 'event' },
     cardId: { type: mongoose.Types.ObjectId },
+    cardStripeId: String,
     chargeId: String,
     zptransId: String,
     payType: String,
