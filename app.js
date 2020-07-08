@@ -41,7 +41,7 @@ app.use('/api', require('./routes/authRouters'));
 app.use('/api', require('./routes/eventRouter'));
 app.use('/api/evenCategory', require('./routes/eventCategoryRouter'));
 app.use('/', require('./routes/googleRouter'));
-
+require('./utils/upload')(app);
 //require('./routes/authRouters')(app);
 
 notification_Controller.startEventNoti();
