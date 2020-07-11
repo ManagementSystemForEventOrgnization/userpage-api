@@ -1,5 +1,5 @@
 Arguments: 
-  /usr/local/bin/node /usr/local/bin/yarn add node-schedule
+  /usr/local/bin/node /usr/local/bin/yarn add multer
 
 PATH: 
   /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:/Applications/Wireshark.app/Contents/MacOS
@@ -14,7 +14,7 @@ Platform:
   darwin x64
 
 Trace: 
-  Error: EACCES: permission denied, mkdir '/Users/nguyenthanhnhut/Desktop/userpage-api/node_modules/cross-spawn/node_modules/lru-cache'
+  Error: EACCES: permission denied, mkdir '/Users/nguyenthanhnhut/Desktop/userpage-api/node_modules/@google-cloud/firestore/node_modules/readable-stream'
 
 npm manifest: 
   {
@@ -43,6 +43,7 @@ npm manifest:
       "moment": "^2.24.0",
       "mongoose": "^5.9.5",
       "morgan": "~1.9.1",
+      "multer": "^1.4.2",
       "node-schedule": "^1.3.2",
       "nodemailer": "^6.4.6",
       "nodemon": "^2.0.2",
