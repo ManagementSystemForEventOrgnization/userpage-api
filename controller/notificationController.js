@@ -2,43 +2,33 @@ const mongoose = require('mongoose');
 const Notification = mongoose.model('notification');
 const ObjectId = mongoose.Types.ObjectId;
 var schedule = require('node-schedule');
+const { adminId } = require('../config/key');
 const Event = mongoose.model('event');
 const ApplyEvent = mongoose.model('applyEvent');
+const { formatDate } = require('../utils/helpers');
 
 module.exports = {
     startEventNoti: async () => {
         var rule = new schedule.RecurrenceRule();
-        rule.hour = 17;
-        rule.minute = 17;
-        rule.second = 30;
+        rule.hour = 21;
+        rule.minute = 00;
+        rule.second = 00;
 
         schedule.scheduleJob(rule, async function () {
-            let conditionEvent = {
-                $expr: {
-                    $and: [
-                        { $eq: ["$_id", "$$event_id"] },
-                        // { "status": { $nin: ["CANCEL", "DELETE"] } },
-                        { 'typeOfEvent': "Public" }
-                    ],
-                },
-            };
-
-            let conditionApply = {
-                $and: [
-                    { 'session': { $exists: true, $not: { $type: 'null', $size: 0 } } },
-                    { 'session': { $elemMatch: { 
-                        $and: [
-                            { 'day': { $gt: new Date() }},
-                            { "status": { $nin: ["CANCEL", "REJECT"] } }
-                        ]
-                    }}},
-                ],
-            };
+            let currentDay = new Date();
+            let nextDay = new Date(new Date().getTime() + 86400 * 1000);
 
             Promise.all([
                 ApplyEvent.aggregate([
                     {
-                        $match: conditionApply
+                        $match: {
+                            session: {
+                                $elemMatch: {
+                                    isReject: false
+                                    , isCancel: { $ne: true }
+                                }
+                            }
+                        }
                     },
                     {
                         $lookup: {
@@ -46,23 +36,73 @@ module.exports = {
                             let: { event_id: "$eventId" },
                             pipeline: [
                                 {
-                                    $match: conditionEvent,
+                                    $match: {
+                                        status: 'PUBLIC',
+                                        $expr: {
+                                            $and: [
+                                                { $eq: ["$_id", "$$event_id"] }
+                                            ],
+                                        },
+                                    },
                                 },
                             ],
-                            as: "events",
+                            as: "event",
                         },
                     },
+                    { $unwind: '$event' },
                     {
-                        $unwind: "$events"
-                    }
+                        $project: {
+                            'session': {
+                                $filter: {
+                                    input: "$session",
+                                    as: "item",
+                                    cond: {
+                                        $and: [
+                                            {
+                                                $not: { $eq: ["$$item.isCancel", true], $eq: ["$$item.isReject", true] }
+                                            },
+                                            {
+                                                $gte: ["$$item.day", currentDay]
+                                            },
+                                            {
+                                                $lte: ["$$item.day", nextDay]
+                                            }
+                                        ]
+                                    }
+                                },
+                            },
+                            eventId: 1, userId: 1, event: 1
+                        }
+                    },
+                    { $match: { session: { $not: { $size: 0 } } } },
                 ])
-            ]).then ((applys) => {
-                console.log(applys)
-                console.log(applys[0][0].events)
-            }).catch ((err) => {
+            ]).then((applies) => {
+                applies[0].forEach(apply => {
+                    const { event } = apply
+                    let dayString = formatDate(apply.session[0].day).toLowerCase();
+
+                    const newNotification = new Notification({
+                        sender: adminId,
+                        receiver: [apply.userId],
+                        type: "EVENT_START",
+                        message: "",
+                        title: `Event ${event.name} will start ${dayString}`,
+                        linkTo: {
+                            key: "EventDetail",
+                            _id: event._id,
+                            urlWeb: event.domain + event.urlWeb
+                        },
+                        isRead: false,
+                        isDelete: false,
+                        session: [apply.session[0].id]
+                    });
+
+                    newNotification.save();
+                    console.log(newNotification)
+                })
+            }).catch((err) => {
                 console.log(err)
             })
-
         })
     },
 

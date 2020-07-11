@@ -4,9 +4,6 @@ const controller_User = require('../controller/user_Controller');
 const Unauthorized = require('../middlewares/loginAuth');
 const Authorization = require('../middlewares/authorization');
 
-router.get('/', (req, res) => {
-    res.send(req.user)
-});
 
 router.post('/login', controller_User.login);
 router.post('/login-google', controller_User.login_google);
