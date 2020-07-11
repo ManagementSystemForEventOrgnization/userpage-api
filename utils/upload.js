@@ -42,6 +42,6 @@ module.exports = function (app){
         if (fs.existsSync(url_del)) {
             fs.unlinkSync(url_del)
         }
-        res.redirect('back')
+        res.status(200).json({result: true});
     });
 }

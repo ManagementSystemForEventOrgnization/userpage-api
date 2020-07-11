@@ -45,65 +45,97 @@ module.exports = {
 		numberRecord = +numberRecord || 10;
 		let userId = req.user;
 
-		let condition = { $or: [{ sender: ObjectId(userId) }, { receiver: ObjectId(userId) }] };
+		let condition = {
+			$or: [{ sender: ObjectId(userId) },
+			{
+				sender: ObjectId(keys.adminId), receiver: ObjectId(userId)
+			}]
+		};
 
-		// let pay = await Payment.find(condition)
-		// 	.populate("sender").populate("eventId").populate("receiver")
-		// 	.sort({ createdAt: -1 }).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord);
+		let conditionRevenue = { sender: ObjectId(keys.adminId), receiver: ObjectId(userId), status: 'PAID' }
+		let conditionExp = { sender: ObjectId(userId), status: 'PAID' };
 
-		let pay = await Payment.aggregate([
-			{ $match: condition },
-			{
-				$lookup: {
-					from: 'users',
-					localField: 'sender',
-					foreignField: '_id',
-					as: 'sender'
-				}
-			},
-			{
-				$unwind: "$sender"
-			},
-			{
-				$lookup: {
-					from: 'users',
-					localField: 'receiver',
-					foreignField: '_id',
-					as: 'receiver'
-				}
-			},
-			{
-				$unwind: "$receiver"
-			},
-			{
-				$lookup: {
-					from: 'events',
-					localField: 'eventId',
-					foreignField: '_id',
-					as: 'eventId'
-				}
-			},
-			{
-				$unwind: "$eventId"
-			},
-			{$sort: {createdAt: -1}},
-			{$skip : +numberRecord * (+pageNumber - 1)},
-			{$limit : +numberRecord}
-		])
 
-		if (!pay) {
+		Promise.all([
+			Payment.aggregate([
+				{ $match: conditionRevenue },
+				{
+					$group: {
+						_id: null,
+						total: { $sum: "$amount" }
+					}
+				}
+
+			]),
+			Payment.aggregate([
+				{ $match: conditionExp },
+				{
+					$project: {
+						num: { $size: '$session' },
+						num1: { $size: '$sessionRefunded' },
+						amount: 1
+					}
+				},
+				{
+					$group: {
+						_id: null,
+						sumTotal: { $sum: { $subtract: ["$amount", { $multiply: ['$amount', { $divide: ['$num1', '$num'] }] }] } },
+					}
+				}
+
+			]),
+			Payment.aggregate([
+				{ $match: condition },
+				{
+					$lookup: {
+						from: 'users',
+						localField: 'sender',
+						foreignField: '_id',
+						as: 'sender'
+					}
+				},
+				{
+					$unwind: "$sender"
+				},
+				{
+					$lookup: {
+						from: 'users',
+						localField: 'receiver',
+						foreignField: '_id',
+						as: 'receiver'
+					}
+				},
+				{
+					$unwind: "$receiver"
+				},
+				{
+					$lookup: {
+						from: 'events',
+						localField: 'eventId',
+						foreignField: '_id',
+						as: 'eventId'
+					}
+				},
+				{
+					$unwind: "$eventId"
+				},
+				{ $sort: { createdAt: -1 } },
+				{ $skip: +numberRecord * (+pageNumber - 1) },
+				{ $limit: +numberRecord }
+			])
+		]).then(([revenueTotal, expTotal, payments]) => {
+			res.status(200).json({ result: { payments, revenueTotal, expTotal } });
+		}).catch(err => {
 			return next({ error: { message: 'Err', code: 700 } });
-		}
-
-		res.status(200).json({ result: pay });
+		})
 	},
 
 	paymentDetail: async (req, res, next) => {
 		if (typeof req.query.paymentId === 'undefined') {
-            next({ error: { message: "Invalid data", code: 402 } });
-            return;
+			next({ error: { message: "Invalid data", code: 402 } });
+			return;
 		}
-		
+
 		let { paymentId } = req.query;
 		let condition = { _id: ObjectId(paymentId) };
 
@@ -174,11 +206,11 @@ module.exports = {
 								}
 							})
 						}
-						
+
 						await nextHandle(true, isUserEvent, applyEvent, sendEvent, sendNoti);
 						return true;
 					}
-					
+
 					if (!currentPayment.sessionRefunded.includes(sessionId)) {
 						var refundNoti = async function (type, success) {
 							const newNotification = new Notification({
@@ -195,7 +227,7 @@ module.exports = {
 								isDelete: false,
 								session: [sessionId]
 							});
-							
+
 							let needNotification = sendNoti || newNotification
 
 							if (success == true) {
@@ -212,7 +244,7 @@ module.exports = {
 												return;
 											}
 										})
-						
+
 										if (isRejectUser != true) {
 											sendEvent.session.forEach(ele => {
 												if (ele.id == sessionId) {
@@ -369,7 +401,7 @@ module.exports = {
 
 				Promise.all([
 					newPayment.save(),
-					ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session }), 
+					ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session }),
 					// Event.findByIdAndUpdate({ _id: event._id }, { session: event.session }),
 					result.data
 				]).then(([payment, applyEvent, dataResult]) => {
@@ -434,7 +466,7 @@ module.exports = {
 
 		try {
 			var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId });
-			
+
 			if (currentApplyEvent) {
 				let cardFind = await Cards.findOne({ userId: req.user });
 
@@ -451,7 +483,7 @@ module.exports = {
 							cardStripeId: cardId,
 							session: sessionIds
 						});
-	
+
 						if (charge) {
 							newPayment.cardId = cardFind.id;
 							newPayment.chargeId = charge.id;
@@ -469,7 +501,7 @@ module.exports = {
 
 						Promise.all([
 							newPayment.save(),
-							ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session }), 
+							ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session }),
 							Event.findByIdAndUpdate({ _id: event._id }, { session: event.session }),
 							charge
 						]).then(([payment, applyEvent, event, charge]) => {
@@ -482,18 +514,18 @@ module.exports = {
 							next({ error: { message: "Server execute failed!", code: 776 } });
 						})
 					}
-					
+
 					stripe.charges.create(
-					{
-						amount: amount,
-						currency: 'vnd',
-						customer: cardFind.customerId,
-						source: cardId,
-						description: description || ("Payment for event " + eventId),
-					},
-					function(err, charge) {
-						nextHandle(cardFind, currentApplyEvent, charge, err);
-					});
+						{
+							amount: amount,
+							currency: 'vnd',
+							customer: cardFind.customerId,
+							source: cardId,
+							description: description || ("Payment for event " + eventId),
+						},
+						function (err, charge) {
+							nextHandle(cardFind, currentApplyEvent, charge, err);
+						});
 				} else {
 					next({ error: { message: 'Card customer not found', code: 900 } });
 				}
@@ -505,14 +537,14 @@ module.exports = {
 		}
 	},
 
-	
+
 	get_card_info: async (req, res, next) => {
 		if (typeof req.cardId == undefined) {
 			res.status(600).json({ error: { message: "Invalid data", code: 402 } });
 			return;
 		}
 		let { cardId } = req.query;
-		
+
 		try {
 			let cardFind = await Cards.findOne({ 'userId': req.user });
 
@@ -522,7 +554,7 @@ module.exports = {
 				stripe.customers.retrieveSource(
 					cardFind.customerId,
 					cardId,
-					function(err, card) {
+					function (err, card) {
 						if (err != null) {
 							next({ error: { message: "Server execute failed!", code: 776 } });
 						} else {
@@ -690,15 +722,15 @@ module.exports = {
 				var customer = await stripe.customers.create({
 					description: 'My First Test Customer (created for API docs)'
 				});
-	
+
 				if (customer) {
 					const newCard = new Cards({
 						customerId: customer.id,
 						userId: req.user
 					});
-	
+
 					await newCard.save();
-	
+
 					createCard(customer.id, req.body.cardToken, res)
 				} else {
 					res.status(600).json({ message: "can't create card customer" });
