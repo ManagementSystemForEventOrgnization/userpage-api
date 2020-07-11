@@ -70,13 +70,13 @@ module.exports = {
                 ]).then (() => {
                     return res.status(200).json({ result: true })
                 }).catch ((err) => {
-                    return next({ error: { message: "Server execute failed!", code: 776 } });
+                    return next({ error: { message: "Something went wrong", code: 776 } });
                 })
             } else {
                 next({ error: { message: 'Not found this payment', code: 703 } });
             }
         }).catch((err) => {
-            next({ error: { message: "Server execute failed!", code: 776 } });
+            next({ error: { message: "Something went wrong", code: 776 } });
         })
     },
 
@@ -228,7 +228,7 @@ module.exports = {
             }
         }
         catch (err) {
-            next({ error: { message: "Server execute failed!", code: 776 } });
+            next({ error: { message: "Something went wrong", code: 776 } });
         }
     },
 
@@ -314,7 +314,7 @@ module.exports = {
             }
         }
         catch (err) {
-            next({ error: { message: "Server execute failed!", code: 776 } });
+            next({ error: { message: "Something went wrong", code: 776 } });
         }
     },
 
@@ -373,7 +373,7 @@ module.exports = {
                 next({ error: { message: 'Join user have not participated in this event', code: 702 } });
             }
         } catch (err) {
-            next({ error: { message: "Server execute failed!", code: 776 } });
+            next({ error: { message: "Something went wrong", code: 776 } });
         }
     },
 
@@ -720,7 +720,7 @@ module.exports = {
                 return res.status(200).json({ result: true });
             }
         } catch (err) {
-            next({ error: { message: "Server execute failed!", code: 776 } });
+            next({ error: { message: "Something went wrong", code: 776 } });
         }
     },
 
@@ -768,7 +768,7 @@ module.exports = {
                 Promise.all([
                     payment_Controller.refund(req, res, next, nextHandle)
                 ]).then().catch((err) => {
-                    return next({ error: { message: "Server execute failed!", code: 776 } });
+                    return next({ error: { message: "Something went wrong", code: 776 } });
                 })
             } else {
                 return next({ error: { message: "User have not joined this event!", code: 733 } });

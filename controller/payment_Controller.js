@@ -45,65 +45,112 @@ module.exports = {
 		numberRecord = +numberRecord || 10;
 		let userId = req.user;
 
-		let condition = { $or: [{ sender: ObjectId(userId) }, { receiver: ObjectId(userId) }] };
-
-		// let pay = await Payment.find(condition)
-		// 	.populate("sender").populate("eventId").populate("receiver")
-		// 	.sort({ createdAt: -1 }).skip(+numberRecord * (+pageNumber - 1)).limit(+numberRecord);
-
-		let pay = await Payment.aggregate([
-			{ $match: condition },
+		let condition = {
+			$or: [{ sender: ObjectId(userId) },
 			{
-				$lookup: {
-					from: 'users',
-					localField: 'sender',
-					foreignField: '_id',
-					as: 'sender'
+				sender: ObjectId(keys.adminId), receiver: ObjectId(userId)
+			}]
+		};
+
+		Promise.all([
+			Payment.aggregate([
+				{ $match: condition },
+				{
+					$lookup: {
+						from: 'users',
+						localField: 'sender',
+						foreignField: '_id',
+						as: 'sender'
+					}
+				},
+				{
+					$unwind: "$sender"
+				},
+				{
+					$lookup: {
+						from: 'users',
+						localField: 'receiver',
+						foreignField: '_id',
+						as: 'receiver'
+					}
+				},
+				{
+					$unwind: "$receiver"
+				},
+				{
+					$lookup: {
+						from: 'events',
+						localField: 'eventId',
+						foreignField: '_id',
+						as: 'eventId'
+					}
+				},
+				{
+					$unwind: "$eventId"
+				},
+				{ $sort: { createdAt: -1 } },
+				{ $skip: +numberRecord * (+pageNumber - 1) },
+				{ $limit: +numberRecord }
+			])
+		]).then(([payments]) => {
+			res.status(200).json({ result: payments || [] });
+		}).catch(err => {
+			return next({ error: { message: 'Something went wrong', code: 776 } });
+		})
+	},
+
+	paymentHistoryTotal: async (req, res, next) => {
+		let userId = req.user;
+		let conditionRevenue = { sender: ObjectId(keys.adminId), receiver: ObjectId(userId), status: 'PAID' }
+		let conditionExp = { sender: ObjectId(userId), status: 'PAID' };
+
+		Promise.all([
+			Payment.aggregate([
+				{ $match: conditionRevenue },
+				{
+					$group: {
+						_id: null,
+						total: { $sum: "$amount" }
+					}
 				}
-			},
-			{
-				$unwind: "$sender"
-			},
-			{
-				$lookup: {
-					from: 'users',
-					localField: 'receiver',
-					foreignField: '_id',
-					as: 'receiver'
-				}
-			},
-			{
-				$unwind: "$receiver"
-			},
-			{
-				$lookup: {
-					from: 'events',
-					localField: 'eventId',
-					foreignField: '_id',
-					as: 'eventId'
-				}
-			},
-			{
-				$unwind: "$eventId"
-			},
-			{$sort: {createdAt: -1}},
-			{$skip : +numberRecord * (+pageNumber - 1)},
-			{$limit : +numberRecord}
-		])
 
-		if (!pay) {
-			return next({ error: { message: 'Err', code: 700 } });
-		}
+			]),
+			Payment.aggregate([
+				{ $match: conditionExp },
+				{
+					$project: {
+						num: { $size: '$session' },
+						num1: { $size: '$sessionRefunded' },
+						amount: 1
+					}
+				},
+				{
+					$group: {
+						_id: null,
+						total: { $sum: { $subtract: ["$amount", { $multiply: ['$amount', { $divide: ['$num1', '$num'] }] }] } },
+					}
+				}
 
-		res.status(200).json({ result: pay });
+			])
+		]).then(([revenueTotal, expTotal]) => {
+			
+			res.status(200).json({ 
+				result: {
+					revenueTotal: revenueTotal[0] && revenueTotal[0].total || 0, 
+					expTotal: expTotal[0] && expTotal[0].total || 0
+				} 
+			});
+		}).catch(err => {
+			return next({ error: { message: 'Something went wrong', code: 776 } });
+		})
 	},
 
 	paymentDetail: async (req, res, next) => {
 		if (typeof req.query.paymentId === 'undefined') {
-            next({ error: { message: "Invalid data", code: 402 } });
-            return;
+			next({ error: { message: "Invalid data", code: 402 } });
+			return;
 		}
-		
+
 		let { paymentId } = req.query;
 		let condition = { _id: ObjectId(paymentId) };
 
@@ -174,11 +221,11 @@ module.exports = {
 								}
 							})
 						}
-						
+
 						await nextHandle(true, isUserEvent, applyEvent, sendEvent, sendNoti);
 						return true;
 					}
-					
+
 					if (!currentPayment.sessionRefunded.includes(sessionId)) {
 						var refundNoti = async function (type, success) {
 							const newNotification = new Notification({
@@ -195,7 +242,7 @@ module.exports = {
 								isDelete: false,
 								session: [sessionId]
 							});
-							
+
 							let needNotification = sendNoti || newNotification
 
 							if (success == true) {
@@ -212,7 +259,7 @@ module.exports = {
 												return;
 											}
 										})
-						
+
 										if (isRejectUser != true) {
 											sendEvent.session.forEach(ele => {
 												if (ele.id == sessionId) {
@@ -288,7 +335,7 @@ module.exports = {
 					return false;
 				})
 			} catch (err) {
-				next({ error: { message: "Server execute failed!", code: 776 } });
+				next({ error: { message: "Something went wrong", code: 776 } });
 				return;
 			}
 		}
@@ -369,7 +416,7 @@ module.exports = {
 
 				Promise.all([
 					newPayment.save(),
-					ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session }), 
+					ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session }),
 					// Event.findByIdAndUpdate({ _id: event._id }, { session: event.session }),
 					result.data
 				]).then(([payment, applyEvent, dataResult]) => {
@@ -379,13 +426,13 @@ module.exports = {
 						next({ error: { message: 'Payment failed', code: 901 } });
 					}
 				}).catch(() => {
-					next({ error: { message: "Server execute failed!", code: 776 } });
+					next({ error: { message: "Something went wrong", code: 776 } });
 				})
 			} else {
 				next({ error: { message: 'You have not participated in this event', code: 702 } });
 			}
 		} catch (err) {
-			next({ error: { message: "Server execute failed!", code: 776 } });
+			next({ error: { message: "Something went wrong", code: 776 } });
 		}
 	},
 
@@ -434,7 +481,7 @@ module.exports = {
 
 		try {
 			var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId });
-			
+
 			if (currentApplyEvent) {
 				let cardFind = await Cards.findOne({ userId: req.user });
 
@@ -451,7 +498,7 @@ module.exports = {
 							cardStripeId: cardId,
 							session: sessionIds
 						});
-	
+
 						if (charge) {
 							newPayment.cardId = cardFind.id;
 							newPayment.chargeId = charge.id;
@@ -469,7 +516,7 @@ module.exports = {
 
 						Promise.all([
 							newPayment.save(),
-							ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session }), 
+							ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session }),
 							Event.findByIdAndUpdate({ _id: event._id }, { session: event.session }),
 							charge
 						]).then(([payment, applyEvent, event, charge]) => {
@@ -479,21 +526,21 @@ module.exports = {
 								next({ error: { message: 'Payment failed', code: 901 } });
 							}
 						}).catch(() => {
-							next({ error: { message: "Server execute failed!", code: 776 } });
+							next({ error: { message: "Something went wrong", code: 776 } });
 						})
 					}
-					
+
 					stripe.charges.create(
-					{
-						amount: amount,
-						currency: 'vnd',
-						customer: cardFind.customerId,
-						source: cardId,
-						description: description || ("Payment for event " + eventId),
-					},
-					function(err, charge) {
-						nextHandle(cardFind, currentApplyEvent, charge, err);
-					});
+						{
+							amount: amount,
+							currency: 'vnd',
+							customer: cardFind.customerId,
+							source: cardId,
+							description: description || ("Payment for event " + eventId),
+						},
+						function (err, charge) {
+							nextHandle(cardFind, currentApplyEvent, charge, err);
+						});
 				} else {
 					next({ error: { message: 'Card customer not found', code: 900 } });
 				}
@@ -501,18 +548,18 @@ module.exports = {
 				next({ error: { message: 'You have not participated in this event', code: 702 } });
 			}
 		} catch (err) {
-			next({ error: { message: "Server execute failed!", code: 776 } });
+			next({ error: { message: "Something went wrong", code: 776 } });
 		}
 	},
 
-	
+
 	get_card_info: async (req, res, next) => {
 		if (typeof req.cardId == undefined) {
 			res.status(600).json({ error: { message: "Invalid data", code: 402 } });
 			return;
 		}
 		let { cardId } = req.query;
-		
+
 		try {
 			let cardFind = await Cards.findOne({ 'userId': req.user });
 
@@ -522,9 +569,9 @@ module.exports = {
 				stripe.customers.retrieveSource(
 					cardFind.customerId,
 					cardId,
-					function(err, card) {
+					function (err, card) {
 						if (err != null) {
-							next({ error: { message: "Server execute failed!", code: 776 } });
+							next({ error: { message: "Something went wrong", code: 776 } });
 						} else {
 							res.status(200).json({ result: card });
 						}
@@ -532,7 +579,7 @@ module.exports = {
 				);
 			}
 		} catch (err) {
-			next({ error: { message: "Server execute failed!", code: 776 } });
+			next({ error: { message: "Something went wrong", code: 776 } });
 		}
 	},
 
@@ -542,7 +589,7 @@ module.exports = {
 		try {
 			cardFind = await Cards.findOne({ 'userId': req.user });
 		} catch (err) {
-			next({ error: { message: "Server execute failed!", code: 776 } });
+			next({ error: { message: "Something went wrong", code: 776 } });
 			return;
 		}
 
@@ -557,7 +604,7 @@ module.exports = {
 				},
 				function (err, cards) {
 					if (err != null) {
-						next({ error: { message: "Server execute failed!", code: 776 } });
+						next({ error: { message: "Something went wrong", code: 776 } });
 					} else {
 						res.status(200).json({ result: cards.data });
 					}
@@ -585,7 +632,7 @@ module.exports = {
 					},
 					function (err, customer) {
 						if (err != null) {
-							next({ error: { message: "Server execute failed!", code: 776 } });
+							next({ error: { message: "Something went wrong", code: 776 } });
 						} else {
 							res.status(200).json({ result: true });
 						}
@@ -593,7 +640,7 @@ module.exports = {
 				);
 			}
 		} catch (err) {
-			next({ error: { message: "Server execute failed!", code: 776 } });
+			next({ error: { message: "Something went wrong", code: 776 } });
 			return;
 		}
 	},
@@ -615,7 +662,7 @@ module.exports = {
 					req.body.cardId,
 					function (err, confirmation) {
 						if (err != null) {
-							next({ error: { message: "Server execute failed!", code: 776 } });
+							next({ error: { message: "Something went wrong", code: 776 } });
 						} else {
 							res.status(200).json({ result: confirmation.deleted });
 						}
@@ -623,7 +670,7 @@ module.exports = {
 				);
 			}
 		} catch (err) {
-			next({ error: { message: "Server execute failed!", code: 776 } });
+			next({ error: { message: "Something went wrong", code: 776 } });
 			return;
 		}
 	},
@@ -634,7 +681,7 @@ module.exports = {
 		try {
 			cardFind = await Cards.findOne({ 'userId': req.user });
 		} catch (err) {
-			next({ error: { message: "Server execute failed!", code: 776 } });
+			next({ error: { message: "Something went wrong", code: 776 } });
 			return;
 		}
 
@@ -646,7 +693,7 @@ module.exports = {
 			try {
 				confirmation = await stripe.customers.del(cardFind.customerId);
 			} catch (err) {
-				next({ error: { message: "Server execute failed!", code: 776 } });
+				next({ error: { message: "Something went wrong", code: 776 } });
 				return;
 			}
 
@@ -658,7 +705,7 @@ module.exports = {
 					res.status(200).json({ result: false })
 				}
 			} catch (err) {
-				next({ error: { message: "Server execute failed!", code: 776 } });
+				next({ error: { message: "Something went wrong", code: 776 } });
 			}
 		}
 	},
@@ -678,7 +725,7 @@ module.exports = {
 					{ source: cardToken },
 					function (err, card) {
 						if (err != null) {
-							next({ error: { message: "Server execute failed!", code: 776 } });
+							next({ error: { message: "Something went wrong", code: 776 } });
 						} else {
 							res.status(200).json({ result: card });
 						}
@@ -690,15 +737,15 @@ module.exports = {
 				var customer = await stripe.customers.create({
 					description: 'My First Test Customer (created for API docs)'
 				});
-	
+
 				if (customer) {
 					const newCard = new Cards({
 						customerId: customer.id,
 						userId: req.user
 					});
-	
+
 					await newCard.save();
-	
+
 					createCard(customer.id, req.body.cardToken, res)
 				} else {
 					res.status(600).json({ message: "can't create card customer" });
@@ -707,7 +754,7 @@ module.exports = {
 				createCard(cardFind.customerId, req.body.cardToken, res)
 			}
 		} catch (err) {
-			next({ error: { message: "Server execute failed!", code: 776 } });
+			next({ error: { message: "Something went wrong", code: 776 } });
 			return;
 		}
 	}
