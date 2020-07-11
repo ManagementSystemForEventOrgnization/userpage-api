@@ -52,38 +52,7 @@ module.exports = {
 			}]
 		};
 
-		let conditionRevenue = { sender: ObjectId(keys.adminId), receiver: ObjectId(userId), status: 'PAID' }
-		let conditionExp = { sender: ObjectId(userId), status: 'PAID' };
-
-
 		Promise.all([
-			Payment.aggregate([
-				{ $match: conditionRevenue },
-				{
-					$group: {
-						_id: null,
-						total: { $sum: "$amount" }
-					}
-				}
-
-			]),
-			Payment.aggregate([
-				{ $match: conditionExp },
-				{
-					$project: {
-						num: { $size: '$session' },
-						num1: { $size: '$sessionRefunded' },
-						amount: 1
-					}
-				},
-				{
-					$group: {
-						_id: null,
-						sumTotal: { $sum: { $subtract: ["$amount", { $multiply: ['$amount', { $divide: ['$num1', '$num'] }] }] } },
-					}
-				}
-
-			]),
 			Payment.aggregate([
 				{ $match: condition },
 				{
@@ -123,10 +92,56 @@ module.exports = {
 				{ $skip: +numberRecord * (+pageNumber - 1) },
 				{ $limit: +numberRecord }
 			])
-		]).then(([revenueTotal, expTotal, payments]) => {
-			res.status(200).json({ result: { payments, revenueTotal, expTotal } });
+		]).then(([payments]) => {
+			res.status(200).json({ result: payments || [] });
 		}).catch(err => {
-			return next({ error: { message: 'Err', code: 700 } });
+			return next({ error: { message: 'Something went wrong', code: 700 } });
+		})
+	},
+
+	paymentHistoryTotal: async (req, res, next) => {
+		let userId = req.user;
+		let conditionRevenue = { sender: ObjectId(keys.adminId), receiver: ObjectId(userId), status: 'PAID' }
+		let conditionExp = { sender: ObjectId(userId), status: 'PAID' };
+
+		Promise.all([
+			Payment.aggregate([
+				{ $match: conditionRevenue },
+				{
+					$group: {
+						_id: null,
+						total: { $sum: "$amount" }
+					}
+				}
+
+			]),
+			Payment.aggregate([
+				{ $match: conditionExp },
+				{
+					$project: {
+						num: { $size: '$session' },
+						num1: { $size: '$sessionRefunded' },
+						amount: 1
+					}
+				},
+				{
+					$group: {
+						_id: null,
+						total: { $sum: { $subtract: ["$amount", { $multiply: ['$amount', { $divide: ['$num1', '$num'] }] }] } },
+					}
+				}
+
+			])
+		]).then(([revenueTotal, expTotal]) => {
+			
+			res.status(200).json({ 
+				result: {
+					revenueTotal: revenueTotal[0] && revenueTotal[0].total || 0, 
+					expTotal: expTotal[0] && expTotal[0].total || 0
+				} 
+			});
+		}).catch(err => {
+			return next({ error: { message: 'Something went wrong', code: 700 } });
 		})
 	},
 
