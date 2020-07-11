@@ -122,7 +122,7 @@ module.exports = {
             await notification.save();
             return res.status(200).json({ result: true });
         } catch (err) {
-            next({ error: { message: "Server execute failed!", code: 776 } });
+            next({ error: { message: "Something went wrong", code: 776 } });
         }
     },
 
@@ -142,7 +142,7 @@ module.exports = {
             await notification.save();
             return res.status(200).json({ result: true });
         } catch (err) {
-            next({ error: { message: "Server execute failed!", code: 776 } });
+            next({ error: { message: "Something went wrong", code: 776 } });
         }
     },
 
@@ -153,7 +153,7 @@ module.exports = {
             let notifications = await Notification.find({ receiver: userId, isRead: false, isDelete: false });
             return res.status(200).json({ result: notifications.length });
         } catch (err) {
-            next({ error: { message: "Server execute failed!", code: 776 } });
+            next({ error: { message: "Something went wrong", code: 776 } });
         }
     },
 

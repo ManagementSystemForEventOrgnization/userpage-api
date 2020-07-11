@@ -66,7 +66,7 @@ module.exports = {
                 ]).then(() => {
                     res.status(200).json({ result: event });
                 }).catch((err) => {
-                    return next({ error: { message: "Server execute failed!", code: 776 } });
+                    return next({ error: { message: "Something went wrong", code: 776 } });
                 })
 
             } else if (event.status === "PUBLIC") {
