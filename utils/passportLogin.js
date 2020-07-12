@@ -70,10 +70,11 @@ module.exports = (app) => {
                     return done(null,user);
                 } else {
                     loginWithPass()
+                    
                 }
+            } else {
+                loginWithPass()
             }
-
-            loginWithPass()
         }).catch(err => {
             // nay la sai cai ten dn
             return done(err, false, { message: err });
