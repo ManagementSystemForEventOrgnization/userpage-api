@@ -29,10 +29,15 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(cors());
 
 require('./utils/passport-google');
 require('./utils/passportLogin')(app);
+
+app.use(cors({
+    credentials: true,
+    origin: ['http://localhost:3000']
+}));
+
 app.use('/api', require('./routes/commentRouter'));
 app.use('/api', require('./routes/chatRouter'));
 app.use('/api', require('./routes/eventRouter'));
