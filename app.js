@@ -35,7 +35,7 @@ require('./utils/passportLogin')(app);
 
 app.use(cors({
     credentials: true,
-    origin: ['http://localhost:3000']
+    origin: ['http://localhost:3000', 'https://event-management-team.herokuapp.com']
 }));
 
 app.use('/api', require('./routes/commentRouter'));
