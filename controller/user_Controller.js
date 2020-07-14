@@ -12,21 +12,26 @@ var passport = require("passport");
 
 module.exports = {
   login: (req, res, next) => {
-    passport.authenticate("local", function (err, user, info) {
+    passport.authenticate("local", async function (err, userData, info) {
       if (err) {
         return next({ error: { message: "Something went wrong", code: 776 } });
       }
 
-      if (!user) {
+      if (!userData) {
         return next({ error: { message: info.message, code: 620 } });
       }
 
-      req.logIn(user._id, function (err) {
-        if (err) {
-            return next({ error: { message: "Something went wrong", code: 776 } });
-        }
-        return res.status(200).json({ result: user });
-      });
+      User.findById(userData._id, function(err, user) { 
+        console.log("login", user)
+  
+        req.logIn(user, function (err) {
+          if (err) {
+              return next({ error: { message: "Something went wrong", code: 776 } });
+          }
+  
+          return res.status(200).json({ result: user });
+        });
+      })
     })(req, res, next);
   },
 

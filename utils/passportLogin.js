@@ -11,6 +11,8 @@ module.exports = (app) => {
 
     passport.serializeUser((user, done) => {
         //2
+        console.log("serializeUser")
+        console.log(user)
         return done(null, user._id);
      
     });
@@ -70,10 +72,11 @@ module.exports = (app) => {
                     return done(null,user);
                 } else {
                     loginWithPass()
+                    
                 }
+            } else {
+                loginWithPass()
             }
-
-            loginWithPass()
         }).catch(err => {
             // nay la sai cai ten dn
             return done(err, false, { message: err });
@@ -81,6 +84,6 @@ module.exports = (app) => {
 
     });
 
-    passport.use(ls);
+    passport.use('local',ls);
 
 }

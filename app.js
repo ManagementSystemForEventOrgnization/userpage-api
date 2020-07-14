@@ -7,6 +7,7 @@ const keys = require('./config/key');
 const bodyParser = require('body-parser');
 const passport = require('passport');
 const mongoose = require('mongoose');
+const cors = require('cors');
 
 mongoose.connect(keys.mongoURI, { useNewUrlParser: true, useUnifiedTopology: true, 'useCreateIndex': true, useFindAndModify: false });
 
@@ -31,6 +32,12 @@ app.use(passport.session());
 
 require('./utils/passport-google');
 require('./utils/passportLogin')(app);
+
+app.use(cors({
+    credentials: true,
+    origin: ['http://localhost:3000', 'https://event-management-team.herokuapp.com']
+}));
+
 app.use('/api', require('./routes/commentRouter'));
 app.use('/api', require('./routes/chatRouter'));
 app.use('/api', require('./routes/eventRouter'));
