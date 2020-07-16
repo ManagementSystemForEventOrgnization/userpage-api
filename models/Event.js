@@ -37,6 +37,7 @@ const eventSchema = new Schema({
     isEdit : {type: String},
     isRequire: {type: Boolean, default : false},
     isPreview: { type: Boolean },
+    paymentId: {type: mongoose.Types.ObjectId, ref: 'payment'}
 }, { 
 	timestamps: { 
 		createdAt: 'createdAt', 
