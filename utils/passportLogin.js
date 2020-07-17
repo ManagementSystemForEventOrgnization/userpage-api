@@ -35,6 +35,15 @@ module.exports = (app) => {
                 return done(null, false, { message: 'username incorrect' });
             }//compareSync
 
+            if(user.dateDelete){
+                return done(null, false, { message: 'User is not exists' });
+            }
+
+            if(user.isReported){
+                return done(null, false, { message: 'You baned' });
+            }
+            
+
             const loginWithPass = async function () {
                 let ret =  bcrypt.compareSync(password, user.hashPass);
 
