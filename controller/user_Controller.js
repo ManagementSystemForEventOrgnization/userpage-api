@@ -681,7 +681,7 @@ module.exports = {
         },
         { $skip: +numberRecord * (+pageNumber - 1) },
         { $limit: +numberRecord },
-        { $sort: { 'session.day': 1 } }
+        { $sort: { createAdt: 1 } }
       ])
 
       res.status(200).json({ result: e });
