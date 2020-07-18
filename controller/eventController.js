@@ -104,12 +104,16 @@ module.exports = {
         try {
 
             let checkApply = await ApplyEvent.findOne({
-                eventId: ObjectId(id), 'session':
-                {
-                    $elemMatch: {
-                       paymentId: {$exists : true }, paymentStatus: 'PAID' , isRefund: false
+                eventId: ObjectId(id), $or: [{
+                    'session':
+                    {
+                        $elemMatch: {
+                            paymentId: { $exists: true }, paymentStatus: 'PAID', isRefund: false
+                        }
                     }
-                }
+                },
+                { session: { $elemMatch: { payment: { $exists: false }, isReject: false, isCancel: { $exists: false } } } }
+                ]
             });
 
             if (checkApply) {
