@@ -761,71 +761,15 @@ module.exports = {
     test: async (req, res, next) => {
         let e = null;
 
-        let time = new Date(new Date().toLocaleDateString()).getTime();
-        console.log(time);
-        time += 86400000 * 1.5;
-
-        e = await ApplyEvent.aggregate([
-            {
-                $match: {
-                    session: {
-                        $elemMatch: {
-                            isReject: false
-                            , isCancel: { $ne: true }
-                        }
-                    }
-                }
-            },
-            {
-                $lookup:
-                    {
-                        from: "events",
-                        let: { event_id : "$eventId" },
-                        pipeline: [
-                            {
-                                $match: {
-                                    status: 'PUBLIC'
-                                    ,
-                                    $expr: {
-                                        $and: [
-                                            { $eq: ["$_id", "$$event_id"] }
-                                        ],
-                                    },
-                                }
-                            },
-                        ],
-                        as: "event"
-                    }
-            },
-            {$unwind : "$event"},
-            {
-                $project: {
-                    event:1,
-                    eventId:1,
-                    'session': {
-                        $filter: {
-                            input: "$session",
-                            as: "item",
-                            cond: {
-                                $and: [
-                                    {
-                                        $not: { $eq: ["$$item.isCancel", true], $eq: ["$$item.isReject", true] }
-                                    }, {
-                                        $gte: ["$$item.day", new Date(time)]
-                                    },
-                                    {
-                                        $lte: ["$$item.day", new Date(time)]
-                                    }]
-
-                            }
-                        }
-                    },
-                }
-            },
-            { $match: { session: { $not: { $size: 0 } } } }
+        let condition = {
+            "session['-1'].joinNumber": 0
+        }
 
 
-        ])
+        e = await Event.aggregate([
+            { $project: { id: 1, session: 1, lastSession: { $slice: ["$session", -1] } } },
+            { $match: { 'lastSession.day': { $lt: new Date() } } }
+        ]);
 
         res.status(200).json({ result: e });
     }
