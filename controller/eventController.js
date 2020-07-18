@@ -103,7 +103,14 @@ module.exports = {
         let { eventId: id } = req.body;
         try {
 
-            let checkApply = await ApplyEvent.findOne({ eventId: ObjectId(id), 'session': { $elemMatch: { isCancel: true, isRefund: false } } });
+            let checkApply = await ApplyEvent.findOne({
+                eventId: ObjectId(id), 'session':
+                {
+                    $elemMatch: {
+                       paymentId: {$exists : true }, paymentStatus: 'PAID' , isRefund: false
+                    }
+                }
+            });
 
             if (checkApply) {
                 return next({ error: { message: 'Event has user apply. Can\'t delete', code: 700 } });
