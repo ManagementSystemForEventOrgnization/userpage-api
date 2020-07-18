@@ -88,13 +88,6 @@ module.exports = {
         }
 
         let { eventId, sessionIds, payType } = req.body;
-
-        // if ( payType === "CREDIT_CARD" ) {
-        //     if (typeof req.body.cardId === 'undefined') {
-        //         next({ error: { message: "Invalid data", code: 402 } });
-        //         return;
-        //     }
-        // }
         let userId = req.user;
 
         try {
@@ -209,7 +202,7 @@ module.exports = {
                 updateSession(false)
 
                 if (currentEvent.isSellTicket == true) {
-                    req.body.amount = (currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price) * sessions.length;
+                    req.body.amount = (currentEvent.ticket.price - (currentEvent.ticket.discount  / 100 * currentEvent.ticket.price)) * sessions.length;
                     req.body.receiver = currentEvent.userId;
                     req.body.event = currentEvent;
 
@@ -297,7 +290,7 @@ module.exports = {
                 }
 
                 if (currentEvent && currentApplyEvent) {
-                    req.body.amount = (currentEvent.ticket.price - currentEvent.ticket.discount * currentEvent.ticket.price) * sessionIds.length;
+                    req.body.amount = (currentEvent.ticket.price - (currentEvent.ticket.discount / 100 * currentEvent.ticket.price)) * sessionIds.length;
                     req.body.receiver = currentEvent.userId;
                     req.body.event = currentEvent;
 

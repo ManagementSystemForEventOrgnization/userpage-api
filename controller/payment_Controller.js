@@ -399,7 +399,7 @@ module.exports = {
 					status: "WAITING",
 					session: sessionIds
 				});
-
+				
 				if (result.data) {
 					result.data.paymentId = newPayment._id;
 					newPayment.zptransId = result.data.zptranstoken;
@@ -478,7 +478,7 @@ module.exports = {
 
 		let { eventId, sessionIds, cardId, amount, description, receiver, event } = req.body;
 		let userId = req.user;
-
+		
 		try {
 			var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId });
 

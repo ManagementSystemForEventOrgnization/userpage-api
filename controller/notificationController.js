@@ -98,7 +98,6 @@ module.exports = {
                     });
 
                     newNotification.save();
-                    console.log(newNotification)
                 })
             }).catch((err) => {
                 console.log(err)
