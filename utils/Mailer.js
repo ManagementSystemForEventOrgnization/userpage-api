@@ -1,5 +1,20 @@
 var nodemailer = require('nodemailer');
 
+const formatEmail = (token, email, subject) => {
+    var title = ""
+    if (subject == "REGISTER") {
+        title = "Thanks for signing up with EVENT IN YOUR HAND. You need to enter below code for activate your account."
+    } else if (subject == "FORGOT") {
+        title = 'Someone has requested a link to change your password. You need to enter below code for reset your password'
+    }
+
+    let message = ` If you didn't request this, please ignore this email.`
+    let thank = ` Thank you for using our services.`
+    let result = '<p> Hello ' + email + ' !</p>' + title + '</p> <ul> <h1>' + token + '</h1>  <li>' + message + '</li> <ul> <li>' + thank + '</li> </ul>  </ul>'
+  
+    return result;
+  }
+  
 exports.sentMailer = function (from1, { email }, subject, content) {
     return new Promise(async (resolve, reject) => {
         let transporter = nodemailer.createTransport({
@@ -17,11 +32,13 @@ exports.sentMailer = function (from1, { email }, subject, content) {
             },
         });
 
+        let htmlContent = formatEmail(content, email, subject)
+
         let mail = {
             from: 'Event. <datn.qlsk@gmail.com>',
             to: email,
-            subject: subject,
-            html: content
+            subject: "EVENT IN YOUR HAND",
+            html: htmlContent
         };
 
         // transporter.verify(function (error, success) {
