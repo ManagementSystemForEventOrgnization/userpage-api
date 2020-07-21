@@ -8,6 +8,7 @@ const bodyParser = require('body-parser');
 const passport = require('passport');
 const mongoose = require('mongoose');
 const cors = require('cors');
+var session = require('express-session')
 
 mongoose.connect(keys.mongoURI, { useNewUrlParser: true, useUnifiedTopology: true, 'useCreateIndex': true, useFindAndModify: false });
 
@@ -17,11 +18,12 @@ const notification_Controller = require('./controller/notificationController');
 var app = express();
 
 app.use(
-    cookieSession({
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-        keys: [keys.cookieKey],
-        httpOnly: false
-    })
+    session({
+        secret: keys.cookieKey,
+        resave: false,
+        saveUninitialized: true,
+        cookie: { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: false}
+      })
 );
 // app.use(bodyParser.urlencoded({ extended: false }))
 app.use(express.json())
