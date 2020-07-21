@@ -16,7 +16,7 @@ module.exports = {
 
     const payload = {
       sub: _id,
-      // iat: Date.now()
+      iat: Date.now()
     };
     const signedToken = jsonwebtoken.sign(payload, key.PRIV_KEY, { expiresIn: expiresIn });
 

@@ -46,6 +46,7 @@ module.exports = async (req, res, next) => {
                             user.TOKEN = too;
                             user.save();
                             let token = await issueJWT(user);
+                            
                             let { email,fullName,birthday,gender,job,phone,avatar,discription, isActive, bank } = user;
                             return res.status(200).json({ result: { email,fullName,birthday,gender,job,phone,avatar,discription, isActive, bank, accessToken: token } });
 
@@ -57,6 +58,7 @@ module.exports = async (req, res, next) => {
 
             } else {
                 let token = await issueJWT(user);
+                
                 let { email,fullName,birthday,gender,job,phone,avatar,discription, isActive, bank } = user;
                 return res.status(200).json({ result: { email,fullName,birthday,gender,job,phone,avatar,discription, isActive, bank, accessToken: token } });
 
@@ -69,7 +71,7 @@ module.exports = async (req, res, next) => {
             if (ret1) {
                 let token = await issueJWT(user);
                 let { email,fullName,birthday,gender,job,phone,avatar,discription, isActive, bank } = user;
-               
+                
                 return res.status(200).json({ result: { email,fullName,birthday,gender,job,phone,avatar,discription, isActive, bank, accessToken: token } });
 
             } else {

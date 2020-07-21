@@ -460,6 +460,10 @@ module.exports = {
     },
 
     getListEvent: async (req, res, next) => {
+        const token = req.cookies;
+
+        console.log(token);
+
         try {
             let {
                 categoryEventId,
@@ -526,7 +530,6 @@ module.exports = {
             } else {
                 sortQuery.createdAt = -1;
             }
-            console.log(query)
             Promise.all([
                 Event.aggregate([
                     { $match: query },
