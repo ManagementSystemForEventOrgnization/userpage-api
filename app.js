@@ -19,8 +19,7 @@ var app = express();
 app.use(
     cookieSession({
         maxAge: 30 * 24 * 60 * 60 * 1000,
-        keys: [keys.cookieKey],
-        secure: true
+        keys: [keys.cookieKey]
     })
 );
 // app.use(bodyParser.urlencoded({ extended: false }))

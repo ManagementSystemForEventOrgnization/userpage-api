@@ -243,7 +243,7 @@ module.exports = {
 
     let token = otp.generateOTP();
 
-    mailer.sentMailer("admin@gmail.com", { email }, "FORGOT", token)
+    mailer.sentMailer("admin@gmail.com", { email, fullName: currentUser.fullName }, "FORGOT", token)
       .then(async (json) => {
         currentUser.TOKEN = token;
 

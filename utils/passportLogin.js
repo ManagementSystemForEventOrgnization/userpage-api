@@ -54,7 +54,7 @@ module.exports = (app) => {
                     let too = otp.generateOTP();
                     
                     try {
-                        mailer.sentMailer('admin@gmail.com', { email: user.email }, 'REGISTER', `${too}`).then(json=>{
+                        mailer.sentMailer('admin@gmail.com', { email: user.email, fullName: user.fullName }, 'REGISTER', `${too}`).then(json=>{
                             if(json.code==400){
                                 return done(null, false, json);
                             }else{
