@@ -13,26 +13,28 @@ mongoose.connect(keys.mongoURI, { useNewUrlParser: true, useUnifiedTopology: tru
 
 require('./middlewares/loadMongoose');
 const notification_Controller = require('./controller/notificationController');
-
+require('./utils/passport')(passport);
 var app = express();
 
+
+// app.use(bodyParser.urlencoded({ extended: false }))
+app.use(express.json())
+app.use(logger('dev'));
+app.use(express.urlencoded({ extended: false }));
+app.use(express.static(path.join(__dirname, 'public')));
+
+
+require('./utils/passportLogin')(app);
+
+app.use(passport.initialize());
+// app.use(passport.session());
+// app.use(cors());
 app.use(
     cookieSession({
         maxAge: 30 * 24 * 60 * 60 * 1000,
         keys: [keys.cookieKey]
     })
 );
-// app.use(bodyParser.urlencoded({ extended: false }))
-app.use(express.json())
-app.use(logger('dev'));
-app.use(express.urlencoded({ extended: false }));
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(passport.initialize());
-app.use(passport.session());
-
-require('./utils/passport-google');
-require('./utils/passportLogin')(app);
-
 app.use(cors({
     credentials: true,
     origin: ['http://localhost:3000', 'https://event-management-team.herokuapp.com']
@@ -52,6 +54,7 @@ require('./utils/upload')(app);
 //require('./routes/authRouters')(app);
 
 notification_Controller.startEventNoti();
+
 
 //Xử lý error 404
 app.use((req, res, next) => {

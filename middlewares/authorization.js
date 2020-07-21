@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const User = mongoose.model('users');
 
 module.exports = async (req, res, next) => {
+    console.log(req.user);
     let u = await User.findById(req.user); 
     if(!u){
         res.status(602).json({error: {message: 'You have to login', code : 700}})
