@@ -260,7 +260,7 @@ module.exports = {
 
     let token = otp.generateOTP();
 
-    mailer.sentMailer("admin@gmail.com", { email }, "confirm", token)
+    mailer.sentMailer("admin@gmail.com", { email, fullName: currentUser.fullName }, "FORGOT", token)
       .then(async (json) => {
         currentUser.TOKEN = token;
 
@@ -698,7 +698,7 @@ module.exports = {
         },
         { $skip: +numberRecord * (+pageNumber - 1) },
         { $limit: +numberRecord },
-        { $sort: { 'session.day': 1 } }
+        { $sort: { createdAt: -1 } }
       ])
 
       res.status(200).json({ result: e });
