@@ -483,16 +483,16 @@ module.exports = {
 
         try {
             var event = await Event.findById(eventId);
-
+            
             if (!event) {
                 next({ error: { message: "Event not found!", code: 724 } });
                 return;
             }
 
             var applyEvents = null;
-            let isUserEvent = userId == event.userId;
+            let isUserEvent = JSON.stringify(userId) === JSON.stringify(event.userId);
             var isExit = false
-
+            
             if (sessionIds) {
                 event.session.forEach(ele => {
                     if (sessionIds.includes(ele.id)) {
@@ -527,7 +527,7 @@ module.exports = {
             if (isExit === true) {
                 return
             }
-
+            
             if (applyEvents.length == 0 ) {
                 return next({ error: { message: "Session not found!", code: 700 } });
             }
@@ -736,14 +736,14 @@ module.exports = {
 
         try {
             let currentApplyEvent = await ApplyEvent.findOne({ userId: ObjectId(joinUserId), eventId: ObjectId(eventId) });
-
+            
             if (currentApplyEvent) {
                 req.body.eventId = ObjectId(eventId)
                 req.body.joinUserId = ObjectId(joinUserId)
                 req.body.paymentId = ObjectId(paymentId)
                 req.body.applyEvent = currentApplyEvent;
                 req.body.sendNoti = null;
-                req.body.isUserEvent = false;
+                req.body.isUserEvent = true;
 
                 const nextHandle = async function (result, isUserEvent, applyEvent, event, noti) {
                     if (result === false) {
