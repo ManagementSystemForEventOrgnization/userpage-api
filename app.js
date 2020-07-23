@@ -38,7 +38,12 @@ app.use(
 );
 app.use(cors({
     credentials: true,
-    origin: ['http://localhost:3000', 'https://event-management-team.herokuapp.com']
+    origin: [
+        'http://localhost:3000',  //local web
+        'https://event-management-team.herokuapp.com',  //online web
+        'https://event-admin-page.herokuapp.com', //online admin
+        'http://localhost:3500' //local admin
+    ]
 }));
 
 app.use('/api', require('./routes/commentRouter'));
