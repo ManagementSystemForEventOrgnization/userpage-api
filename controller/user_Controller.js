@@ -9,30 +9,40 @@ const ApplyEvent = mongoose.model("applyEvent");
 const mailer = require("../utils/Mailer");
 const otp = require("../utils/otp");
 var passport = require("passport");
+const funcLogin = require('../utils/loginUtil');
+const myFunction = require('../utils/function');
+const loginUtil = require("../utils/loginUtil");
 
 module.exports = {
   login: (req, res, next) => {
-    passport.authenticate("local", async function (err, userData, info) {
-      if (err) {
-        return next({ error: { message: "Something went wrong", code: 776 } });
-      }
+    
 
-      if (!userData) {
-        return next({ error: { message: info.message, code: 620 } });
-      }
+    funcLogin(req,res,next);
+    
+    
+    
+    // passport.authenticate("local", async function (err, userData, info) {
+    //   if (err) {
+    //     return next({ error: { message: "Something went wrong", code: 776 } });
+    //   }
 
-      User.findById(userData._id, function(err, user) { 
-        console.log("login", user)
+    //   if (!userData) {
+    //     return next({ error: { message: info.message, code: 620 } });
+    //   }
+
+    //   User.findById(userData._id, function(err, user) { 
+    //     console.log("login", user)
   
-        req.logIn(user, function (err) {
-          if (err) {
-              return next({ error: { message: "Something went wrong", code: 776 } });
-          }
+    //     req.logIn(user, function (err) {
+    //       if (err) {
+    //           return next({ error: { message: "Something went wrong", code: 776 } });
+    //       }
   
-          return res.status(200).json({ result: user });
-        });
-      })
-    })(req, res, next);
+    //       return res.status(200).json({ result: user });
+    //     });
+    //   })
+    // })(req, res, next);
+  
   },
 
   logout: async (req, res) => {
@@ -83,24 +93,27 @@ module.exports = {
       userPassport = userSave;
     }
 
-    passport.authenticate("local", function (err, user, info) {
+    loginUtil(req,res,next);
 
-      if (err) {
-        return next({ error: { message: "Something went wrong", code: 776 } });
-      }
 
-      if (!user) {
-        return next({ error: { message: info.message, code: 620 } });
-      }
+    // passport.authenticate("local", function (err, user, info) {
 
-      req.logIn(user._id, function (err) {
-        if (err) {
-          return next({ error: { message: "Something went wrong", code: 776 } });
-        }
+    //   if (err) {
+    //     return next({ error: { message: "Something went wrong", code: 776 } });
+    //   }
 
-        return res.status(200).json({ result: user });
-      });
-    })(req, res, next);
+    //   if (!user) {
+    //     return next({ error: { message: info.message, code: 620 } });
+    //   }
+
+    //   req.logIn(user._id, function (err) {
+    //     if (err) {
+    //       return next({ error: { message: "Something went wrong", code: 776 } });
+    //     }
+
+    //     return res.status(200).json({ result: user });
+    //   });
+    // })(req, res, next);
   },
 
   register: async (req, res, next) => {
@@ -151,22 +164,26 @@ module.exports = {
     try {
       await newUser.save();
 
-      passport.authenticate("local", function (err, user, info) {
-        if (err) {
-          return next({ error: { message: "Something went wrong", code: 776 } });
-        }
-        if (!user) {
-          return next({ error: { message: info.message, code: 620 } });
-        }
+      loginUtil(req,res,next);
 
-        req.logIn(user._id, function (err) {
-          if (err) {
-            return next({ error: { message: "Something went wrong", code: 776 } });
-          }
+      // passport.authenticate("local", function (err, user, info) {
+      //   if (err) {
+      //     return next({ error: { message: "Something went wrong", code: 776 } });
+      //   }
+      //   if (!user) {
+      //     return next({ error: { message: info.message, code: 620 } });
+      //   }
 
-          return res.status(200).json({ result: user });
-        });
-      })(req, res, next);
+      //   req.logIn(user._id, function (err) {
+      //     if (err) {
+      //       return next({ error: { message: "Something went wrong", code: 776 } });
+      //     }
+
+      //     return res.status(200).json({ result: user });
+      //   });
+      // })(req, res, next);
+
+
     } catch (err) {
       next({ error: { message: "Something went wrong", code: 776 } });
       return;
@@ -243,7 +260,7 @@ module.exports = {
 
     let token = otp.generateOTP();
 
-    mailer.sentMailer("admin@gmail.com", { email }, "confirm", token)
+    mailer.sentMailer("admin@gmail.com", { email, fullName: currentUser.fullName }, "FORGOT", token)
       .then(async (json) => {
         currentUser.TOKEN = token;
 

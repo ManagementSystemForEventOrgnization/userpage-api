@@ -1,26 +1,29 @@
+const key = require('../config/key');
+const jsonwebtoken = require('jsonwebtoken');
+
 module.exports = {
 
-    validateUrlWeb:(alias)=> {
-        var str = alias || '';
-        let regex = /[^\w-_]/;
-        return regex.test(str);
-    },
+  validateUrlWeb: (alias) => {
+    var str = alias || '';
+    let regex = /[^\w-_]/;
+    return regex.test(str);
+  },
 
-    // call when all api success and result is array
-    funcPromiseAll: (arr)=>{
-        return new Promise((resolve, reject)=>{
-            Promise.all([...arr])
-            .then((val)=>resolve(val))
-            .catch(e=>reject(e))
-        })
-    },
-    // call when 1api success
-    funcPromiseRace: (arr)=>{
-        return new Promise((resolve,reject)=>{
-            Promise.race([...arr])
-            .then(val=>resolve(val))
-            .catch(err=> reject(err));
-        })
+  issueJWT: (user) => {
+    const _id = user._id;
+
+    const expiresIn = '1d';
+
+    const payload = {
+      sub: _id,
+      iat: Date.now()
+    };
+    const signedToken = jsonwebtoken.sign(payload, key.PRIV_KEY, { expiresIn: expiresIn });
+
+    return {
+      token: "Bearer " + signedToken,
+      expires: expiresIn
     }
-    
+  },
+
 }

@@ -30,7 +30,8 @@ module.exports = {
             fullName,
             content,
         } = req.body;
-        sender = sender || req.user;
+        sender = sender;
+        
 
         let chat = new Chat({
             sender, 

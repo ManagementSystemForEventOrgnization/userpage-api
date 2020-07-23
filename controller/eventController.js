@@ -1,4 +1,4 @@
-
+const crypto = require('crypto');
 var bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
 const ObjectId = mongoose.Types.ObjectId;
@@ -339,6 +339,83 @@ module.exports = {
             next({ error: { message: err, code: 500 } })
         }
     },
+    getPageEventEdit: async (req, res, next) => {
+        let { eventId, index, editSite } = req.query; // eventId, index: 0,1,2,3,4
+        //trả lên header, rows[index];
+        index = index || 0;
+
+        try {
+            if (!eventId) {
+                return next({ error: { message: 'Event is not exists', code: 422 } });
+            }
+
+            let checkEventUrl = await Event.findOne({ urlWeb: eventId });
+            if (!checkEventUrl) {
+                return next({ error: { message: 'Url is not exists!', code: 404 } });
+            }
+            eventId = await checkEventUrl._id;
+            let idUser = req.user;
+            Promise.all([
+                ApplyEvent.findOne({ eventId: ObjectId(eventId), session: { $elemMatch: { isRefund: false } } }),
+                ApplyEvent.findOne({ eventId: ObjectId(eventId), userId: ObjectId(idUser) }).populate('session.paymentId'),
+                Event.findOne({ _id: ObjectId(eventId) }),
+                PageEvent.findOne({ eventId: new ObjectId(eventId) },
+                    { _id: 0, __v: 0, createdAt: 0, updatedAt: 0 }),
+            ]).then(([checkApply, ap, e, p]) => {
+                if (!e) {
+                    return next({ error: { message: 'Event is not exists', code: 422 } });
+                }
+                let result = {};
+
+                if (editSite && (idUser != e.userId)) {
+                    next({ error: { message: 'You are not authorization' } });
+                    return;
+                }
+
+                if (editSite && checkApply) {
+
+                    if ((+(e.isEdit || 0) - (Date.now())) < 0) {
+                        next({ error: { message: 'Event has user apply! Please contact with admin to resolve!', code: 700 } });
+                        return;
+                    }
+                }
+
+                if (ap) {
+                    let eS = e.session;
+                    let apS = ap.session;
+                    for (let i = 0; i < apS.length; i++) {
+                        let e = apS[i];
+                        for (let j = 0; j < eS.length; j++) {
+                            let element = eS[j];
+                            if (element.id == e.id) {
+                                eS[j].status = e.status;
+                                eS[j].isConfirm = e.isConfirm;
+                                eS[j].isReject = e.isReject;
+                                eS[j].paymentId = e.paymentId;
+                                eS[j].isCancel = e.isCancel;
+                                break;
+                            }
+                        }
+                    }
+                    e.session = eS;
+
+                }
+                result.event = e;
+                result.header = p.header;
+                result.eventId = p.eventId;
+                result.rows = editSite ? (p.rows) : (p.rows[index]);
+                if (!p) {
+                    return next({ error: { message: 'Event is not exists!', code: 500 } });
+                }
+
+                res.status(200).json({ result: result });
+            }).catch(err => {
+                return next({ error: { message: 'Event is not exists!', code: 600 } });
+            })
+        } catch (err) {
+            next({ error: { message: err, code: 500 } })
+        }
+    },
 
     require_edit_event: async (req, res, next) => {
         let { eventId, urlWeb } = req.body;
@@ -383,6 +460,10 @@ module.exports = {
     },
 
     getListEvent: async (req, res, next) => {
+        const token = req.cookies;
+
+        console.log(token);
+
         try {
             let {
                 categoryEventId,
@@ -449,7 +530,6 @@ module.exports = {
             } else {
                 sortQuery.createdAt = -1;
             }
-            console.log(query)
             Promise.all([
                 Event.aggregate([
                     { $match: query },
@@ -770,18 +850,9 @@ module.exports = {
     },
 
     test: async (req, res, next) => {
-        let e = null;
+        let u = await User.findOne({});
 
-        let condition = {
-            "session['-1'].joinNumber": 0
-        }
-
-
-        e = await Event.aggregate([
-            { $project: { id: 1, session: 1, lastSession: { $slice: ["$session", -1] } } },
-            { $match: { 'lastSession.day': { $lt: new Date() } } }
-        ]);
-
+        let e = await myFunction.issueJWT(u);
         res.status(200).json({ result: e });
     }
 
