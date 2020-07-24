@@ -191,7 +191,7 @@ module.exports = {
                     linkTo: {
                         key: "EventDetail",
                         _id: eventId,
-                        urlWeb: currentEvent.domain + currentEvent.urlWeb
+                        urlWeb: currentEvent.urlWeb
                     },
                     isRead: false,
                     isDelete: false,
@@ -416,7 +416,7 @@ module.exports = {
                         linkTo: {
                             key: "EventDetail",
                             _id: eventId,
-                            urlWeb: currentEvent.domain + currentEvent.urlWeb
+                            urlWeb: currentEvent.urlWeb
                         },
                         session: [sessionId],
                         isRead: false,
@@ -530,7 +530,7 @@ module.exports = {
             
             if (applyEvents.length == 0 ) {
                 if (isUserEvent) {
-                    await Event.findByIdAndUpdate({ _id: event._id }, { session: event.session })
+                    await Event.findByIdAndUpdate({ _id: event._id }, { session: event.session, status: event.status })
                     return res.status(200).json({ result: true });
                 } else {
                     return next({ error: { message: "Session not found!", code: 700 } });
@@ -679,7 +679,7 @@ module.exports = {
                         linkTo: {
                             key: "EventDetail",
                             _id: eventId,
-                            urlWeb: event.domain + event.urlWeb
+                            urlWeb: event.urlWeb
                         },
                         isRead: false,
                         isDelete: false,

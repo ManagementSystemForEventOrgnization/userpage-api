@@ -236,7 +236,8 @@ module.exports = {
 								title: "{sender} refunded for event " + event.name,
 								linkTo: {
 									key: "PaymentInfo",
-									_id: paymentId
+									_id: paymentId,
+									urlWeb: event.urlWeb
 								},
 								isRead: false,
 								isDelete: false,
