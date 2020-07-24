@@ -90,7 +90,7 @@ module.exports = {
                         linkTo: {
                             key: "EventDetail",
                             _id: event._id,
-                            urlWeb: event.domain + event.urlWeb
+                            urlWeb: event.urlWeb
                         },
                         isRead: false,
                         isDelete: false,
