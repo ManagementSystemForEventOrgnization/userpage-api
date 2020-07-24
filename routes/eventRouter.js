@@ -15,6 +15,7 @@ router.get('/event_edit',Unauthorized ,eventController.getPageEventEdit);
 router.get('/get_list_event', eventController.getListEvent);
 router.get('/get_list_event_coming_up', eventController.getListEventComingUp);
 router.get('/get_event_inf', eventController.getEventInf);
+router.get('/get_event_info_app', Unauthorized, eventController.getEventInf);
 router.get('/get_user_join_event', eventController.getUserJoinEvent);
 router.get('/test',eventController.test);
 router.post('/require_edit_event', Unauthorized, eventController.require_edit_event);

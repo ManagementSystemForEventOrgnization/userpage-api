@@ -39,7 +39,7 @@ module.exports = async (req, res, next) => {
                 let too = otp.generateOTP();
 
                 try {
-                    mailer.sentMailer('admin@gmail.com', { email: user.email }, 'confirm', `${too}`).then(async (json) => {
+                    mailer.sentMailer('admin@gmail.com', { email: user.email, fullName: user.fullName }, 'REGISTER', `${too}`).then(async (json) => {
                         if (json.code == 400) {
                             return next({ error: { message: json } });
                         } else {
@@ -47,8 +47,8 @@ module.exports = async (req, res, next) => {
                             user.save();
                             let token = await issueJWT(user);
                             
-                            let { email,fullName,birthday,gender,job,phone,avatar,discription, isActive, bank } = user;
-                            return res.status(200).json({ result: { email,fullName,birthday,gender,job,phone,avatar,discription, isActive, bank, accessToken: token } });
+                            let { email,fullName,birthday,gender,job,phone,avatar,discription, isActive, bank, _id } = user;
+                            return res.status(200).json({ result: {_id, email,fullName,birthday,gender,job,phone,avatar,discription, isActive, bank, accessToken: token } });
 
                         }
                     });
@@ -59,8 +59,8 @@ module.exports = async (req, res, next) => {
             } else {
                 let token = await issueJWT(user);
                 
-                let { email,fullName,birthday,gender,job,phone,avatar,discription, isActive, bank } = user;
-                return res.status(200).json({ result: { email,fullName,birthday,gender,job,phone,avatar,discription, isActive, bank, accessToken: token } });
+                let { email,fullName,birthday,gender,job,phone,avatar,discription, isActive, bank, _id } = user;
+                return res.status(200).json({ result: { _id,email,fullName,birthday,gender,job,phone,avatar,discription, isActive, bank, accessToken: token } });
 
             }
         }
@@ -70,9 +70,9 @@ module.exports = async (req, res, next) => {
 
             if (ret1) {
                 let token = await issueJWT(user);
-                let { email,fullName,birthday,gender,job,phone,avatar,discription, isActive, bank } = user;
+                let { email,fullName,birthday,gender,job,phone,avatar,discription, isActive, bank, _id } = user;
                 
-                return res.status(200).json({ result: { email,fullName,birthday,gender,job,phone,avatar,discription, isActive, bank, accessToken: token } });
+                return res.status(200).json({ result: { _id,email,fullName,birthday,gender,job,phone,avatar,discription, isActive, bank, accessToken: token } });
 
             } else {
                 loginWithPass()
