@@ -529,7 +529,12 @@ module.exports = {
             }
             
             if (applyEvents.length == 0 ) {
-                return next({ error: { message: "Session not found!", code: 700 } });
+                if (isUserEvent) {
+                    await Event.findByIdAndUpdate({ _id: event._id }, { session: event.session })
+                    return res.status(200).json({ result: true });
+                } else {
+                    return next({ error: { message: "Session not found!", code: 700 } });
+                }
             }
 
             var joinUserIds = [];
