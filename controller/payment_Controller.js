@@ -221,7 +221,7 @@ module.exports = {
 							})
 						}
 
-						await nextHandle(true, isUserEvent, applyEvent, sendEvent, sendNoti);
+						await nextHandle(true, isUserEvent, applyEvent, sendEvent, sendNoti, sessionId);
 						return;
 					}
 
@@ -270,13 +270,13 @@ module.exports = {
 										}
 									}
 
-									nextHandle(true, isUserEvent, applyEvent, sendEvent, newNotification);
+									nextHandle(true, isUserEvent, applyEvent, sendEvent, newNotification, sessionId);
 								}).catch((err) => {
-									nextHandle(false, isUserEvent, applyEvent, sendEvent, null)
+									nextHandle(false, isUserEvent, applyEvent, sendEvent, null, sessionId)
 								})
 							} else {
 								newNotification.save();
-								nextHandle(false, isUserEvent, applyEvent, sendEvent, null)
+								nextHandle(false, isUserEvent, applyEvent, sendEvent, null, sessionId)
 							}
 						}
 

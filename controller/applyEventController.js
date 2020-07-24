@@ -404,7 +404,7 @@ module.exports = {
                 
                 if (session.isReject != true) {
                     session.isReject = true,
-                        session.status = "REJECT"
+                    session.status = "REJECT"
 
                     const newNotification = new Notification({
                         sender: userId,
@@ -422,17 +422,45 @@ module.exports = {
                         isDelete: false
                     });
 
-                    const nextHandle = async function (response, isUserEvent, applyEvent, event, noti) {
+                    const nextHandle = async function (response, isUserEvent, applyEvent, event, noti, sessionId) {
+                        console.log(event)
+                        console.log(applyEvent)
+                        console.log(sessionId)
+                        console.log(applyEvent.session)
+                        console.log(event.session)
                         if (response == true) {
-                            Promise.all([
-                                ApplyEvent.findByIdAndUpdate({ _id: applyEvent._id }, { session: applyEvent.session }),
-                                Event.findByIdAndUpdate({ _id: event._id }, { session: event.session }),
-                                noti.save()
-                            ]).then(() => {
-                                return res.status(200).json({ result: true });
-                            }).catch((err) => {
-                                return next({ error: { message: 'Save data failed', code: 775 } });
-                            })
+                            if (sessionId) {
+                                let applySession = applyEvent.session.find(element => {
+                                    if (sessionId === element.id) {
+                                        return element
+                                    }
+                                })
+                                let eventSession = event.session.find(element => {
+                                    if (sessionId === element.id) {
+                                        return element
+                                    }
+                                })
+                                
+                                let applyCondition = { _id: applyEvent._id }
+                                let applyUpdate = { $set: { "session.$[element]" : applySession } }
+                                let applyFilter = { arrayFilters: [ { "element.id": sessionId } ] }
+
+                                let eventCondition = { _id: event._id }
+                                let eventUpdate = { $set: { "session.$[element]" : eventSession } }
+                                let eventFilter = { arrayFilters: [ { "element.id": sessionId } ] }
+
+                                Promise.all([
+                                    ApplyEvent.findOneAndUpdate(applyCondition, applyUpdate, applyFilter),
+                                    Event.findOneAndUpdate(eventCondition, eventUpdate, eventFilter),
+                                    noti.save()
+                                ]).then(() => {
+                                    return res.status(200).json({ result: true });
+                                }).catch((err) => {
+                                    return next({ error: { message: 'Save data failed', code: 775 } });
+                                })
+                            } else {
+                                return next({ error: { message: 'Something went wrong', code: 776 } });
+                            }
                         } else {
                             return next({ error: { message: 'Can not reject because refund failed', code: 774 } });
                         }
@@ -458,7 +486,7 @@ module.exports = {
                             next({ error: { message: 'Save data failed', code: 775 } });
                         })
                     } else {
-                        nextHandle(true, false, applyEvent, currentEvent, newNotification);
+                        nextHandle(true, false, applyEvent, currentEvent, newNotification, sessionId);
                     }
                 } else {
                     next({ error: { message: 'you have rejected', code: 710 } });
@@ -543,7 +571,7 @@ module.exports = {
             var index = 0
             var isCancelled = false
 
-            const nextHandle = async function (result, isUserEvent, applyEvent, event, noti) {
+            const nextHandle = async function (result, isUserEvent, applyEvent, event, noti, sessionId) {
                 var subSessions = applyEvent.session
 
                 if (!isUserEvent) {
@@ -635,7 +663,7 @@ module.exports = {
                                 payment_Controller.refund(req, res, next, nextHandle)
                             ])
                         } else {
-                            nextHandle(true, isUserEvent, applyEvents[index], event, null)
+                            nextHandle(true, isUserEvent, applyEvents[index], event, null, null)
                         }
                     } else {
                         next({ error: { message: "Session not found!", code: 722 } });
@@ -652,7 +680,7 @@ module.exports = {
                         i++;
                     }
 
-                    nextHandle(null, isUserEvent, applyEvents[index])
+                    nextHandle(null, isUserEvent, applyEvents[index], null, null, null)
                 }
 
                 index++;
@@ -748,17 +776,43 @@ module.exports = {
                 req.body.applyEvent = currentApplyEvent;
                 req.body.sendNoti = null;
                 req.body.isUserEvent = true;
+                req.body.isReject = true;
 
-                const nextHandle = async function (result, isUserEvent, applyEvent, event, noti) {
+                const nextHandle = async function (result, isUserEvent, applyEvent, event, noti, sessionId) {
+                    console.log("applyEvent", applyEvent.session)
                     if (result === false) {
                         return res.status(200).json({ result: false });
                     } else {
-                        Promise.all([
-                            ApplyEvent.findByIdAndUpdate({ _id: applyEvent._id }, { session: applyEvent.session }),
-                            Event.findByIdAndUpdate({ _id: event._id }, { session: event.session })
-                        ]).then(async () => {
-                            return res.status(200).json({ result: true });
-                        })
+                        if (sessionId) {
+                            let applySession = applyEvent.session.find(element => {
+                                if (sessionId === element.id) {
+                                    return element
+                                }
+                            })
+                            let eventSession = event.session.find(element => {
+                                if (sessionId === element.id) {
+                                    return element
+                                }
+                            })
+                            
+                            let applyCondition = { _id: applyEvent._id }
+                            let applyUpdate = { $set: { "session.$[element]" : applySession } }
+                            let applyFilter = { arrayFilters: [ { "element.id": sessionId } ] }
+
+                            let eventCondition = { _id: event._id }
+                            let eventUpdate = { $set: { "session.$[element]" : eventSession } }
+                            let eventFilter = { arrayFilters: [ { "element.id": sessionId } ] }
+
+                            Promise.all([
+                                ApplyEvent.findOneAndUpdate(applyCondition, applyUpdate, applyFilter),
+                                Event.findOneAndUpdate(eventCondition, eventUpdate, eventFilter)
+                            ]).then(async () => {
+                                console.log("save success")
+                                return res.status(200).json({ result: true });
+                            })
+                        } else {
+                            return next({ error: { message: "Something went wrong", code: 776 } });
+                        }
                     }
                 }
 
