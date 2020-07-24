@@ -1,11 +1,16 @@
-var express = require('express');
+var express = require("express");
 var router = express.Router();
-const commentController = require('../controller/commentController');
-const Unauthorized = require('../middlewares/loginAuth');
-const Authorization = require('../middlewares/authorization');
+const commentController = require("../controller/commentController");
+const Unauthorized = require("../middlewares/loginAuth");
+const Authorization = require("../middlewares/authorization");
 
-router.post('/comment/save', Unauthorized, Authorization ,commentController.saveComment);
+router.post(
+	"/comment/save",
+	Unauthorized,
+	Authorization,
+	commentController.saveComment
+);
 
-router.get('/comment/get_list',commentController.getList);
+router.get("/comment/get_list", commentController.getList);
 
 module.exports = router;
