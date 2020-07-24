@@ -217,13 +217,12 @@ module.exports = {
 									var refundNumber = ele.refundNumber || 0;
 									refundNumber += 1;
 									ele.refundNumber = refundNumber;
-									return;
 								}
 							})
 						}
 
 						await nextHandle(true, isUserEvent, applyEvent, sendEvent, sendNoti);
-						return true;
+						return;
 					}
 
 					if (!currentPayment.sessionRefunded.includes(sessionId)) {
@@ -257,7 +256,6 @@ module.exports = {
 										applyEvent.session.forEach(ele => {
 											if (ele.id == sessionId) {
 												ele.isRefund = true;
-												return;
 											}
 										})
 
@@ -267,22 +265,18 @@ module.exports = {
 													var refundNumber = ele.refundNumber || 0;
 													refundNumber += 1;
 													ele.refundNumber = refundNumber;
-													return;
 												}
 											})
 										}
 									}
 
 									nextHandle(true, isUserEvent, applyEvent, sendEvent, newNotification);
-									return true;
 								}).catch((err) => {
 									nextHandle(false, isUserEvent, applyEvent, sendEvent, null)
-									return false;
 								})
 							} else {
 								newNotification.save();
 								nextHandle(false, isUserEvent, applyEvent, sendEvent, null)
-								return false;
 							}
 						}
 
@@ -333,7 +327,8 @@ module.exports = {
 						next({ error: { message: 'Not found session for refund', code: 850 } });
 					}
 				}).catch((err) => {
-					return false;
+					console.log("refund", err);
+					return;
 				})
 			} catch (err) {
 				next({ error: { message: "Something went wrong", code: 776 } });

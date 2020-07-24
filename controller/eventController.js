@@ -290,7 +290,7 @@ module.exports = {
                 }
                 let result = {};
 
-                if (editSite && (idUser != e.userId)) {
+                if (editSite && (JSON.stringify(idUser) != JSON.stringify(e.userId))) {
                     next({ error: { message: 'You are not authorization' } });
                     return;
                 }
@@ -367,7 +367,7 @@ module.exports = {
                 }
                 let result = {};
 
-                if (editSite && (idUser != e.userId)) {
+                if (editSite && (JSON.stringify(idUser) != JSON.stringify(e.userId))) {
                     next({ error: { message: 'You are not authorization' } });
                     return;
                 }

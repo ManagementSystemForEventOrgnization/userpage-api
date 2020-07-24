@@ -95,7 +95,7 @@ module.exports = {
             var isExit = false
             
             if (currentEvent) {
-                if (currentEvent.userId == userId) {
+                if (JSON.stringify(currentEvent.userId) === JSON.stringify(userId)) {
                     return next({ error: { message: 'Can not join in yourself event', code: 706 } });
                 }
                 if (currentEvent.status === "CANCEL" || currentEvent.status === "DELETE") {
@@ -113,7 +113,6 @@ module.exports = {
                             isExit = true
                             return next({ error: { message: 'Some session cancelled, can you reload and choose again', code: 718 } });
                         }
-
 
                         let currentDate = new Date()
                         if (element.day < currentDate) {
