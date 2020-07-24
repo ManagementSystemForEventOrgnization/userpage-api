@@ -15,12 +15,12 @@ const loginUtil = require("../utils/loginUtil");
 
 module.exports = {
   login: (req, res, next) => {
-    
 
-    funcLogin(req,res,next);
-    
-    
-    
+
+    funcLogin(req, res, next);
+
+
+
     // passport.authenticate("local", async function (err, userData, info) {
     //   if (err) {
     //     return next({ error: { message: "Something went wrong", code: 776 } });
@@ -32,17 +32,17 @@ module.exports = {
 
     //   User.findById(userData._id, function(err, user) { 
     //     console.log("login", user)
-  
+
     //     req.logIn(user, function (err) {
     //       if (err) {
     //           return next({ error: { message: "Something went wrong", code: 776 } });
     //       }
-  
+
     //       return res.status(200).json({ result: user });
     //     });
     //   })
     // })(req, res, next);
-  
+
   },
 
   logout: async (req, res) => {
@@ -93,7 +93,7 @@ module.exports = {
       userPassport = userSave;
     }
 
-    loginUtil(req,res,next);
+    loginUtil(req, res, next);
 
 
     // passport.authenticate("local", function (err, user, info) {
@@ -164,7 +164,7 @@ module.exports = {
     try {
       await newUser.save();
 
-      loginUtil(req,res,next);
+      loginUtil(req, res, next);
 
       // passport.authenticate("local", function (err, user, info) {
       //   if (err) {
@@ -530,17 +530,21 @@ module.exports = {
       }
 
       if (typeOfEvent) {
-        conditionMath["$and"].push({ 'events.typeOfEvent' : typeOfEvent });
+        conditionMath["$and"].push({ 'events.typeOfEvent': typeOfEvent });
       }
 
       conditionMath.$and.push({
-        'events.session': {$exists : true, $not : {$type : 'null', $size : 0}}
+        'events.session': { $exists: true, $not: { $type: 'null', $size: 0 } }
       })
 
       Promise.all([
         ApplyEvent.aggregate([
           {
             $match: {
+              $or: [
+                { 'session': { $elemMatch: { isCancel: { $ne: true }, isReject: false, paymentStatus: 'PAID' } } },
+                { 'session': { $elemMatch: { isCancel: { $ne: true }, isReject: false, paymentId: { $exists: false } } } }
+              ],
               userId: ObjectId(idUserLogin),
             },
           },
@@ -668,7 +672,7 @@ module.exports = {
         conditionQuery.$and.push({ typeOfEvent });
       }
 
-      conditionQuery.$and.push({session: {$exists : true, $not : {$type : 'null', $size : 0}}});
+      conditionQuery.$and.push({ session: { $exists: true, $not: { $type: 'null', $size: 0 } } });
 
       let e = await Event.aggregate([
         { $match: conditionQuery },
