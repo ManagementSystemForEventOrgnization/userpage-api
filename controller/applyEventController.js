@@ -331,6 +331,10 @@ module.exports = {
         let { qrcode, eventId, sessionId } = req.body;
         let userId = req.user;
 
+        if (eventId + sessionId != qrcode) {
+            next({ error: { message: 'This session does not match, please check it!', code: 794 } });
+        }
+
         try {
             var currentApplyEvent = await ApplyEvent.findOne({ userId: userId, eventId: eventId });
 
