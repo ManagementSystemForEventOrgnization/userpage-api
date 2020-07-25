@@ -30,5 +30,6 @@ router.get('/user/bank_inf', Unauthorized, controller_User.getBankInf);
 router.post('/user/update_bank_inf', Unauthorized, controller_User.updateBankInf);
 
 router.post('/user/reported', Unauthorized, controller_User.reportUser);
+router.get('/user/report_revenus', Unauthorized, controller_User.report_revenus);
 
 module.exports = router;
