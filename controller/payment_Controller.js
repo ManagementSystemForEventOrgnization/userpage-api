@@ -211,7 +211,7 @@ module.exports = {
 					var sendEvent = eventChange || event
 
 					if (currentPayment.status !== "PAID") {
-						if (isUserEvent != false) {
+						if (isUserEvent != false && isRejectUser != true) {
 							sendEvent.session.forEach(ele => {
 								if (ele.id == sessionId) {
 									var refundNumber = ele.refundNumber || 0;
@@ -510,10 +510,14 @@ module.exports = {
 							}
 						})
 
+						let eventCondition = { _id: event._id }
+						let eventUpdate = { $inc: { "session.$[element].joinNumber" : 1 } }
+						let eventFilter = { arrayFilters: [ { "element.id": { $in: sessionIds } } ] }
+					
 						Promise.all([
 							newPayment.save(),
 							ApplyEvent.findByIdAndUpdate({ _id: currentApplyEvent._id }, { session: currentApplyEvent.session }),
-							Event.findByIdAndUpdate({ _id: event._id }, { session: event.session }),
+							Event.findOneAndUpdate(eventCondition, eventUpdate, eventFilter),
 							charge
 						]).then(([payment, applyEvent, event, charge]) => {
 							if (charge) {

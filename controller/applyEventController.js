@@ -63,10 +63,14 @@ module.exports = {
                     })
                 }
 
+                let eventCondition = { _id: event._id }
+                let eventUpdate = { $inc: { "session.$[element].joinNumber" : 1 } }
+                let eventFilter = { arrayFilters: [ { "element.id": { $in: sessionIds } } ] }
+
                 Promise.all([
                     currentPayment.save(),
                     ApplyEvent.findByIdAndUpdate({ _id: applyEvent._id }, { session: applyEvent.session }),
-                    Event.findByIdAndUpdate({ _id: currentEvent._id }, { session: currentEvent.session })
+                    Event.findOneAndUpdate(eventCondition, eventUpdate, eventFilter)
                 ]).then (() => {
                     return res.status(200).json({ result: true })
                 }).catch ((err) => {
@@ -211,8 +215,14 @@ module.exports = {
                         await payment_Controller.create_order(req, res, next);
                     }
                 } else {
-                    await Event.findByIdAndUpdate({ _id: currentEvent._id }, { session: currentEvent.session })
+                    console.log("joind event")
+                    let eventCondition = { _id: currentEvent._id }
+                    let eventUpdate = { $inc: { "session.$[element].joinNumber" : 1 } }
+                    let eventFilter = { arrayFilters: [ { "element.id": { $in: sessionIds } } ] }
 
+                    await Event.findOneAndUpdate(eventCondition, eventUpdate, eventFilter)
+
+                    console.log("joind event1")
                     return res.status(200).json({ result: true })
                 }
             } else {
@@ -582,9 +592,13 @@ module.exports = {
                             return ele;
                         }
                     })
+                    
+                    let eventCondition = { _id: event._id }
+                    let eventUpdate = { $inc: { "session.$[element].joinNumber" : -1 } }
+                    let eventFilter = { arrayFilters: [ { "element.id": { $in: sessionIds } } ] }
 
                     Promise.all([
-                        Event.findByIdAndUpdate({ _id: event._id }, { session: event.session, status: event.status })
+                        Event.findOneAndUpdate(eventCondition, eventUpdate, eventFilter)
                     ])
                 }
 
