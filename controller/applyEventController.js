@@ -63,7 +63,7 @@ module.exports = {
                     })
                 }
 
-                let eventCondition = { _id: event._id }
+                let eventCondition = { _id: currentEvent._id }
                 let eventUpdate = { $inc: { "session.$[element].joinNumber" : 1 } }
                 let eventFilter = { arrayFilters: [ { "element.id": { $in: sessionIds } } ] }
 
