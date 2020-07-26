@@ -808,12 +808,12 @@ module.exports = {
               as: "item",
               cond: conditionFilter
             }
-          }, name:1, ticket : 1, status : 1, urlWeb : 1,
+          }, name: 1, ticket: 1, status: 1, urlWeb: 1,bannerUrl: 1,
         }
       },
       {// chuyển sang danh sách các id của dnah sách đã có
         $project: {
-          sessionId: 1, name:1, ticket : 1, status : 1, urlWeb : 1,
+          sessionId: 1, name: 1, ticket: 1, status: 1, urlWeb: 1,bannerUrl: 1,
           session_id: {
             "$map": {
               "input": "$sessionId", "as": "ar", "in": "$$ar.id"
@@ -846,9 +846,12 @@ module.exports = {
       { $match: { payments: { $not: { $size: 0 } } } },
       {
         $project: {
-          SumAmount: { $sum: "$payments.amount" },
+
           session_id: 1,
-          sessionId: 1, name:1, ticket : 1, status : 1, urlWeb : 1,
+          SumAmount: {
+            $sum: "$payments.amount"
+          },
+          sessionId: 1, name: 1, ticket: 1, status: 1, urlWeb: 1, paymentId: 1, bannerUrl: 1,
           "amountSession": {
             $map:
             {
@@ -857,7 +860,7 @@ module.exports = {
               in: {
                 $reduce: {
                   input: "$payments",
-                  initialValue: { total: 0, idS: "$$id" },
+                  initialValue: { total: 0 },
                   in: {
                     total: {
                       $sum: ["$$value.total", {
@@ -872,11 +875,24 @@ module.exports = {
                 }
               }
             }
+          }
+        }
+      }, {
+        $project: {
+          sessionId: 1, name: 1, ticket: 1, status: 1, urlWeb: 1, paymentId: 1, bannerUrl: 1,
+          SumAmount: 1, amountSession: 1,
 
+          totalSession: {
+            $reduce: {
+              input: "$amountSession",
+              initialValue: 0,
+              in: {
+                $add: ["$$value", "$$this.total"]
+              }
+            }
           }
         }
       }
-
     ]);
 
     res.status(200).json({ result: e });
