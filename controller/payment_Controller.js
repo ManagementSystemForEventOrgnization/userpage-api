@@ -45,12 +45,7 @@ module.exports = {
 		numberRecord = +numberRecord || 10;
 		let userId = req.user;
 
-		let condition = {
-			$or: [{ sender: ObjectId(userId) },
-			{
-				sender: ObjectId(keys.adminId), receiver: ObjectId(userId)
-			}]
-		};
+		let condition = { sender: ObjectId(userId) };
 
 		Promise.all([
 			Payment.aggregate([

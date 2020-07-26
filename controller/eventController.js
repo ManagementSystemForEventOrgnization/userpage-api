@@ -359,7 +359,7 @@ module.exports = {
                 ApplyEvent.findOne({ eventId: ObjectId(eventId), session: { $elemMatch: { isRefund: false } } }),
                 ApplyEvent.findOne({ eventId: ObjectId(eventId), userId: ObjectId(idUser) }).populate('session.paymentId'),
                 Event.findOne({ _id: ObjectId(eventId) }),
-                PageEvent.findOne({ eventId: new ObjectId(eventId) },
+                PageEvent.findOne({ eventId: ObjectId(eventId) },
                     { _id: 0, __v: 0, createdAt: 0, updatedAt: 0 }),
             ]).then(([checkApply, ap, e, p]) => {
                 if (!e) {
@@ -371,7 +371,6 @@ module.exports = {
                     next({ error: { message: 'You are not authorization' } });
                     return;
                 }
-
                 if (editSite && checkApply) {
 
                     if ((+(e.isEdit || 0) - (Date.now())) < 0) {
@@ -401,15 +400,17 @@ module.exports = {
 
                 }
                 result.event = e;
-                result.header = p.header;
+                p = p || {};
+                result.header = p.header || [];
                 result.eventId = p.eventId;
-                result.rows = editSite ? (p.rows) : (p.rows[index]);
+                result.rows = editSite ? (p.rows || []) : (p.rows[index]);
                 if (!p) {
                     return next({ error: { message: 'Event is not exists!', code: 500 } });
                 }
 
                 res.status(200).json({ result: result });
             }).catch(err => {
+                console.log(err);
                 return next({ error: { message: 'Event is not exists!', code: 600 } });
             })
         } catch (err) {
