@@ -31,5 +31,6 @@ router.post('/user/update_bank_inf', Unauthorized, controller_User.updateBankInf
 
 router.post('/user/reported', Unauthorized, controller_User.reportUser);
 router.get('/user/report_revenus', Unauthorized, controller_User.report_revenus);
+router.get('/user/list_payment_session', Unauthorized, controller_User.list_payment_session);
 
 module.exports = router;

@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const ObjectId = mongoose.Types.ObjectId;
 const User = mongoose.model("users");
 const Event = mongoose.model("event");
-
+const Payment = mongoose.model('payment');
 const ApplyEvent = mongoose.model("applyEvent");
 
 const mailer = require("../utils/Mailer");
@@ -12,6 +12,7 @@ var passport = require("passport");
 const funcLogin = require('../utils/loginUtil');
 const myFunction = require('../utils/function');
 const loginUtil = require("../utils/loginUtil");
+const session = require("express-session");
 
 module.exports = {
   login: (req, res, next) => {
@@ -763,140 +764,176 @@ module.exports = {
   },
 
   report_revenus: async (req, res, next) => {
-
-    let { startDate, endDate, eventId, urlWeb } = req.query;
-    startDate = startDate || '';
-    endDate = endDate || '';
-    if (!eventId) {
-      if (urlWeb) {
-        let e = await Event.findOne({ urlWeb });
-        eventId = e._id;
-        if (!eventId) {
-          return next({ error: { message: 'Invalid data', code: 401 } });
-        }
-      }
-    }
-    let userId = req.user;
-
-    let conditionFilter = {
-      $and: [
-        { $ne: ["$$item.isCancel", true] }
-      ]
-    };
-    let condition = { userId: ObjectId(userId), status: 'PUBLIC', isSellTicket: true };
-
-    if (eventId) {
-      condition._id = ObjectId(eventId);
-    }
-    if (startDate) {
-      conditionFilter.$and.push({ $gte: ["$$item.day", new Date(startDate)] });
-    }
-    if (endDate) {
-      conditionFilter.$and.push({ $lte: ["$$item.day", new Date(endDate)] });
-    }
-
-    let e = await Event.aggregate([
-      {
-        // điều kiện để lấy ra danh sacshc ác sự kiện 
-        $match: condition
-      },
-      { // chuyển sang danh sách các sesion đạt chuẩn cần phải lấy ra.
-        $project: {
-          sessionId: {
-            $filter: {
-              input: "$session",
-              as: "item",
-              cond: conditionFilter
-            }
-          }, name: 1, ticket: 1, status: 1, urlWeb: 1,bannerUrl: 1,
-        }
-      },
-      {// chuyển sang danh sách các id của dnah sách đã có
-        $project: {
-          sessionId: 1, name: 1, ticket: 1, status: 1, urlWeb: 1,bannerUrl: 1,
-          session_id: {
-            "$map": {
-              "input": "$sessionId", "as": "ar", "in": "$$ar.id"
-            }
+    try {
+      let { startDate, endDate, eventId, urlWeb } = req.query;
+      startDate = startDate || '';
+      endDate = endDate || '';
+      if (!eventId) {
+        if (urlWeb) {
+          let e = await Event.findOne({ urlWeb });
+          eventId = e._id;
+          if (!eventId) {
+            return next({ error: { message: 'Invalid data', code: 401 } });
           }
         }
-      },
-      {
-        $lookup:
-        {
-          // lấy danh sách các payment của sự kiện 
-          from: "payments",
-          let: { eventId: "$_id", sessionId: "$session_id" },
-          pipeline: [
-            {
-              $match: {
-                // điều kiện là phải paid và chưa refund
-                status: 'PAID', sessionRefunded: { $size: 0 },
-                $expr: {
-                  $and: [
-                    { $eq: ["$eventId", "$$eventId"] },
-                  ],
-                },
-              }
-            },
-          ],
-          as: "payments"
-        }
-      },
-      { $match: { payments: { $not: { $size: 0 } } } },
-      {
-        $project: {
+      }
+      let userId = req.user;
 
-          session_id: 1,
-          SumAmount: {
-            $sum: "$payments.amount"
-          },
-          sessionId: 1, name: 1, ticket: 1, status: 1, urlWeb: 1, paymentId: 1, bannerUrl: 1,
-          "amountSession": {
-            $map:
-            {
-              input: "$session_id",
-              as: "id",
-              in: {
-                $reduce: {
-                  input: "$payments",
-                  initialValue: { total: 0 },
-                  in: {
-                    total: {
-                      $sum: ["$$value.total", {
-                        $cond: {
-                          if: { $in: ["$$id", "$$this.session"] },
-                          then: "$$this.amount",
-                          else: 0
-                        }
-                      }]
+      let conditionFilter = {
+        $and: [
+          { $ne: ["$$item.isCancel", true] }
+        ]
+      };
+      let condition = { userId: ObjectId(userId), status: 'PUBLIC', isSellTicket: true };
+
+      if (eventId) {
+        condition._id = ObjectId(eventId);
+      }
+      if (startDate) {
+        conditionFilter.$and.push({ $gte: ["$$item.day", new Date(startDate)] });
+      }
+      if (endDate) {
+        conditionFilter.$and.push({ $lte: ["$$item.day", new Date(endDate)] });
+      }
+
+      let e = await Event.aggregate([
+        {
+          // điều kiện để lấy ra danh sacshc ác sự kiện 
+          $match: condition
+        },
+        { // chuyển sang danh sách các sesion đạt chuẩn cần phải lấy ra.
+          $project: {
+            sessionId: {
+              $filter: {
+                input: "$session",
+                as: "item",
+                cond: conditionFilter
+              }
+            }, name: 1, ticket: 1, status: 1, urlWeb: 1, bannerUrl: 1, paymentId: 1,
+          }
+        },
+        {// chuyển sang danh sách các id của dnah sách đã có
+          $project: {
+            sessionId: 1, name: 1, ticket: 1, status: 1, urlWeb: 1, bannerUrl: 1, paymentId: 1,
+            session_id: {
+              "$map": {
+                "input": "$sessionId", "as": "ar", "in": "$$ar.id"
+              }
+            }
+          }
+        },
+        {
+          $lookup:
+          {
+            // lấy danh sách các payment của sự kiện 
+            from: "payments",
+            let: { eventId: "$_id", sessionId: "$session_id" },
+            pipeline: [
+              {
+                $match: {
+                  // điều kiện là phải paid và chưa refund
+                  status: 'PAID', sessionRefunded: { $size: 0 },
+                  $expr: {
+                    $and: [
+                      { $eq: ["$eventId", "$$eventId"] },
+                    ],
+                  },
+                }
+              },
+            ],
+            as: "payments"
+          }
+        },
+        { $match: { payments: { $not: { $size: 0 } } } },
+        {
+          $project: {
+
+            session_id: 1,
+            SumAmount: {
+              $sum: "$payments.amount"
+            },
+            sessionId: 1, name: 1, ticket: 1, status: 1, urlWeb: 1, paymentId: 1, bannerUrl: 1, paymentId: 1,
+            "amountSession": {
+              $map:
+              {
+                input: "$session_id",
+                as: "id",
+                in: {
+                  $reduce: {
+                    input: "$payments",
+                    initialValue: { total: 0 },
+                    in: {
+                      total: {
+                        $sum: ["$$value.total", {
+                          $cond: {
+                            if: { $in: ["$$id", "$$this.session"] },
+                            then: "$$this.amount",
+                            else: 0
+                          }
+                        }]
+                      }
                     }
                   }
                 }
               }
             }
           }
-        }
-      }, {
-        $project: {
-          sessionId: 1, name: 1, ticket: 1, status: 1, urlWeb: 1, paymentId: 1, bannerUrl: 1,
-          SumAmount: 1, amountSession: 1,
+        }, {
+          $project: {
+            sessionId: 1, name: 1, ticket: 1, status: 1, urlWeb: 1, paymentId: 1, bannerUrl: 1, paymentId: 1,
+            SumAmount: 1, amountSession: 1,
 
-          totalSession: {
-            $reduce: {
-              input: "$amountSession",
-              initialValue: 0,
-              in: {
-                $add: ["$$value", "$$this.total"]
+            totalSession: {
+              $reduce: {
+                input: "$amountSession",
+                initialValue: 0,
+                in: {
+                  $add: ["$$value", "$$this.total"]
+                }
               }
             }
           }
         }
+      ]);
+
+      res.status(200).json({ result: e });
+    } catch (err) {
+      next({ error: { message: "Something went wrong", code: 776 } });
+    }
+  },
+
+  list_payment_session: async (req, res, next) => {
+    let { sessionId, eventId, urlWeb } = req.query;
+
+    try {
+      if (!eventId) {
+        if (urlWeb) {
+          let e = await Event.findOne({ urlWeb });
+          eventId = e._id;
+        }
       }
-    ]);
+      if (!eventId || !sessionId) {
+        return next({ error: { message: 'Invalid data', code: 401 } });
+      }
 
-    res.status(200).json({ result: e });
+      let userId = req.user;
 
+      let payments = await Payment.find(
+        {
+          eventId: ObjectId(eventId),
+          status: "PAID",
+          sessionRefunded: { $size: 0 },
+          "session.0": sessionId
+        }
+      ).populate(
+        {
+          path: 'sender',
+          select: ["avatar", "fullName"]
+        })
 
+      return res.status(200).send({ result: payments })
+    } catch (err) {
+      next({ error: { message: "Something went wrong", code: 776 } });
+    }
   }
 };
