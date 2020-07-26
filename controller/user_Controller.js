@@ -903,7 +903,10 @@ module.exports = {
   },
 
   list_payment_session: async (req, res, next) => {
-    let { sessionId, eventId, urlWeb } = req.query;
+    let { pageNumber, numberRecord, sessionId, eventId, urlWeb } = req.query;
+
+    numberRecord = +numberRecord || 10
+    pageNumber = +pageNumber || 1
 
     try {
       if (!eventId) {
@@ -916,8 +919,6 @@ module.exports = {
         return next({ error: { message: 'Invalid data', code: 401 } });
       }
 
-      let userId = req.user;
-
       let payments = await Payment.find(
         {
           eventId: ObjectId(eventId),
@@ -929,8 +930,12 @@ module.exports = {
         {
           path: 'sender',
           select: ["avatar", "fullName"]
-        })
-
+        }
+      )
+      .sort({createdAt: -1})
+      .skip((pageNumber - 1) * numberRecord)
+      .limit(numberRecord)
+      
       return res.status(200).send({ result: payments })
     } catch (err) {
       next({ error: { message: "Something went wrong", code: 776 } });
