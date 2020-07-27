@@ -563,9 +563,9 @@ module.exports = {
 
                     },
                     { $match: mathQuery },
+                    { $sort: sortQuery },
                     { $skip: +numberRecord * (+pageNumber - 1) },
-                    { $limit: +numberRecord },
-                    { $sort: sortQuery }
+                    { $limit: +numberRecord }
                 ]),
                 Event.aggregate([
                     { $match: query },
@@ -668,9 +668,9 @@ module.exports = {
                 {
                     $unwind: "$eventCategories"
                 },
+                { $sort: { 'session.day': 1 } },
                 { $skip: +numberRecord * (+pageNumber - 1) },
-                { $limit: +numberRecord },
-                { $sort: { 'session.day': 1 } }
+                { $limit: +numberRecord }
             ])
             res.status(200).json({ result: e });
         } catch (error) {
