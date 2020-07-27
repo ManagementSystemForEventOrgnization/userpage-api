@@ -701,9 +701,9 @@ module.exports = {
         {
           $unwind: "$eventCategory"
         },
+        { $sort: { createdAt: -1 } },
         { $skip: +numberRecord * (+pageNumber - 1) },
-        { $limit: +numberRecord },
-        { $sort: { createdAt: -1 } }
+        { $limit: +numberRecord }
       ])
 
       res.status(200).json({ result: e });
