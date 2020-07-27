@@ -736,24 +736,46 @@ module.exports = {
                     titleMess = titleMess + " and waiting for us refund your money."
                 }
 
-                const newNotification = new Notification({
-                    sender: userId,
-                    receiver: isUserEvent ? joinUserIds : [event.userId],
-                    type: typeNoti,
-                    message: "",
-                    title: titleMess,
-                    linkTo: {
-                        key: "EventDetail",
-                        _id: eventId,
-                        urlWeb: event.urlWeb
-                    },
-                    isRead: false,
-                    isDelete: false,
-                    session: sessionNoti
-                });
+                if (isUserEvent) {
+                    joinUserIds.forEach(joinId => {
+                        const newNotification = new Notification({
+                            sender: userId,
+                            receiver: [joinId],
+                            type: typeNoti,
+                            message: "",
+                            title: titleMess,
+                            linkTo: {
+                                key: "EventDetail",
+                                _id: eventId,
+                                urlWeb: event.urlWeb
+                            },
+                            isRead: false,
+                            isDelete: false,
+                            session: sessionNoti
+                        });
+        
+                        newNotification.save();    
+                    })
+                } else {
+                    const newNotification = new Notification({
+                        sender: userId,
+                        receiver: [event.userId],
+                        type: typeNoti,
+                        message: "",
+                        title: titleMess,
+                        linkTo: {
+                            key: "EventDetail",
+                            _id: eventId,
+                            urlWeb: event.urlWeb
+                        },
+                        isRead: false,
+                        isDelete: false,
+                        session: sessionNoti
+                    });
 
-                newNotification.save();
-
+                    newNotification.save();    
+                }
+                
                 if (isUserEvent) {
                     await Event.findByIdAndUpdate({ _id: event._id }, { session: event.session, status: event.status });
                 }
